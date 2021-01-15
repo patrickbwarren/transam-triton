@@ -1,4 +1,21 @@
-/* TRITON RELOCATABLE MACHINE CODE COMPILER */
+/* This file is part of my Transam Triton code repository.
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your
+option) any later version.
+
+This is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
+
+Copyright (c) 1990-2021 Patrick B Warren <patrickbwarren@gmail.com>.
+
+You should have received a copy of the GNU General Public License
+along with this file.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 /* Compile with gcc -O -Wall trimcc.c -o trimcc */
 
 #include <stdlib.h>
@@ -12,28 +29,30 @@
 
 #define MAXTOK 200    /* Max token length (note include strings) */
 #define MAXREG 10     /* Max register (pair) name length */
-#define MAXNNV 200    /* Max # of name,value pairs */
+#define MAXNNV 200    /* Max # of name, value pairs */
 #define MAXRPT 300    /* Max repeat value for error trapping */
 #define NMN    78     /* # mnemonic codes */
 #define DELAY  10     /* Delay in ms after a byte transmitted */
 #define NOVAL -1      /* Signals no value assigned in name, value pair */
 #define MAXFP 5       /* Max level of file inclusion */
 
-int print;            /* Signals intention to print data */
-int transmit;         /* Signals intention to transmit */
-int savebin;          /* Save data in binary file */
-int start,count;      /* Position, byte count variables */
+int nparse = 0;       /* count number of times have parsed file */
+int transmit = 0;     /* Signals intention to transmit */
 int zcount;           /* Keeps track of number of bytes printed out */
 char cc;              /* Keeps track of the current character */
 
-FILE *fsp = NULL;     /* File pointer for save data */
+int origin, byte_count, end_prog;      /* Position, byte count variables */
+
+FILE *fsp = NULL;     /* File pointer for save binary data */
 
 int fd;                     /* port id number */
 struct termios oldtio;      /* original port settings */
 struct termios newtio;      /* TRITON required port settings */
 char *port = "/dev/ttyS0";  /* name of port */
+char *tri_ext = ".tri";     /* file name extension (source files) */
 
 /* 8080 mnemonic codes follow: see 8080 bugbook */
+/* Note that 'CC' has been replaced by 'CCC' to avoid a clash with 0xCC */
 
 char *mnemonic[NMN] =
 { "ACI",  "ADC",  "ADD",  "ADI",  "ANA",  "ANI",  "CALL", "CCC",  "CM",  
@@ -57,21 +76,22 @@ char *mncode[NMN] =
   "3N7", "310", "23S", "336", "042", "371", "062", "0U2", "067", 
   "22S", "326", "353", "25S", "356", "343" }; 
 
-int mntype[NMN],mnval[NMN];
+int mntype[NMN], mnval[NMN];
 
 /* Storage for name, value pairs */ 
 int nnv = 0;
 int value[MAXNNV];
 char *name[MAXNNV];
 
-/* List of routines */
+/* Function prototypes */
+
 void parse(char *);
 int regin(FILE *);
 int pairin(FILE *);
 int rstnin(FILE *);
 void zinit(); 
 void mninit();
-void send(int);
+void byte_out(int);
 int nvlistok();
 void printnvlist();
 int tokval(char *);
@@ -85,88 +105,105 @@ int whitespace(char);
 void startio();
 void finishio();
 int ctoi(char c) { return (int)c - '0'; }
-void warn(char *s) { fprintf(stderr,"** Warning: %s.\n",s); }
-void error(char *s) { fprintf(stderr,"** Error: %s.\n",s); exit(1); }
+
+void warn(char *s) {
+  fprintf(stderr, "warning: %s\n", s);
+}
+
+void error(char *s) {
+  fprintf(stderr, "error: %s\n", s); exit(1);
+}
+
+void fprint_help(FILE *fp, char *name) {
+  fprintf(fp, "%s srcfile [-o tapefile] [-t] : compile TRITON machine code\n", name);
+  exit(0);
+}
+
+void *emalloc(size_t size) {
+  void *p;
+  if ((p = malloc(size)) == NULL) error("out of memory in emalloc");
+  return p;
+}
 
 int main(int argc, char *argv[]) {
   char c;
-  char filename[40];
-  char savename[40];
-  if (argc < 2) {
-    fprintf(stderr,"Please enter file to be processed\n");
-    scanf("%s",filename);
-  } else strcpy(filename,argv[1]);
-  if (strchr(filename,'.') == NULL) strcat(filename,".tri");
+  char *s;
+  char *src_file, *tape_file = NULL;
+  /* Sort out command line options */
+  while ((c = getopt(argc, argv, "hto:")) != -1) {
+    switch (c) {
+    case 't': transmit = 1; break;
+    case 'o': tape_file = strdup(optarg); break;
+    case 'h': fprint_help(stdout, argv[0]);
+    }
+  }
+  if (optind == argc) { /* missing non-option argument (source file) */
+    fprintf(stderr, "missing source file\n");
+    fprint_help(stderr, argv[0]);
+  } else src_file = strdup(argv[optind]);
+  if (strchr(src_file, '.') == NULL) { /* append file extension */
+    s = strdup(src_file); free(src_file);
+    src_file = (char *)emalloc(strlen(s) + strlen(tri_ext) + 1);
+    strcpy(src_file, s); free(s);
+    strcat(src_file, tri_ext);
+  }
   mninit();
-  printf("\nTriton Machine Code Compiler\n\n");
-  printf("First pass through %s\n",filename);
-  print = transmit = 0;
-  parse(filename);
+  printf("\nTriton relocatable Machine Code Compiler\n\n");
+  if (tape_file) printf("Parsing %s, storing result in %s\n", src_file, tape_file);
+  else printf("Parsing %s, not storing result\n", src_file);
+  parse(src_file); /* First pass through */
   if (!nvlistok()) { printnvlist(); error("undefined variables"); }
-  printf("First pass completed successfully\n");
-  transmit = savebin = 0;
-  fprintf(stderr,"Do you want to transmit, save or nothing (t/s)\n");
-  scanf("%c",&c);
-  if (c == 't' || c == 'T') transmit = 1;
-  if (c == 's' || c == 'S') savebin = 1;
+  if (tape_file) {
+    if ((fsp = fopen(tape_file, "wb")) == NULL) error("Couldn't open file for saving");
+  }
   if (transmit) {
-    printf("OK, transmitting down the wires\n"); 
+    printf("Transmitting down the wires...\n"); 
     startio();
   }
-  if (savebin) {
-    printf("OK, saving binary to file\n");
-    printf("Please enter the name of the file\n");
-    scanf("%s",savename);
-    if ((fsp = fopen(savename,"wb")) == NULL) error("Couldn't open file for saving");
-  }
-  printf("Second pass through %s\n",filename);
-  print = 1;
-  parse(filename);
+  parse(src_file); /* Second pass through */
   if (transmit) {
     printf("\nFinished transmitting down the wires\n"); 
     finishio();
   }
-  if (savebin) {
-    printf("\nFinished saving binary data\n"); 
-    fclose(fsp);
-  }
-  printf("\nSecond pass finished successfully\n");
+  if (fsp) fclose(fsp);
   printf("\nVariable list\n\n"); printnvlist();
-  printf("\nThank you for using TriMCC, have a nice day\n");
   return 0;
 }
 
-/* Reads in tokens from filename and generates 8080 machine code */
-void parse(char *filename) {
-  int i,j,len,val,valhi,vallo,nrpt,wasplit,found;
+/* Reads in tokens from src_file and generates 8080 machine code */
+void parse(char *file) {
+  int i, j, len, val, valhi, vallo, nrpt, wasplit, found;
   int fpstackpos = 0;
   char tok[MAXTOK] = "", pre[MAXTOK] = "";
   char *punkt, *tempfile;
-  FILE *fp,*fp2,*fpstack[MAXFP];
-  if ((fp = fopen(filename,"r")) == NULL) error("couldn't open file");
-  start = count = NOVAL;
-  start = addval("START",0); count = addval("COUNT",0); zinit();
+  FILE *fp, *fp2, *fpstack[MAXFP];
+  if ((fp = fopen(file, "r")) == NULL) error("couldn't open file");
+  origin = byte_count = end_prog = NOVAL;
+  origin = addval("ORG", 0);
+  byte_count = addval("BYTES", 0);
+  if (nparse == 0) end_prog = addval("END", 0);
+  zinit();
 /* Outer do loop around file inclusion levels */
   do {
     cc = ' ';    /* set initial character properly */
-    while (tokin(tok,fp,MAXTOK) != EOF) {
-      if (myscmp("include",tok)) {     /* Process include files */
-        if (tokin(tok,fp,MAXTOK) == EOF) error("Expected a file name");
-        if ((punkt = strchr(tok,'.')) == NULL) {
+    while (tokin(tok, fp, MAXTOK) != EOF) {
+      if (myscmp("include", tok)) {     /* Process include files */
+        if (tokin(tok, fp, MAXTOK) == EOF) error("Expected a file name");
+        if ((punkt = strchr(tok, '.')) == NULL) {
           tempfile = (char *) malloc(strlen(tok) + 5);
-          strcpy(tempfile,tok); strcat(tempfile,".tri");
+          strcpy(tempfile, tok); strcat(tempfile, ".tri");
         } else tempfile = strdup(tok);
-        if (!print) printf("Including commands from %s\n",tempfile);
-        if ((fp2 = fopen(tempfile,"r")) == NULL) {
+        if (nparse > 0) printf("Including commands from %s\n",tempfile);
+        if ((fp2 = fopen(tempfile, "r")) == NULL) {
           error("I couldn't find the file.");
         } else {
           if (fpstackpos < MAXFP) { fpstack[fpstackpos++] = fp; fp = fp2; }
           else error("I'm out of file pointer stack space");
         }
       } else {    /* Process tokens normally */
-        if (split(tok,pre,'=')) { addval(pre,eval(tok)); continue; }
-        if (split(tok,pre,':')) addval(pre,value[start]+value[count]);
-        if (split(tok,pre,'*')) sscanf(pre,"%i",&nrpt); else nrpt = 1;
+        if (split(tok, pre, '=')) { addval(pre, eval(tok)); continue; }
+        if (split(tok, pre, ':')) addval(pre, value[origin]+value[byte_count]);
+        if (split(tok, pre, '*')) sscanf(pre, "%i", &nrpt); else nrpt = 1;
         if (nrpt < 1 || nrpt > MAXRPT) {
           warn("bad repeat number, setting to unity"); nrpt = 1;
         }
@@ -178,7 +215,7 @@ void parse(char *filename) {
             }
             for (i=0; i<nrpt; i++) {
               for (j=0; j<len-1; j++) {
-                if (tok[j] == '"') continue; else send((int)tok[j]);
+                if (tok[j] == '"') continue; else byte_out((int)tok[j]);
               }
             }
             break;
@@ -186,14 +223,14 @@ void parse(char *filename) {
             if (strlen(tok) != 3 || tok[2] != '\'') {
               warn("invalid character"); break; 
             }
-            for (i=0; i<nrpt; i++) send((int)tok[1]);
+            for (i=0; i<nrpt; i++) byte_out((int)tok[1]);
             break;
           case '%': /* Encountered a decimal number */
-            if ((val = eval(tok)) < 0xff) for (i=0; i<nrpt; i++) send(val);
+            if ((val = eval(tok)) < 0xff) for (i=0; i<nrpt; i++) byte_out(val);
             else warn("invalid number");
             break;
           case '!': /* Encountered a variable, dereference it therefore */
-            wasplit = split(tok,pre,'.'); val = tokval(&pre[1]);
+            wasplit = split(tok, pre, '.'); val = tokval(&pre[1]);
             valhi = val / 0x100; vallo = val - 0x100*valhi;
             if (wasplit) {
               switch (tok[0]) {
@@ -201,12 +238,12 @@ void parse(char *filename) {
                 case 'L': val = vallo; break;
                 default: warn("invalid byte specification"); val = 0;
               }
-              for (i=0; i<nrpt; i++) send(val);
-            } else for (i=0; i<nrpt; i++) { send(vallo); send(valhi); }
+              for (i=0; i<nrpt; i++) byte_out(val);
+            } else for (i=0; i<nrpt; i++) { byte_out(vallo); byte_out(valhi); }
             break;
           default: /* See if it's a mnemonic or a piece of hex */
             for (i=0, found=0; i<NMN; i++) {
-              if (strcmp(tok,mnemonic[i]) == 0) { found = 1; break; }
+              if (strcmp(tok, mnemonic[i]) == 0) { found = 1; break; }
             }
             if (found) { /* Encountered a mnemonic */
               val = mnval[i];
@@ -221,19 +258,22 @@ void parse(char *filename) {
             } else { /* Encountered hex code */
               val = eval(tok);
             }
-            for (i=0; i<nrpt; i++) send(val);
+            for (i=0; i<nrpt; i++) byte_out(val);
         }
       }
     } 
     if (fclose(fp) != 0) error("I couldn't close the file.");
     if (--fpstackpos >= 0) fp = fpstack[fpstackpos];
   } while (fpstackpos >= 0);
+  value[end_prog] = value[origin] + value[byte_count]; /* capture end point */
+  if (nparse > 0) printf("\n"); /* Catch trailing printout */
+  nparse++;
 }
 
 /* Reads next token and returns code for register B,C,D,E,H,L,M, or A */ 
 int regin(FILE*fp) {
   char reg[MAXREG];
-  if (tokin(reg,fp,MAXREG) == EOF) error("unexpected end of file");
+  if (tokin(reg, fp, MAXREG) == EOF) error("unexpected end of file");
   if (reg[1] == '\0') switch (reg[0]) {
     case 'B': return 0;
     case 'C': return 1;
@@ -250,13 +290,13 @@ int regin(FILE*fp) {
 /* Reads next token and returns code for register pair B,D,H, or SP/PSW */
 int pairin(FILE*fp) {
   char reg[MAXREG];
-  if (tokin(reg,fp,MAXREG) == EOF) error("unexpected end of file");
+  if (tokin(reg, fp, MAXREG) == EOF) error("unexpected end of file");
   if (reg[1] == '\0') switch (reg[0]) {
     case 'B': return 0;
     case 'D': return 2;
     case 'H': return 4;
   }
-  if (strcmp(reg,"SP") == 0 || strcmp(reg,"PSW") == 0) return 6;
+  if (strcmp(reg, "SP") == 0 || strcmp(reg, "PSW") == 0) return 6;
   warn("invalid register specification"); return 0;
 }
 
@@ -264,20 +304,21 @@ int pairin(FILE*fp) {
 int rstnin(FILE*fp) {
   int val = NOVAL;
   char reg[MAXREG];
-  if (tokin(reg,fp,MAXREG) == EOF) error("unexpected end of file");
+  if (tokin(reg, fp, MAXREG) == EOF) error("unexpected end of file");
   if (reg[1] == '\0') val = ctoi(reg[0]);
   if (val >= 0 && val <= 7) return val;
   warn("invalid number in RST N"); return 0;
 }
+
 /* (Re)initialises printed byte counter */
 void zinit() { 
   zcount = 0; 
-  if (print) printf("\n%04X ",value[start]+value[count]); 
+  if (nparse > 0) printf("\n%04X ", value[origin] + value[byte_count]); 
 }
 
 /* Initialises mnemonic codes */
 void mninit() {
-  int i,v,t;
+  int i, v, t;
   for (i=0; i<NMN; i++) {
     v = ctoi(mncode[i][0]) << 6;
     switch (mncode[i][1]) {
@@ -292,15 +333,15 @@ void mninit() {
   }
 }
 
-/* Sends or prints a code */
-void send(int v) {
-  char buf[1],c;
+/* Save, print, and/or transmit a byte */
+void byte_out(int v) {
+  char buf[1], c;
   if (v<0 || v>0xff) { warn("invalid byte crept in somehow"); v = 0; }
   c = buf[0] = (char)v;
-  if (transmit) { write(fd,buf,1); usleep(50000); }
-  if (savebin) { fwrite(&c,sizeof(char),1,fsp); }
-  if (print) printf(" %02X",v);
-  value[count]++;
+  if (transmit) { write(fd, buf, 1); usleep(50000); }
+  if (fsp) fwrite(&c, sizeof(char), 1, fsp);
+  if (nparse > 0) printf(" %02X", v);
+  value[byte_count]++;
   if (++zcount == 16) zinit();
 }
 
@@ -313,7 +354,7 @@ int nvlistok() {
 
 /* Prints out name, value list */
 void printnvlist() {
-  int i,v;
+  int i, v;
   for (i=0; i<nnv; i++) {
     if ((v = value[i]) == NOVAL) printf("%8s * undefined *   ",name[i]);
     else printf("%8s = %04X = %%%-6i ",name[i],v,v);
@@ -322,27 +363,27 @@ void printnvlist() {
   if (nnv % 3 != 0) printf("\n");
 }
 
-/* Looks up the name in the name,value list and returns value, or 0 */
+/* Looks up the name in the name, value list and returns value, or 0 */
 /* If not in list, then entered with NOVAL, but 0 returned */
 int tokval(char *s) {
   int i;
-  for (i=0; i<nnv; i++) if (strcmp(name[i],s) == 0) { 
+  for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) { 
     return (value[i] == NOVAL) ? 0 : value[i];
   }
-  newnv(s,NOVAL); return 0;
+  newnv(s, NOVAL); return 0;
 }
 
 /* Adds the name, value to the list, returning position of entry */
 /* if name is already there, then just alter value */
-/* if name = START then reset byte count and restart printing */
+/* if name = ORG then reset byte count and restart printing */
 int addval(char *s, int v) {
   int i;
-  for (i=0; i<nnv; i++) if (strcmp(name[i],s) == 0) { 
+  for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) { 
     value[i] = v;
-    if (i == start) { value[count] = 0; zinit(); } 
+    if (i == origin) { value[byte_count] = 0; zinit(); } 
     return i; 
   }
-  newnv(s,v); 
+  newnv(s, v);
   return nnv-1;
 }
 
@@ -367,7 +408,7 @@ int eval(char *s) {
 /* If it occurs, split into s1[] + c + s2[] */
 /* If it does not occur, copy s1[] into s2[] */
 int split(char *s1, char *s2, char c) {
-  int i,j; 
+  int i, j; 
   for (i=0; (s2[i] = s1[i]) != c; i++) if (s1[i] == '\0') return 0; 
   s2[i++] = '\0';
   for (j=0; (s1[j] = s1[i]) != '\0'; i++, j++) ; 
@@ -413,11 +454,11 @@ int whitespace(char c) {
 void startio() {
 /* Open port for writing, and not as controlling tty */
   if ((fd = open(port, O_WRONLY | O_NOCTTY )) < 0) {
-    fprintf(stderr,"Couldn't open %s for writing",port);
+    fprintf(stderr, "Couldn't open %s for writing", port);
     error("there was an error");
   }
 /* save current serial port settings */
-  tcgetattr(fd,&oldtio); 
+  tcgetattr(fd, &oldtio); 
 /* clear struct for new port settings */
   bzero(&newtio, sizeof(newtio)); 
 /* Set to 300 baud, 8 bits, odd parity, 2 stop bits, no hardware control */
@@ -429,12 +470,13 @@ void startio() {
 /* No character interpretation on input */
   newtio.c_lflag = 0;
 /* Clean the modem line and activate the settings for the port */
-  tcflush(fd,TCIFLUSH);
-  tcsetattr(fd,TCSANOW,&newtio);
+  tcflush(fd, TCIFLUSH);
+  tcsetattr(fd, TCSANOW, &newtio);
 }
 
 /* Restore port settings */
 void finishio() {
- tcsetattr(fd,TCSANOW,&oldtio);
+ tcsetattr(fd, TCSANOW, &oldtio);
 }
 
+/* End of file */

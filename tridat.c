@@ -1,4 +1,21 @@
-/* TRITON RS232 DATA RECEIVER */
+/* This file is part of my Transam Triton code repository.
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your
+option) any later version.
+
+This is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
+
+Copyright (c) 1990-2021 Patrick B Warren <patrickbwarren@gmail.com>.
+
+You should have received a copy of the GNU General Public License
+along with this file.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 /* Compile with gcc -O -Wall tridat.c -o tridat */
 
 #include <stdio.h>
@@ -39,16 +56,14 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sighook); /* catch ctrl-c */
   while ((c = getopt(argc, argv, "ho:")) != -1)
     switch (c) {
-    case 'o':
-      filename = strdup(optarg);
-      break;
+    case 'o': filename = strdup(optarg); break;
     case 'h':
       printf("%s [-o file] : receive TRITON RS232 data from %s\n",
 	     argv[0], port);
       exit(0);
     }
   if (strlen(filename) > 0) { /* set up output to a file */
-    if (strchr(filename,'.') == NULL) {
+    if (strchr(filename, '.') == NULL) {
       s = strdup(filename); free(filename);
       filename = (char *)emalloc(strlen(s) + strlen(tri_ext) + 1);
       strcpy(filename, s); free(s);
