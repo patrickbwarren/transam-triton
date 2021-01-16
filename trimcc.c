@@ -180,7 +180,8 @@ int main(int argc, char *argv[]) {
 void parse(char *file) {
   int i, j, len, val, valhi, vallo, nrpt, wasplit, found;
   int fpstackpos = 0;
-  char tok[MAXTOK] = "", pre[MAXTOK] = "";
+  char tok[MAXTOK] = "";
+  char pre[MAXTOK] = "";
   char *punkt, *tempfile;
   FILE *fp, *fp2, *fpstack[MAXFP];
   if ((fp = fopen(file, "r")) == NULL) error("couldn't open file");
@@ -196,8 +197,8 @@ void parse(char *file) {
       if (myscmp("include", tok)) {     /* Process include files */
         if (tokin(tok, fp, MAXTOK) == EOF) error("Expected a file name");
         if ((punkt = strchr(tok, '.')) == NULL) {
-          tempfile = (char *) malloc(strlen(tok) + 5);
-          strcpy(tempfile, tok); strcat(tempfile, ".tri");
+          tempfile = (char *)emalloc(strlen(tok) + strlen(tri_ext) + 1);
+          strcpy(tempfile, tok); strcat(tempfile, tri_ext);
         } else tempfile = strdup(tok);
         if (verbose && (nparse > 0)) printf("Including commands from %s\n",tempfile);
         if ((fp2 = fopen(tempfile, "r")) == NULL) {
@@ -208,7 +209,7 @@ void parse(char *file) {
         }
       } else {    /* Process tokens normally */
         if (split(tok, pre, '=')) { addval(pre, eval(tok)); continue; }
-        if (split(tok, pre, ':')) addval(pre, value[origin]+value[byte_count]);
+        if (split(tok, pre, ':')) addval(pre, value[origin] + value[byte_count]);
         if (split(tok, pre, '*')) sscanf(pre, "%i", &nrpt); else nrpt = 1;
         if (nrpt < 1 || nrpt > MAXRPT) {
           warn("bad repeat number, setting to unity"); nrpt = 1;
@@ -233,7 +234,7 @@ void parse(char *file) {
             break;
           case '%': /* Encountered a decimal number */
             if ((val = eval(tok)) < 0xff) for (i=0; i<nrpt; i++) byte_out(val);
-            else warn("invalid number");
+            else warn("invalid number, should be less than 255");
             break;
           case '!': /* Encountered a variable, dereference it therefore */
             wasplit = split(tok, pre, '.'); val = tokval(&pre[1]);
@@ -403,7 +404,7 @@ void newnv(char *s, int v) {
 /* Returns value of string, or 0 and a warning if invalid */
 int eval(char *s) {
   int v = 0;
-  if (sscanf(s,(*s == '%') ? "%%%i" : "%X", &v) != 1) {
+  if (sscanf(s, (*s == '%') ? "%%%i" : "%X", &v) != 1) {
     warn("unrecognised value, using 0"); v = 0;
   }
   if (v<0 || v>0xffff) { warn("invalid number, using 0"); v = 0; }

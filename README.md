@@ -13,10 +13,10 @@ There is now also an excellent
 [SFML library](https://www.sfml-dev.org/).  Some of the original TRITON
 documentation can also be found in Robin's repository.
 
-Storage was provided by tape cassette with an interface driven by an
+Storage for TRITON was provided by tape cassette with an interface driven by an
 [AY-5-1013](https://datasheetspdf.com/datasheet/AY-5-1013A.html)
 [UART](https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter)
-chip. This serialised bytes as 8 data bits, a parity bit, and 2 STOP
+chip. This serialised each data byte as 8 bits, followed by a parity bit and 2 STOP
 bits, transmitted at a rate of 300 baud.  This interface was not very
 reliable so at a later date (circa 1995) it was hacked to drive an
 [RS-232](https://en.wikipedia.org/wiki/RS-232) interface, first to a
@@ -32,10 +32,10 @@ They can be compiled by
 gcc -Wall tridat.c -o tridat
 gcc -Wall trimcc.c -o trimcc
 ```
-Note that you may have to add yourself the `dialout` group to run
-them, to use the default serial port (`/dev/ttyS0`).
+Note that you may have to add yourself the `dialout` group
+to use the default serial port (`/dev/ttyS0`).
 
-The transmitter code `trimcc` implements a rudimentary minilanguage
+The transmitter `trimcc` implements a rudimentary minilanguage
 (detailed below) and can be used to compile the `.tri` source codes
 (below) to `TAPE` binaries which can be loaded by Robin Stuart's
 emulator.
@@ -43,11 +43,11 @@ emulator.
 For `trimcc`, as well as the `-o` option to save the compiled binary
 output to a specified file, the `-v` option lists the compiled code
 plus the defined variables, and the `-t` option attempts to transmit
-the compiled bytes to a TRITON physically connected to the (default)
+the compiled bytes to a physically-connected TRITON via the (default)
 serial port `/dev/ttyS0`.
 
 For `tridat` the default is to receive and print bytes from a
-physically connected TRITON using the (default) serial port
+physically-connected TRITON using the (default) serial port
 `/dev/ttyS0`.  The `-o` option additionally saves these received bytes
 to a file.
 
@@ -71,17 +71,17 @@ Copy the resulting `TAPE` file into the main directory for Robin
 Stuart's emulator and load it with the 'I' monitor command.  The 'tape headers' are
 listed below.  To run these codes in TRITON, use the 'G' monitor command, with the starting address 1602 (hexadecimal).
 
-`hex2dec.tri` (tape header `HEX2DEC`) - convert a 16-bit word
+`hex2dec.tri` (tape header `HEX2DEC`) -- convert a 16-bit word
 to decimal, illustrating some of the features of the TriMCC
 minilanguage.
 
-`tapeout.tri` (tape header `TAPEOUT`) - get a character and output to
+`tapeout.tri` (tape header `TAPEOUT`) -- get a character and output to
 tape, repeat indefinitely (used to test the RS-232 interface).
 
-`rawsave.tri` (tape header `RAWSAVE`) - outputs a block of memory to
+`rawsave.tri` (tape header `RAWSAVE`) -- outputs a block of memory to
 tape and used to manufacture the ROM dumps.
 
-`galaxian.tri` (tape header `GALAXIAN`) - hand-coded [Galaxian](https://en.wikipedia.org/wiki/Galaxian)
+`galaxian.tri` (tape header `GALAXIAN`) -- hand-coded [Galaxian](https://en.wikipedia.org/wiki/Galaxian)
 clone. Keys: 1 - left; 2 - stop; 3 - right; spacebar - fire. Enjoy!
 
 Note the tape header format is incorporated into these files: 64 ASCII
@@ -97,37 +97,63 @@ point for the executable part of the code is the address 1602.
 
 This is designed to be able to handle raw machine code, 8080 op-code
 mnemonics, labels and cross references, ASCII characters, and ASCII
-text.  For examples see the `.tri` files.
+text.  A `.tri` file is an ASCII-encoded text file consisting of a stream of
+tokens separated by white space characters, commas, semicolons, and/or
+newlines.  Other files can be included by using an `include <file>`
+directive, which is nestable to a certain level. For examples see
+above.
 
-A `.tri` code is an ASCII file consisting of a stream of tokens separated by white space
-characters, commas, semicolons, and/or newlines, as follows:
+The token stream comprises:
 
 Raw machine code is written using hexadecimal tokens in the range `00` to `FF`.
 
-Decimal numbers are preceded by `%` but the range is limited to 0-255 for single bytes and 0-65535 for 16-bit words.
+Decimal numbers are preceded by `%` but the range is limited to 0-255 to represent a single byte.
 
-The 8080 op-code mnemonics follow the standard naming scheme with the exception of 'Call subroutine if carry flip-flop = logic 1' for which the mnemonic `CCC` is used to avoid a clash with `CC`. 
+An individual ASCII character is written as `'x'` where x is 0-9, A-Z etc, and is replaced by the corresponding ASCII byte code.
 
-ASCII text is delimited by `"..."` and an individual ASCII character by `'x'` where x is 0-9, A-Z etc.
+The 8080 op-code mnemonics follow the standard naming scheme with the exception of 'Call subroutine if carry flip-flop = logic 1' for which the mnemonic `CCC` is used to avoid a clash with hexadecimal token `CC`.  These are all replaced by the corresponding byte code.
+
+An ASCII text string is designated by `"..."`, and is interpreted to
+the corresponding sequence of ASCII byte codes.
 
 Repeated tokens can be specified by a repeat count followed by `*`, thus for example `64*OD` generates 64 ASCII carriage return markers (see tape header below).
 
 Comments can be included at any point: they are delimited by `#...#` and can span multiple lines.
 
-Variables can be defined at any time with the syntax `VAR=<val>` where the value is represented a 2-byte hexadecimal word.  These can be used for example to define monitor entry points for example.  Decimal values can be assigned using the `%` notation above.  The high and low bytes of the word can be accessed by appending `.H` and `.L` to the variable name.
+Variables can be defined at any time with the syntax `VAR=<val>` where
+the value is represented a 16-bit word.  These can be used for example
+to define monitor entry points for example.  Decimal values in the
+range 0 to 65535 can be assigned using the `%` notation above.
+Additionally a label of the form `LABEL:` introduces a variable of the
+same name and assigns its value to the value of the address counter
+for the next byte to be emitted.
 
-A label of the form `LABEL:` introduces a variable of this name and assigns the value to the location counter which keeps track of the number of bytes generated so far.
+The value of a variable can be inserted into the stream at any point
+by referencing the variable with an `!` character.  The value appears
+as a little-endian 16-bit word represented by a pair of bytes.  For
+example if `GETADR=020B` then `!GETADR` would generate `OB`
+followed by `02`.  For another example if `X=%12345` (`3039` in hexadecimal) has been assigned
+then `!X` would result in `39` followed by `30`.  The low and high bytes of the word can be
+individually accessed by appending `.L` and `.H` to the variable name.
+Thus `!VAR`, and `!VAR.L` followed by `!VAR.H`, are equivalent.
 
-A special `ORG` variable can be set and this (re)sets the location counter for the labels.  Typically one would use this to set the origin of the compiled code to user-space memory (for example `ORG=1600`, see below).  Another special `END` variable is used to capture the value of the location counter at the end of the compiled code (the location of the final emitted byte).
+A special variable `ORG` can be used to (re)set the address counter.
+Typically one would use this to set the origin of the compiled code to
+user-space memory (for example `ORG=1600`, see below).  Another
+special variable `END` contains the value of the address counter at
+the end of the compiled code (ie one after the address of the final
+emitted byte).  This can be used to make tape headers.
 
 With the above the standard tape header (here for `FILENAME`) can be generated by
 ```
 64*0D "FILENAME" 20 04 ORG=1600 !END
 ```
-followed by whatever code is required.  Note that the `!END` in this generates two bytes as a little-endian 16-bit word, as required for the tape format.  Thus the actual code starts at 1602.
+followed by whatever code is required.  Note that the `!END` in this
+generates the address as two bytes in a little-endian 16-bit word, as
+required for the tape format.  Thus the actual code starts at 1602.
 
-Strings in TRITON are usually terminated by the ASCII
-END OF TRANSMISSION marker (`04` or ctrl-D), so that a typical string would look like
+Strings in TRITON have to be explicitly terminated  by the ASCII
+END OF TRANSMISSION marker (`04` or ctrl-D) so that a typical string would look like
 ```
 STRING: "THIS IS A STRING" 04
 ```
