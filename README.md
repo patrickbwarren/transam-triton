@@ -152,13 +152,16 @@ LXI D !B; CALL !SUB
 LXI D !C; CALL !SUB
 LXI D !D; CALL !SUB
 LXI D !E; CALL !SUB
-CALL !PCRLF; RET
+CALL !PCRLF;
+RET
 
+# Obtain a decimal digit and print it out #
 SUB:   
 MVI B '0'; DCR B;
 LOOP: INR B; MOV A,L; SUB E; MOV L,A; MOV A,H; SBB D; MOV H,A; JNC !LOOP
 MOV A,L; ADD E; MOV L,A; MOV A,H; ADC D; MOV H,A;
-MOV A,B; CALL !OUTCH; RET
+MOV A,B; CALL !OUTCH;
+RET
 
 # Text for messages #
 MESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
