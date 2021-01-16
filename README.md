@@ -168,7 +168,7 @@ MESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
 VAL: "VALUE IS " 04
 ```
 It works by subtracting the decimal numbers from 10000 to 1 from the
-provided 16-bit word, and for each incrementing the ASCII code for
+provided 16-bit word, and incrementing the ASCII code for
 `'0'` to obtain the corresponding decimal digit (this relies on
 the ASCII codes for the digits 0-9 being contiguous).
 
