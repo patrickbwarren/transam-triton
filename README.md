@@ -38,6 +38,16 @@ to run them, to use the default serial port (`/dev/ttyS0`).
 
 The transmitter code implements a rudimentary 'TriMCC' minilanguage (detailed below) and can be used to compile the `.tri` source codes (below) to `TAPE` binaries which can be loaded by Robin Stuart's emulator.
 
+For `trimcc`, as well as the `-o` option (save compiled binary output
+to the specified file), the `-v` option means be verbose and list the
+compiled code plus the defined variables, and the `-t` option means
+attempt to transmit the compiled bytes to a TRITON physically connected
+to the (default) serial port `/dev/ttyS0`.
+
+For `tridat` the default is to receive bytes from a physically
+connected TRITON using the (default) serial port `/dev/ttyS0`, and the
+`-o` option additionally saves these to a file.
+
 ### Level 7.2 ROM dumps
 
 ROM dumps for the TRITON Level 7.2 Monitor and BASIC are also included.  These can be compiled to binaries by
@@ -114,7 +124,7 @@ With the above the standard tape header (here for `FILENAME`) can be generated b
 followed by whatever code is required.  Note that the `!END` in this generates two bytes as a little-endian 16-bit word, as required for the tape format.  Thus the actual code starts at 1602.
 
 Strings in TRITON are usually terminated by the ASCII
-END OF TRANSMISSION marker (ASCII `04` or ctrl-D), so that a typical string would look like
+END OF TRANSMISSION marker (`04` or ctrl-D), so that a typical string would look like
 ```
 STRING: "THIS IS A STRING" 04
 ```

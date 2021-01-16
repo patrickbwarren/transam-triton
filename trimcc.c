@@ -116,7 +116,7 @@ void error(char *s) {
 }
 
 void fprint_help(FILE *fp, char *name) {
-  fprintf(fp, "%s srcfile [-q] [-o tapefile] [-t] : compile TRITON machine code\n", name);
+  fprintf(fp, "%s [-v] [-t] [-o tapefile] srcfile\n", name);
   exit(0);
 }
 

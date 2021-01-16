@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
     }
     printf("Writing data to %s\n",filename);
   }
-  printf("Press ^C to exit\n\n");
+  printf("Press ctrl-C to exit\n\n");
   startio();
   for (;;) {
     while (read(fd, buf, 1) != 1);
