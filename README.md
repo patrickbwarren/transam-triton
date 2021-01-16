@@ -60,7 +60,7 @@ Copy the resulting `TAPE` file into the main directory for Robin
 Stuart's emulator and load it with the 'I' monitor command.  The 'tape headers' are
 listed below.  To run these codes in TRITON, use the 'G' monitor command, with the starting address 1602 (hexadecimal).
 
-`hex2dec.tri` (tape header `HEX2DEC`) - convert a 4-byte hexadecimal
+`hex2dec.tri` (tape header `HEX2DEC`) - convert a 16-bit word
 to decimal, illustrating some of the features of the TriMCC
 minilanguage.
 
@@ -116,7 +116,7 @@ With the above the standard tape header (here for `FILENAME`) can be generated b
 ```
 followed by whatever code is required.  Note that the `!END` in this generates two bytes as a little-endian 16-bit word, as required for the tape format.  Thus the actual code starts at 1602.
 
-Note that strings in TRITON are usually terminated by the ASCII
+Strings in TRITON are usually terminated by the ASCII
 END OF TRANSMISSION marker (ASCII `04` or ctrl-D), so that a typical string would look like
 ```
 STRING: "THIS IS A STRING" 04
@@ -126,6 +126,48 @@ This can be printed to the VDU by `LXI D !STRING; CALL !PSTRNG` assuming that
 print a string preceded by CR/LF.
 
 The TriMCC compiler was written in C over twenty years ago and is certainly a bit clunky by modern standards.  An ongoing project is to replace this by something more modern written in python.
+
+### Example TriMCC code
+
+An example which illustrates the features of the TriMCC minilanguage is provided in the `hex2dec.tri` code, given also here:
+```
+# Standard tape header #
+64*0D "HEX2DEC" 20 04 ORG=1600 !END
+ 
+# Entry points for TRITON L7.2 monitor #
+GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
+
+# Constants #
+A=%10000 B=%1000 C=%100 D=%10 E=%1
+
+# Main program #
+ENTRY: LXI D !MESSG; CALL !GETADR; CALL !PDEC; 
+JMP !ENTRY
+
+# This prints HL in decimal #
+PDEC:
+LXI D !VAL; CALL !PSTRNG
+LXI D !A; CALL !SUB
+LXI D !B; CALL !SUB
+LXI D !C; CALL !SUB
+LXI D !D; CALL !SUB
+LXI D !E; CALL !SUB
+CALL !PCRLF; RET
+
+SUB:   
+MVI B '0'; DCR B;
+LOOP: INR B; MOV A,L; SUB E; MOV L,A; MOV A,H; SBB D; MOV H,A; JNC !LOOP
+MOV A,L; ADD E; MOV L,A; MOV A,H; ADC D; MOV H,A;
+MOV A,B; CALL !OUTCH; RET
+
+# Text for messages #
+MESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
+VAL: "VALUE IS " 04
+```
+It works by subtracting the decimal numbers from 10000 to 1 from the
+provided 16-bit word, and for each incrementing the ASCII code for
+`'0'` to obtain the corresponding decimal digit (this relies on
+the ASCII codes for the digits 0-9 being contiguous).
 
 ### Copying
 

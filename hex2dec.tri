@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this file.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
-# 4-byte hex to decimal converter #
+# 16-bit word to decimal converter #
 
 # Standard tape header #
 64*0D "HEX2DEC" 20 04 ORG=1600 !END
@@ -29,8 +29,7 @@ GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
 A=%10000 B=%1000 C=%100 D=%10 E=%1
 
 # Main program #
-ENTRY:
-LXI D !MESSG; CALL !GETADR; CALL !PDEC; 
+ENTRY: LXI D !MESSG; CALL !GETADR; CALL !PDEC; 
 JMP !ENTRY
 
 # This prints HL in decimal #
@@ -50,5 +49,5 @@ MOV A,L; ADD E; MOV L,A; MOV A,H; ADC D; MOV H,A;
 MOV A,B; CALL !OUTCH; RET
 
 # Text for messages #
-MESSG: "TYPE FOUR BYTE HEX NUMBER" 04
+MESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
 VAL: "VALUE IS " 04
