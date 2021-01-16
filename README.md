@@ -2,18 +2,18 @@
 
 The TRITON was an 8080-based microcomputer released in late 1978 by
 Transam Components Ltd, a British company based at 12 Chapel Street,
-off the Edgeware Road in north London.  More information can be found
-on my
-[webpage](https://sites.google.com/site/patrickbwarren/electronics/transam-triton),
-and in a couple of entries in the online [Centre for Computing
+off the Edgeware Road in north London.  Some more information can be found
+on 
+[my webpage](https://sites.google.com/site/patrickbwarren/electronics/transam-triton),
+and  the online [Centre for Computing
 History](http://www.computinghistory.org.uk/).  Recently a [YouTube
 video](https://www.youtube.com/watch?v=0cSRgJ68_tM) has appeared, and
 a Facebook group has sprung up ('ETI Triton Single Board Computer').
+
 There is now also an excellent
-[TRITON emulator](https://github.com/woo-j/triton) (written by Robin Stuart) that uses the
-[SFML library](https://www.sfml-dev.org/).  Some of the original
-documentation can also be found on this [GitHub
-site](https://github.com/woo-j/triton).
+[emulator](https://github.com/woo-j/triton) written by Robin Stuart, that uses the
+[SFML library](https://www.sfml-dev.org/).  Some of the original TRITON
+documentation can also be found in Robin's repository.
 
 Storage was provided by tape cassette with an interface driven by an
 [AY-5-1013](https://datasheetspdf.com/datasheet/AY-5-1013A.html)
@@ -27,14 +27,16 @@ output of the UART before the tape cassette signal modulation stage.
 
 To manage this modified tape / RS-232 interface, a serial data receiver (`tridat.c`)
 and transmitter (`trimcc.c`) were written, to run on a standard linux
-machine.  It is these codes that are in the present repository.  They can be compiled by
+machine.  It is these codes that are in the present repository.
+
+They can be compiled by
 ```
 gcc -Wall tridat.c -o tridat
 gcc -Wall trimcc.c -o trimcc
 ```
 Note that 
 you may have to add yourself the `dialout` group
-to use the default serial port (`/dev/ttyS0`).
+to run them, to use the default serial port (`/dev/ttyS0`).
 
 The transmitter code implements a rudimentary 'TriMCC' minilanguage (detailed below) and can be used to compile the `.tri` source codes (below) to `TAPE` binaries which can be loaded by Robin Stuart's emulator.
 
@@ -46,11 +48,11 @@ ROM dumps for the TRITON Level 7.2 Monitor and BASIC are also included.  These c
 ./trimcc -o MONB72.ROM L72_0c00-0fff.tri
 ./trimcc -o BASIC72.ROM L72_e000-ffff.tri
 ```
-These `.ROM` files can be used with Robin Stuart's emulator (copy them into the main directory).
+These `.ROM` files can be used directly with Robin Stuart's emulator (copy them into the main directory).
 
 ### Other TriMCC codes
 
-All codes can be compiled to `TAPE` binaries by
+All codes can be compiled to `TAPE` binaries suitable for Robin Stuart's emulator by
 ```
 ./trimcc -o TAPE <src_file>
 ```
