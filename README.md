@@ -32,21 +32,24 @@ They can be compiled by
 gcc -Wall tridat.c -o tridat
 gcc -Wall trimcc.c -o trimcc
 ```
-Note that 
-you may have to add yourself the `dialout` group
-to run them, to use the default serial port (`/dev/ttyS0`).
+Note that you may have to add yourself the `dialout` group to run
+them, to use the default serial port (`/dev/ttyS0`).
 
-The transmitter code implements a rudimentary 'TriMCC' minilanguage (detailed below) and can be used to compile the `.tri` source codes (below) to `TAPE` binaries which can be loaded by Robin Stuart's emulator.
+The transmitter code `trimcc` implements a rudimentary minilanguage
+(detailed below) and can be used to compile the `.tri` source codes
+(below) to `TAPE` binaries which can be loaded by Robin Stuart's
+emulator.
 
-For `trimcc`, as well as the `-o` option (save compiled binary output
-to the specified file), the `-v` option means be verbose and list the
-compiled code plus the defined variables, and the `-t` option means
-attempt to transmit the compiled bytes to a TRITON physically connected
-to the (default) serial port `/dev/ttyS0`.
+For `trimcc`, as well as the `-o` option to save the compiled binary
+output to a specified file, the `-v` option lists the compiled code
+plus the defined variables, and the `-t` option attempts to transmit
+the compiled bytes to a TRITON physically connected to the (default)
+serial port `/dev/ttyS0`.
 
-For `tridat` the default is to receive bytes from a physically
-connected TRITON using the (default) serial port `/dev/ttyS0`, and the
-`-o` option additionally saves these to a file.
+For `tridat` the default is to receive and print bytes from a
+physically connected TRITON using the (default) serial port
+`/dev/ttyS0`.  The `-o` option additionally saves these received bytes
+to a file.
 
 ### Level 7.2 ROM dumps
 
