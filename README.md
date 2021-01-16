@@ -32,8 +32,6 @@ They can be compiled by
 gcc -Wall tridat.c -o tridat
 gcc -Wall trimcc.c -o trimcc
 ```
-Note that you may have to add yourself the `dialout` group
-to use the default serial port (`/dev/ttyS0`).
 
 The transmitter `trimcc` implements a rudimentary minilanguage
 (detailed below) and can be used to compile the `.tri` source codes
@@ -50,6 +48,9 @@ For `tridat` the default is to receive and print bytes from a
 physically-connected TRITON using the (default) serial port
 `/dev/ttyS0`.  The `-o` option additionally saves these received bytes
 to a file.
+
+Note that you may have to add yourself the `dialout` group
+to use the default serial port (`/dev/ttyS0`).
 
 ### Level 7.2 ROM dumps
 
