@@ -75,12 +75,12 @@ clone. Keys: 1 - left; 2 - stop; 3 - right; spacebar - fire. Enjoy!
 
 Note the tape header format is incorporated into these files: 64 ASCII
 carriage return markers (`0D`, or ctrl-M), followed by the title (in
-ASCII), followed by an ASCII space (`20`), and followed by the ASCII END OF
-TRANSMISSION marker (`04`, or ctrl-D).  After this header, the rest of
-the bytes read from `TAPE` are loaded into memory starting from
-address 1600.  The first two bytes at 1600 are conventionally used to
-indicate the end point for tape storage, so the usual entry point is
-the address 1602.
+ASCII), followed by an ASCII space (`20`), and followed by the ASCII
+END OF TRANSMISSION marker (`04`, or ctrl-D).  After this header, the
+rest of the bytes read from `TAPE` are loaded into memory starting
+from address 1600.  The first two bytes at 1600 are conventionally
+used to indicate the end point for tape storage, so the usual entry
+point for the executable part of the code is the address 1602.
 
 ### TriMCC minilanguage
 
@@ -88,7 +88,7 @@ This is designed to be able to handle raw machine code, 8080 op-code
 mnemonics, labels and cross references, ASCII characters, and ASCII
 text.  For examples see the `.tri` files.
 
-A `.tri` file consist of a stream of tokens separated by white space
+A `.tri` code is an ASCII file consisting of a stream of tokens separated by white space
 characters, commas, semicolons, and/or newlines, as follows:
 
 Raw machine code is written using hexadecimal tokens in the range `00` to `FF`.
