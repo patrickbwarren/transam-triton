@@ -73,13 +73,14 @@ tape and used to manufacture the ROM dumps.
 `galaxian.tri` (tape header `GALAXIAN`) - hand-coded [Galaxian](https://en.wikipedia.org/wiki/Galaxian)
 clone. Keys: 1 - left; 2 - stop; 3 - right; spacebar - fire. Enjoy!
 
-Note the tape header format is incorporated into these files: 64 line
-feeds (ASCII `0A`), followed by the title (in ASCII), a space, and the
-END OF TRANSMISSION marker (ASCII `04` or ctrl-D).  After this header, the rest of the
-bytes read from `TAPE` are loaded into memory starting from address
-1600.  The first two bytes at 1600 are conventionally used to indicate
-the end point for tape storage, so the usual entry point is the
-address 1602.
+Note the tape header format is incorporated into these files: 64 ASCII
+carriage return markers (`0D`, or ctrl-M), followed by the title (in
+ASCII), followed by an ASCII space (`20`), and followed by the ASCII END OF
+TRANSMISSION marker (`04`, or ctrl-D).  After this header, the rest of
+the bytes read from `TAPE` are loaded into memory starting from
+address 1600.  The first two bytes at 1600 are conventionally used to
+indicate the end point for tape storage, so the usual entry point is
+the address 1602.
 
 ### TriMCC minilanguage
 
@@ -98,7 +99,7 @@ The 8080 op-code mnemonics follow the standard naming scheme with the exception 
 
 ASCII text is delimited by `"..."` and an individual ASCII character by `'x'` where x is 0-9, A-Z etc.
 
-Repeated tokens can be specified by a repeat count followed by `*`, thus for example `64*OD` generates 64 ASCII CR (carriage return, ctrl-M) characters (see tape header below).
+Repeated tokens can be specified by a repeat count followed by `*`, thus for example `64*OD` generates 64 ASCII carriage return markers (see tape header below).
 
 Comments can be included at any point: they are delimited by `#...#` and can span multiple lines.
 
