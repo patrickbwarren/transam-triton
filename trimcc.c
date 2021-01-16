@@ -38,6 +38,7 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 
 int nparse = 0;       /* count number of times have parsed file */
 int transmit = 0;     /* Signals intention to transmit */
+int verbose = 0;      /* Verbosity in reporting results */
 int zcount;           /* Keeps track of number of bytes printed out */
 char cc;              /* Keeps track of the current character */
 
@@ -115,7 +116,7 @@ void error(char *s) {
 }
 
 void fprint_help(FILE *fp, char *name) {
-  fprintf(fp, "%s srcfile [-o tapefile] [-t] : compile TRITON machine code\n", name);
+  fprintf(fp, "%s srcfile [-q] [-o tapefile] [-t] : compile TRITON machine code\n", name);
   exit(0);
 }
 
@@ -130,8 +131,9 @@ int main(int argc, char *argv[]) {
   char *s;
   char *src_file, *tape_file = NULL;
   /* Sort out command line options */
-  while ((c = getopt(argc, argv, "hto:")) != -1) {
+  while ((c = getopt(argc, argv, "vhto:")) != -1) {
     switch (c) {
+    case 'v': verbose = 1; break;
     case 't': transmit = 1; break;
     case 'o': tape_file = strdup(optarg); break;
     case 'h': fprint_help(stdout, argv[0]);
@@ -148,9 +150,11 @@ int main(int argc, char *argv[]) {
     strcat(src_file, tri_ext);
   }
   mninit();
-  printf("\nTriton relocatable Machine Code Compiler\n\n");
-  if (tape_file) printf("Parsing %s, storing result in %s\n", src_file, tape_file);
-  else printf("Parsing %s, not storing result\n", src_file);
+  if (verbose) {
+    printf("\nTriton relocatable Machine Code Compiler\n\n");
+    if (tape_file) printf("Parsing %s, storing result in %s\n", src_file, tape_file);
+    else printf("Parsing %s, not storing result\n", src_file);
+  }
   parse(src_file); /* First pass through */
   if (!nvlistok()) { printnvlist(); error("undefined variables"); }
   if (tape_file) {
@@ -166,7 +170,9 @@ int main(int argc, char *argv[]) {
     finishio();
   }
   if (fsp) fclose(fsp);
-  printf("\nVariable list\n\n"); printnvlist();
+  if (verbose) {
+    printf("\nVariable list\n\n"); printnvlist();
+  }
   return 0;
 }
 
@@ -193,7 +199,7 @@ void parse(char *file) {
           tempfile = (char *) malloc(strlen(tok) + 5);
           strcpy(tempfile, tok); strcat(tempfile, ".tri");
         } else tempfile = strdup(tok);
-        if (nparse > 0) printf("Including commands from %s\n",tempfile);
+        if (verbose && (nparse > 0)) printf("Including commands from %s\n",tempfile);
         if ((fp2 = fopen(tempfile, "r")) == NULL) {
           error("I couldn't find the file.");
         } else {
@@ -266,7 +272,7 @@ void parse(char *file) {
     if (--fpstackpos >= 0) fp = fpstack[fpstackpos];
   } while (fpstackpos >= 0);
   value[end_prog] = value[origin] + value[byte_count]; /* capture end point */
-  if (nparse > 0) printf("\n"); /* Catch trailing printout */
+  if (verbose && (nparse > 0)) printf("\n"); /* Catch trailing printout */
   nparse++;
 }
 
@@ -313,7 +319,7 @@ int rstnin(FILE*fp) {
 /* (Re)initialises printed byte counter */
 void zinit() { 
   zcount = 0; 
-  if (nparse > 0) printf("\n%04X ", value[origin] + value[byte_count]); 
+  if (verbose && (nparse > 0)) printf("\n%04X ", value[origin] + value[byte_count]); 
 }
 
 /* Initialises mnemonic codes */
@@ -340,7 +346,7 @@ void byte_out(int v) {
   c = buf[0] = (char)v;
   if (transmit) { write(fd, buf, 1); usleep(50000); }
   if (fsp) fwrite(&c, sizeof(char), 1, fsp);
-  if (nparse > 0) printf(" %02X", v);
+  if (verbose && (nparse > 0)) printf(" %02X", v);
   value[byte_count]++;
   if (++zcount == 16) zinit();
 }
