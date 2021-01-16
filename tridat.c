@@ -10,7 +10,7 @@ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 for more details.
 
-Copyright (c) 1990-2021 Patrick B Warren <patrickbwarren@gmail.com>.
+Copyright (c) 1995-2021 Patrick B Warren <patrickbwarren@gmail.com>.
 
 You should have received a copy of the GNU General Public License
 along with this file.  If not, see <http://www.gnu.org/licenses/>.

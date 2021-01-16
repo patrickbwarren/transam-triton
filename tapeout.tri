@@ -22,7 +22,7 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 # Standard tape header #
 64*0D "TAPEOUT" 20 04 ORG=1600 !END
 
-# Entry points for TRITON monitor #
+# Entry points for TRITON L7.2 monitor #
 ECHOCH=003B  URTOUT=003E
 
 # get character and output to RS232, repeat indefinitely #

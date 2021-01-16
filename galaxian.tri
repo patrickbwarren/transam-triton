@@ -17,10 +17,10 @@ You should have received a copy of the GNU General Public License
 along with this file.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
-# Hand coded galaxians clone #
+# Hand coded galaxian clone - runs with TRITON L7.2 monitor #
 
 # Standard tape header #
-64*0D "GALAXIANS" 20 04 ORG=1600
+64*0D "GALAXIAN" 20 04 ORG=1600
 
 # Start of code #
 #1600# 00 20 CF 21 00 1A 11 00 15 7E EB 77 EB 23 13 7C 
