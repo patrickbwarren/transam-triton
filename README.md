@@ -29,9 +29,10 @@ machine.  It is these codes that are in the present repository.
 
 They can be compiled by
 ```
-gcc -Wall tridat.c -o tridat
-gcc -Wall trimcc.c -o trimcc
+gcc -O -Wall trimcc.c -o trimcc
+gcc -O -Wall tridat.c -o tridat
 ```
+(implemented as `make codes` in the Makefile).
 
 The transmitter `trimcc` implements a rudimentary minilanguage
 (detailed below) and can be used to compile the `.tri` source codes
@@ -49,24 +50,27 @@ physically-connected TRITON using the (default) serial port
 `/dev/ttyS0`.  The `-o` option additionally saves these received bytes
 to a file.
 
-Note that you may have to add yourself the `dialout` group
-to use the default serial port (`/dev/ttyS0`).
+Note that you may have to add yourself the `dialout` group to use the
+default serial port (`/dev/ttyS0`).  This is not necessary if just
+compiling `.tri` codes with `trimcc -o`.
 
 ### Level 7.2 ROM dumps
 
 ROM dumps for the TRITON Level 7.2 Monitor and BASIC are also included.  These can be compiled to binaries by
 ```
-./trimcc -o MONA72.ROM L72_0000-03ff.tri
-./trimcc -o MONB72.ROM L72_0c00-0fff.tri
-./trimcc -o BASIC72.ROM L72_e000-ffff.tri
+./trimcc L72_0000-03ff.tri -o MONA72.ROM
+./trimcc L72_0c00-0fff.tri -o MONB72.ROM
+./trimcc L72_e000-ffff.tri -o BASIC72.ROM
 ```
-These `.ROM` files can be used directly with Robin Stuart's emulator (copy them into the main directory).
+(implemented as `make roms` in the Makefile).  These `.ROM` files can
+be used directly with Robin Stuart's emulator (copy them into the main
+directory).
 
 ### Other TriMCC codes
 
 All codes can be compiled to `TAPE` binaries suitable for Robin Stuart's emulator by
 ```
-./trimcc -o TAPE <src_file>
+./trimcc <src_file> -o TAPE
 ```
 Copy the resulting `TAPE` file into the main directory for Robin
 Stuart's emulator and load it with the 'I' monitor command.  The 'tape headers' are
@@ -126,17 +130,18 @@ the value is represented a 16-bit word.  These can be used for example
 to define monitor entry points for example.  Decimal values in the
 range 0 to 65535 can be assigned using the `%` notation above.
 Additionally a label of the form `LABEL:` introduces a variable of the
-same name and assigns its value to the value of the address counter
+same name and assigns it to the value of the address counter
 for the next byte to be emitted.
 
 The value of a variable can be inserted into the stream at any point
 by referencing the variable with an `!` character.  The value appears
 as a little-endian 16-bit word represented by a pair of bytes.  For
-example if `GETADR=020B` then `!GETADR` would generate `OB`
-followed by `02`.  For another example if `X=%12345` (`3039` in hexadecimal) has been assigned
-then `!X` would result in `39` followed by `30`.  The low and high bytes of the word can be
-individually accessed by appending `.L` and `.H` to the variable name.
-Thus `!VAR`, and `!VAR.L` followed by `!VAR.H`, are equivalent.
+example if `GETADR=020B` then `!GETADR` would generate `OB` followed
+by `02`.  For another example if `X=%12345` (`3039` in hexadecimal)
+then `!X` would result in `39` followed by `30`.  The low and high
+bytes of the word can be individually accessed by appending `.L` and
+`.H` to the variable name.  Thus `!VAR`, and `!VAR.L` followed by
+`!VAR.H`, are equivalent.
 
 A special variable `ORG` can be used to (re)set the address counter.
 Typically one would use this to set the origin of the compiled code to
@@ -150,8 +155,9 @@ With the above the standard tape header (here for `FILENAME`) can be generated b
 64*0D "FILENAME" 20 04 ORG=1600 !END
 ```
 followed by whatever code is required.  Note that the `!END` in this
-generates the address as two bytes in a little-endian 16-bit word, as
-required for the tape format.  Thus the actual code starts at 1602.
+generates the end address as two bytes in a little-endian 16-bit word, as
+required for the tape format.  Thus the actual code starts at the
+address 1602.
 
 Strings in TRITON have to be explicitly terminated  by the ASCII
 END OF TRANSMISSION marker (`04` or ctrl-D) so that a typical string would look like
@@ -178,23 +184,22 @@ GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
 # Constants #
 A=%10000 B=%1000 C=%100 D=%10 E=%1
 
-# Main program #
-ENTRY: LXI D !MESSG; CALL !GETADR; CALL !PDEC; 
+# Main program loops indefinitely #
+ENTRY:
+LXI D !SMESSG; CALL !GETADR;
+LXI D !SVALUE; CALL !PSTRNG;
+CALL !PDEC; CALL !PCRLF
 JMP !ENTRY
 
-# This prints HL in decimal #
-PDEC:
-LXI D !VAL; CALL !PSTRNG
+PDEC: # Prints HL in decimal #
 LXI D !A; CALL !SUB
 LXI D !B; CALL !SUB
 LXI D !C; CALL !SUB
 LXI D !D; CALL !SUB
 LXI D !E; CALL !SUB
-CALL !PCRLF;
 RET
 
-# Obtain a decimal digit and print it out #
-SUB:   
+SUB: # Obtain a decimal digit and print it out #
 MVI B '0'; DCR B;
 LOOP: INR B; MOV A,L; SUB E; MOV L,A; MOV A,H; SBB D; MOV H,A; JNC !LOOP
 MOV A,L; ADD E; MOV L,A; MOV A,H; ADC D; MOV H,A;
@@ -202,13 +207,39 @@ MOV A,B; CALL !OUTCH;
 RET
 
 # Text for messages #
-MESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
-VAL: "VALUE IS " 04
+SMESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
+SVALUE: "VALUE IS " 04
 ```
 It works by subtracting the decimal numbers from 10000 to 1 from the
 provided 16-bit word, and incrementing the ASCII code for
 `'0'` to obtain the corresponding decimal digit (this relies on
 the ASCII codes for the digits 0-9 being contiguous).
+
+Compiling this with `./trimcc hex2dec.tri -v` results in the machine code
+```
+0000  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+0010  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+0020  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+0030  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+0040  48 45 58 32 44 45 43 20 04
+1600  78 16 11 4E 16 CD 0B 02 11 6E 16 CD 2B 00 CD 17
+1610  16 CD 33 00 C3 02 16 11 10 27 CD 36 16 11 E8 03
+1620  CD 36 16 11 64 00 CD 36 16 11 0A 00 CD 36 16 11
+1630  01 00 CD 36 16 C9 06 30 05 04 7D 93 6F 7C 9A 67
+1640  D2 39 16 7D 83 6F 7C 8A 67 78 CD 13 00 C9 54 59
+1650  50 45 20 31 36 2D 42 49 54 20 57 4F 52 44 20 28
+1660  30 30 30 30 20 54 4F 20 46 46 46 46 29 04 56 41
+1670  4C 55 45 20 49 53 20 04
+```
+and variable list
+```
+     ORG = 1600 = %5632      BYTES = 0078 = %120         END = 1678 = %5752   
+  GETADR = 020B = %523      PSTRNG = 002B = %43        PCRLF = 0033 = %51     
+   OUTCH = 0013 = %19            A = 2710 = %10000         B = 03E8 = %1000   
+       C = 0064 = %100           D = 000A = %10            E = 0001 = %1      
+   ENTRY = 1602 = %5634     SMESSG = 164E = %5710     SVALUE = 166E = %5742   
+    PDEC = 1617 = %5655        SUB = 1636 = %5686       LOOP = 1639 = %5689
+```
 
 ### Copying
 
@@ -229,5 +260,5 @@ along with this program.  If not, see
 
 ### Copyright
 
-Where indicated, copyright &copy;
-1979-2021 Patrick B Warren (email: <patrickbwarren@gmail.com>).
+Where indicated, copyright &copy; 1979-2021, 1995-2021
+Patrick B Warren (email: <patrickbwarren@gmail.com>).
