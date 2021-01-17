@@ -9,7 +9,7 @@ video](https://www.youtube.com/watch?v=0cSRgJ68_tM) has appeared, and
 a Facebook group ('ETI Triton Single Board Computer') has sprung up.
 
 There is now also an excellent
-[emulator](https://github.com/woo-j/triton) written by Robin Stuart, that uses the
+[TRITON emulator](https://github.com/woo-j/triton) written by Robin Stuart, that uses the
 [SFML library](https://www.sfml-dev.org/).  Some of the original TRITON
 documentation can also be found in Robin's repository.
 
