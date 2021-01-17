@@ -260,5 +260,5 @@ along with this program.  If not, see
 
 ### Copyright
 
-Where indicated, copyright &copy; 1979-2021, 1995-2021
+Where indicated, copyright &copy; 1979-2021, 1995-2021, 2021
 Patrick B Warren (email: <patrickbwarren@gmail.com>).
