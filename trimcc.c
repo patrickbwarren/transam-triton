@@ -42,7 +42,8 @@ int verbose = 0;      /* Verbosity in reporting results */
 int zcount;           /* Keeps track of number of bytes printed out */
 char cc;              /* Keeps track of the current character */
 
-int origin, byte_count, end_prog;      /* Position, byte count variables */
+int origin, end_prog; /* Position variables */
+int byte_count;       /* Byte counter */
 
 FILE *fsp = NULL;     /* File pointer for save binary data */
 
@@ -56,30 +57,30 @@ char *tri_ext = ".tri";     /* file name extension (source files) */
 /* Note that 'CC' has been replaced by 'CCC' to avoid a clash with 0xCC */
 
 char *mnemonic[NMN] =
-{ "ACI",  "ADC",  "ADD",  "ADI",  "ANA",  "ANI",  "CALL", "CCC",  "CM",  
-  "CMA",  "CMC",  "CMP",  "CNC",  "CNZ",  "CP",   "CPE",  "CPI",  "CPO", 
-  "CZ",   "DAA",  "DAD",  "DCR",  "DCX",  "DI",   "EI",   "HLT",  "IN",   
-  "INR",  "INX",  "JC",   "JM",   "JMP",  "JNC",  "JNZ",  "JP",   "JPE", 
-  "JPO",  "JZ",   "LDA",  "LDAX", "LHLD", "LXI",  "MVI",  "MOV",  "NOP",  
-  "ORA",  "ORI",  "OUT",  "PCHL", "POP",  "PUSH", "RAL",  "RAR",  "RC", 
-  "RET",  "RLC",  "RM",   "RNC",  "RNZ",  "RP",   "RPE",  "RPO",  "RRC",  
-  "RST",  "RZ",   "SBB",  "SBI",  "SHLD", "SPHL", "STA",  "STAX", "STC", 
-  "SUB",  "SUI",  "XCHG", "XRA",  "XRI",  "XTHL" }; 
+{ "ACI",  "ADC",  "ADD",  "ADI",  "ANA",  "ANI",  "CALL", "CCC",  "CM",
+  "CMA",  "CMC",  "CMP",  "CNC",  "CNZ",  "CP",   "CPE",  "CPI",  "CPO",
+  "CZ",   "DAA",  "DAD",  "DCR",  "DCX",  "DI",   "EI",   "HLT",  "IN",
+  "INR",  "INX",  "JC",   "JM",   "JMP",  "JNC",  "JNZ",  "JP",   "JPE",
+  "JPO",  "JZ",   "LDA",  "LDAX", "LHLD", "LXI",  "MVI",  "MOV",  "NOP",
+  "ORA",  "ORI",  "OUT",  "PCHL", "POP",  "PUSH", "RAL",  "RAR",  "RC",
+  "RET",  "RLC",  "RM",   "RNC",  "RNZ",  "RP",   "RPE",  "RPO",  "RRC",
+  "RST",  "RZ",   "SBB",  "SBI",  "SHLD", "SPHL", "STA",  "STAX", "STC",
+  "SUB",  "SUI",  "XCHG", "XRA",  "XRI",  "XTHL" };
 
 char *mncode[NMN] =
-{ "316", "21S", "20S", "306", "24S", "346", "315", "334", "374", 
-  "057", "077", "27S", "324", "304", "364", "354", "376", "344", 
-  "314", "047", "0V1", "0D5", "0V3", "363", "373", "166", "333", 
-  "0D4", "0U3", "332", "372", "303", "322", "302", "362", "352", 
-  "342", "312", "072", "0V2", "052", "0U1", "0D6", "1DS", "000", 
-  "26S", "366", "323", "351", "3U1", "3U5", "027", "037", "330", 
-  "311", "007", "370", "320", "300", "360", "350", "340", "017", 
-  "3N7", "310", "23S", "336", "042", "371", "062", "0U2", "067", 
-  "22S", "326", "353", "25S", "356", "343" }; 
+{ "316", "21S", "20S", "306", "24S", "346", "315", "334", "374",
+  "057", "077", "27S", "324", "304", "364", "354", "376", "344",
+  "314", "047", "0V1", "0D5", "0V3", "363", "373", "166", "333",
+  "0D4", "0U3", "332", "372", "303", "322", "302", "362", "352",
+  "342", "312", "072", "0V2", "052", "0U1", "0D6", "1DS", "000",
+  "26S", "366", "323", "351", "3U1", "3U5", "027", "037", "330",
+  "311", "007", "370", "320", "300", "360", "350", "340", "017",
+  "3N7", "310", "23S", "336", "042", "371", "062", "0U2", "067",
+  "22S", "326", "353", "25S", "356", "343" };
 
 int mntype[NMN], mnval[NMN];
 
-/* Storage for name, value pairs */ 
+/* Storage for name, value pairs */
 int nnv = 0;
 int value[MAXNNV];
 char *name[MAXNNV];
@@ -90,7 +91,7 @@ void parse(char *);
 int regin(FILE *);
 int pairin(FILE *);
 int rstnin(FILE *);
-void zinit(); 
+void zinit();
 void mninit();
 void byte_out(int);
 int nvlistok();
@@ -161,12 +162,12 @@ int main(int argc, char *argv[]) {
     if ((fsp = fopen(tape_file, "wb")) == NULL) error("Couldn't open file for saving");
   }
   if (transmit) {
-    printf("Transmitting down the wires...\n"); 
+    printf("Transmitting down the wires...\n");
     startio();
   }
   parse(src_file); /* Second pass through */
   if (transmit) {
-    printf("\nFinished transmitting down the wires\n"); 
+    printf("\nFinished transmitting down the wires\n");
     finishio();
   }
   if (fsp) fclose(fsp);
@@ -185,10 +186,11 @@ void parse(char *file) {
   char *punkt, *tempfile;
   FILE *fp, *fp2, *fpstack[MAXFP];
   if ((fp = fopen(file, "r")) == NULL) error("couldn't open file");
-  origin = byte_count = end_prog = NOVAL;
-  origin = addval("ORG", 0);
-  byte_count = addval("BYTES", 0);
-  if (nparse == 0) end_prog = addval("END", 0);
+  byte_count = 0;
+  if (nparse == 0) {
+    origin = addval("ORG", 0);
+    end_prog = addval("END", 0);
+  }
   zinit();
 /* Outer do loop around file inclusion levels */
   do {
@@ -209,7 +211,7 @@ void parse(char *file) {
         }
       } else {    /* Process tokens normally */
         if (split(tok, pre, '=')) { addval(pre, eval(tok)); continue; }
-        if (split(tok, pre, ':')) addval(pre, value[origin] + value[byte_count]);
+        if (split(tok, pre, ':')) addval(pre, value[origin] + byte_count);
         if (split(tok, pre, '*')) sscanf(pre, "%i", &nrpt); else nrpt = 1;
         if (nrpt < 1 || nrpt > MAXRPT) {
           warn("bad repeat number, setting to unity"); nrpt = 1;
@@ -218,7 +220,7 @@ void parse(char *file) {
           case '\0': break; /* Case where there's nothing left of token */
           case '"': /* Encountered a string in double quotes */
             if ((len = strlen(tok)) < 2 || tok[len-1] != '"') {
-              warn("invalid string"); break; 
+              warn("invalid string"); break;
             }
             for (i=0; i<nrpt; i++) {
               for (j=0; j<len-1; j++) {
@@ -228,7 +230,7 @@ void parse(char *file) {
             break;
           case '\'': /* Encountered a character in single quotes */
             if (strlen(tok) != 3 || tok[2] != '\'') {
-              warn("invalid character"); break; 
+              warn("invalid character"); break;
             }
             for (i=0; i<nrpt; i++) byte_out((int)tok[1]);
             break;
@@ -268,16 +270,16 @@ void parse(char *file) {
             for (i=0; i<nrpt; i++) byte_out(val);
         }
       }
-    } 
+    }
     if (fclose(fp) != 0) error("I couldn't close the file.");
     if (--fpstackpos >= 0) fp = fpstack[fpstackpos];
   } while (fpstackpos >= 0);
-  value[end_prog] = value[origin] + value[byte_count]; /* capture end point */
+  value[end_prog] = value[origin] + byte_count; /* capture end point */
   if (verbose && (nparse > 0)) printf("\n"); /* Catch trailing printout */
   nparse++;
 }
 
-/* Reads next token and returns code for register B,C,D,E,H,L,M, or A */ 
+/* Reads next token and returns code for register B,C,D,E,H,L,M, or A */
 int regin(FILE*fp) {
   char reg[MAXREG];
   if (tokin(reg, fp, MAXREG) == EOF) error("unexpected end of file");
@@ -318,9 +320,9 @@ int rstnin(FILE*fp) {
 }
 
 /* (Re)initialises printed byte counter */
-void zinit() { 
-  zcount = 0; 
-  if (verbose && (nparse > 0)) printf("\n%04X ", value[origin] + value[byte_count]); 
+void zinit() {
+  zcount = 0;
+  if (verbose && (nparse > 0)) printf("\n%04X ", value[origin] + byte_count);
 }
 
 /* Initialises mnemonic codes */
@@ -348,7 +350,7 @@ void byte_out(int v) {
   if (transmit) { write(fd, buf, 1); usleep(50000); }
   if (fsp) fwrite(&c, sizeof(char), 1, fsp);
   if (verbose && (nparse > 0)) printf(" %02X", v);
-  value[byte_count]++;
+  byte_count++;
   if (++zcount == 16) zinit();
 }
 
@@ -374,7 +376,7 @@ void printnvlist() {
 /* If not in list, then entered with NOVAL, but 0 returned */
 int tokval(char *s) {
   int i;
-  for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) { 
+  for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) {
     return (value[i] == NOVAL) ? 0 : value[i];
   }
   newnv(s, NOVAL); return 0;
@@ -385,17 +387,17 @@ int tokval(char *s) {
 /* if name = ORG then reset byte count and restart printing */
 int addval(char *s, int v) {
   int i;
-  for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) { 
+  for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) {
     value[i] = v;
-    if (i == origin) { value[byte_count] = 0; zinit(); } 
-    return i; 
+    if (i == origin) { byte_count = 0; zinit(); }
+    return i;
   }
   newnv(s, v);
   return nnv-1;
 }
 
 /* Adds a new name, value pair to the list */
-void newnv(char *s, int v) {  
+void newnv(char *s, int v) {
   if (nnv == MAXNNV) error("exceeded storage for name,value pairs");
   if ((name[nnv] = strdup(s)) == NULL) error("out of heap space");
   value[nnv++] = v;
@@ -415,10 +417,10 @@ int eval(char *s) {
 /* If it occurs, split into s1[] + c + s2[] */
 /* If it does not occur, copy s1[] into s2[] */
 int split(char *s1, char *s2, char c) {
-  int i, j; 
-  for (i=0; (s2[i] = s1[i]) != c; i++) if (s1[i] == '\0') return 0; 
+  int i, j;
+  for (i=0; (s2[i] = s1[i]) != c; i++) if (s1[i] == '\0') return 0;
   s2[i++] = '\0';
-  for (j=0; (s1[j] = s1[i]) != '\0'; i++, j++) ; 
+  for (j=0; (s1[j] = s1[i]) != '\0'; i++, j++) ;
   return 1;
 }
 
@@ -445,7 +447,7 @@ int tokin(char *s, FILE *fp, int maxlen) {
   while (!whitespace(cc) || verbatim) {
     if (cc == '"') verbatim = !verbatim;
     if (i == maxlen) error("token too long, probable syntax error");
-    s[i++] = cc; 
+    s[i++] = cc;
     if ((cc = getc(fp)) == EOF) break;
   }
   s[i++] = '\0';
@@ -453,7 +455,7 @@ int tokin(char *s, FILE *fp, int maxlen) {
 }
 
 /* Return true if character c is whitespace */
-int whitespace(char c) { 
+int whitespace(char c) {
   return ((c > EOF && c <= ' ') || c == ',' || c == ';' || c == '#');
 }
 
@@ -465,9 +467,9 @@ void startio() {
     error("there was an error");
   }
 /* save current serial port settings */
-  tcgetattr(fd, &oldtio); 
+  tcgetattr(fd, &oldtio);
 /* clear struct for new port settings */
-  bzero(&newtio, sizeof(newtio)); 
+  bzero(&newtio, sizeof(newtio));
 /* Set to 300 baud, 8 bits, odd parity, 2 stop bits, no hardware control */
   newtio.c_cflag = B300 | CS8 | CSTOPB | PARENB | PARODD | CLOCAL;
 /* Make device raw (no other input processing) */

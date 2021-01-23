@@ -23,7 +23,7 @@ reliable so at a later date (circa 1995) it was hacked to drive an
 BBC micro, and later to a linux laptop.  This hack intercepted the 5V
 output of the UART before the tape cassette signal modulation stage.
 
-To manage this modified tape / RS-232 interface, a serial data receiver (`tridat.c`)
+To manage this RS-232 interface, a serial data receiver (`tridat.c`)
 and transmitter (`trimcc.c`) were written, to run on a standard linux
 machine.  It is these codes that are in the present repository.
 
@@ -137,11 +137,9 @@ The value of a variable can be inserted into the stream at any point
 by referencing the variable with an `!` character.  The value appears
 as a little-endian 16-bit word represented by a pair of bytes.  For
 example if `GETADR=020B` then `!GETADR` would generate `OB` followed
-by `02`.  For another example if `X=%12345` (`3039` in hexadecimal)
-then `!X` would result in `39` followed by `30`.  The low and high
-bytes of the word can be individually accessed by appending `.L` and
-`.H` to the variable name.  Thus `!VAR`, and `!VAR.L` followed by
-`!VAR.H`, are equivalent.
+by `02`.  The low and high bytes of the word can be individually
+accessed by appending `.L` and `.H` to the variable name.  Thus
+`!GETADR.L` followed by `!GETADR.H` is equivalent to `!GETADR`.
 
 A special variable `ORG` can be used to (re)set the address counter.
 Typically one would use this to set the origin of the compiled code to
@@ -217,11 +215,11 @@ the ASCII codes for the digits 0-9 being contiguous).
 
 Compiling this with `./trimcc hex2dec.tri -v` results in the machine code
 ```
-0000  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
-0010  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
-0020  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
-0030  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
-0040  48 45 58 32 44 45 43 20 04
+1600  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+1610  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+1620  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+1630  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+1640  48 45 58 32 44 45 43 20 04
 1600  78 16 11 4E 16 CD 0B 02 11 6E 16 CD 2B 00 CD 17
 1610  16 CD 33 00 C3 02 16 11 10 27 CD 36 16 11 E8 03
 1620  CD 36 16 11 64 00 CD 36 16 11 0A 00 CD 36 16 11
@@ -233,12 +231,12 @@ Compiling this with `./trimcc hex2dec.tri -v` results in the machine code
 ```
 and variable list
 ```
-     ORG = 1600 = %5632      BYTES = 0078 = %120         END = 1678 = %5752   
-  GETADR = 020B = %523      PSTRNG = 002B = %43        PCRLF = 0033 = %51     
-   OUTCH = 0013 = %19            A = 2710 = %10000         B = 03E8 = %1000   
-       C = 0064 = %100           D = 000A = %10            E = 0001 = %1      
-   ENTRY = 1602 = %5634     SMESSG = 164E = %5710     SVALUE = 166E = %5742   
-    PDEC = 1617 = %5655        SUB = 1636 = %5686       LOOP = 1639 = %5689
+     ORG = 1600 = %5632        END = 1678 = %5752     GETADR = 020B = %523    
+  PSTRNG = 002B = %43        PCRLF = 0033 = %51        OUTCH = 0013 = %19     
+       A = 2710 = %10000         B = 03E8 = %1000          C = 0064 = %100    
+       D = 000A = %10            E = 0001 = %1         ENTRY = 1602 = %5634   
+  SMESSG = 164E = %5710     SVALUE = 166E = %5742       PDEC = 1617 = %5655   
+     SUB = 1636 = %5686       LOOP = 1639 = %5689   
 ```
 
 ### Copying
