@@ -291,7 +291,7 @@ along with these programs.  If not, see
 
 ### Copyright
 
-Where explicitly stated, copyright &copy; 1979-2021, 1995-2021, 2021
+Where stated, copyright &copy; 1979-2021, 1995-2021, 2021
 Patrick B Warren (PBW).  
 Email: <patrickbwarren@gmail.com>.
 
