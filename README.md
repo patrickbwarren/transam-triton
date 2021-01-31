@@ -108,7 +108,8 @@ left; '2' : stop; '3' : right; 'SPACE' : fire. Enjoy!
 [`invaders_raw.tri`](invaders_raw.tri) -- [Space
 Invaders](https://en.wikipedia.org/wiki/Space_Invaders) clone from
 Computing Today (March 1980) converted to run with Triton L7.2.  Keys:
-'[' : stop; ']' : right; 'ESC' : fire.  Surprisingly good!
+'[' : stop; ']' : right; 'ESC' : fire; and when the game is over 'G'
+to start a new game.  Surprisingly good!
 
 Note the tape header format is incorporated into these files: 64 ASCII
 carriage return markers (`0D`, or ctrl-M), followed by the title (in
