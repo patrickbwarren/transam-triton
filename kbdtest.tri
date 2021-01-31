@@ -25,7 +25,7 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 # Standard tape header #
 64*0D "KBDTEST" 20 04 ORG=1600 !END
 
-# Entry points for TRITON L7.2 monitor #
+# Entry points for Triton L7.2 monitor #
 
 OUTCH=0013 # Character output routine; outputs to the VDU #
 SWAPCASE=01E2 # Undocumented: swap case of A #

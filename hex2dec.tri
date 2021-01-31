@@ -22,7 +22,7 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 # Standard tape header #
 64*0D "HEX2DEC" 20 04 ORG=1600 !END
  
-# Entry points for TRITON L7.2 monitor #
+# Entry points for Triton L7.2 monitor #
 GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
 
 # Constants #

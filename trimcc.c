@@ -49,7 +49,7 @@ FILE *fsp = NULL;     /* File pointer for save binary data */
 
 int fd;                     /* port id number */
 struct termios oldtio;      /* original port settings */
-struct termios newtio;      /* TRITON required port settings */
+struct termios newtio;      /* Triton required port settings */
 char *port = "/dev/ttyS0";  /* name of port */
 char *tri_ext = ".tri";     /* file name extension (source files) */
 
@@ -202,7 +202,9 @@ void parse(char *file) {
           tempfile = (char *)emalloc(strlen(tok) + strlen(tri_ext) + 1);
           strcpy(tempfile, tok); strcat(tempfile, tri_ext);
         } else tempfile = strdup(tok);
-        if (verbose && (nparse > 0)) printf("Including commands from %s\n",tempfile);
+        if (verbose && (nparse == 0)) {
+	  printf("Including commands from %s\n",tempfile);
+	}
         if ((fp2 = fopen(tempfile, "r")) == NULL) {
           error("I couldn't find the file.");
         } else {

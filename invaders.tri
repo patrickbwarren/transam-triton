@@ -11,19 +11,14 @@ WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 General Public License for more details.
 
-Copyright (c) 1979-2021 Patrick B Warren <patrickbwarren@gmail.com>.
+For this file ONLY:
+Copyright (c) 2021 Patrick B Warren <patrickbwarren@gmail.com>.
 
 You should have received a copy of the GNU General Public License
 along with this file.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
-# Read characters from keyboard and output to tape #
-
 # Standard tape header #
-64*0D "TAPEOUT" 20 04 ORG=1600 !END
+64*0D "INVADERS" 20 04 ORG=1600
 
-# Entry points for Triton L7.2 monitor #
-ECHOCH=003B  URTOUT=003E
-
-# get character and output to RS232, repeat indefinitely #
-LOOP: CALL !ECHOCH, CALL !URTOUT, JMP !LOOP
+include invaders_raw

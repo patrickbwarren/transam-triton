@@ -31,7 +31,7 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 int fd;                     /* port id number for fileio*/
 FILE *fp = NULL;            /* write data to a file as well */
 struct termios oldtio;      /* original port settings */
-struct termios newtio;      /* TRITON required port settings */
+struct termios newtio;      /* Triton required port settings */
 char *port = "/dev/ttyS0";  /* name of port to read data from */
 char *tri_ext = ".tri";     /* file name extension to store data */
 
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
     switch (c) {
     case 'o': filename = strdup(optarg); break;
     case 'h':
-      printf("%s [-o file] : receive TRITON RS232 data from %s\n",
+      printf("%s [-o file] : receive Triton RS232 data from %s\n",
 	     argv[0], port);
       exit(0);
     }
