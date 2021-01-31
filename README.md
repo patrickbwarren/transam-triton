@@ -59,9 +59,9 @@ Note that you may have to add yourself the `dialout` group to use the
 default serial port (`/dev/ttyS0`).  This is not necessary if just
 compiling `.tri` codes with `trimcc -o`.
 
-### Level 7.2 ROM dumps
+### Triton Level 7.2 ROM dumps
 
-ROM dumps for the Triton Level 7.2 Monitor and BASIC are also
+ROM dumps for the Triton L7.2 Monitor and BASIC are also
 included.  These can be compiled to binaries by
 ```
 ./trimcc L72_0000-03ff.tri -o MONA72.ROM
@@ -107,8 +107,8 @@ left; '2' : stop; '3' : right; 'SPACE' : fire. Enjoy!
 [`invaders.tri`](invaders.tri) (tape header `INVADERS`) and
 [`invaders_raw.tri`](invaders_raw.tri) -- [Space
 Invaders](https://en.wikipedia.org/wiki/Space_Invaders) clone from
-Computing Today (March 1980).  Keys: '[' : stop; ']' : right; 'ESC' :
-fire.  Surprisingly good!
+Computing Today (March 1980) converted to run with Triton L7.2.  Keys:
+'[' : stop; ']' : right; 'ESC' : fire.  Surprisingly good!
 
 Note the tape header format is incorporated into these files: 64 ASCII
 carriage return markers (`0D`, or ctrl-M), followed by the title (in
@@ -275,22 +275,32 @@ and variable list
 
 ### Copying
 
-This program (comprising the `.c` and `.tri` files)
-is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+Where stated, these programs are free software: you can redistribute
+them and/or modify them under the terms of the GNU General Public License
+as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but
+These programs are distributed in the hope that they will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see
+along with these programs.  If not, see
 <http://www.gnu.org/licenses/>.
 
 ### Copyright
 
-Except where stated, copyright &copy; 1979-2021, 1995-2021, 2021
-Patrick B Warren (email: <patrickbwarren@gmail.com>).
+Where explicitly stated, copyright &copy; 1979-2021, 1995-2021, 2021
+Patrick B Warren (PBW).  
+Email: <patrickbwarren@gmail.com>.
+
+The file `invaders_raw.tri` is taken from a hex dump in Computing
+Today (March 1980; page 32).  Copyright (c) is claimed in the magazine
+(page 3) but the copyright holder is not identified.  No license terms
+were given - the code is hereby presumed to be clonable under the
+equivalent of a modern open source license.  Some changes were made to
+the original hex dump to render the code usable with Triton Level 7.2;
+these changes are hereby released into the public domain (PBW, January
+2021).
+

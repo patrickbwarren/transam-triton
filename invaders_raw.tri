@@ -5,8 +5,13 @@ This file is part of my Transam Triton code repository.
 # Space Invaders clone - runs with Triton L7.2 monitor. #
 
 # From a hex dump in Computing Today (March 1980; page 32). #
-# Copyright (c) in this will be retained by Computing Today presumably. #
-# The changes below are hereby released into the public domain (PBW, Jan 2021) #
+# Copyright (c) is claimed in the magazine (page 3) but the #
+# copyright holder is not identified. #
+# No license terms were given - the code is hereby presumed to be #
+# clonable under the equivalent of a modern open source license. #
+
+# The further changes listed below to make this work with Triton #
+# L7.2 are hereby released into the public domain (PBW, January 2021). #
 
 # Note that a later Computing Today (May 1980; page 9), contains #
 # an erratum news item 'Begging your pardon' but just to say the #
