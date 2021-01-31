@@ -127,8 +127,9 @@ text.  A `.tri` file is an ASCII-encoded text file consisting of a
 stream of tokens separated by white space characters, commas,
 semicolons, and/or newlines.  Other files can be included by using an
 `include <file>` directive, which is nestable to a certain level. For
-examples see `galaxian.tri` and `invaders.tri`, which just provide
-tape headers for the raw data files.
+examples see `galaxian.tri` and `invaders.tri` which are wrappers for
+the raw data files.  This enables the raw data files to be separately
+compiled to binaries, without the tape headers.
 
 The token stream comprises:
 
