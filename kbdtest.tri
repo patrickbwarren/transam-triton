@@ -1,0 +1,42 @@
+###
+This file is part of my Transam Triton code repository.
+
+This is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+Copyright (c) 2021 Patrick B Warren <patrickbwarren@gmail.com>.
+
+You should have received a copy of the GNU General Public License
+along with this file.  If not, see <http://www.gnu.org/licenses/>.
+###
+
+# Continuously read from keyboard port and output to screen #
+
+# Note that when a program is run with 'G', a 'return' instruction
+  will return to the monitor provided the stack is not reset. #
+
+# Standard tape header #
+64*0D "KBDTEST" 20 04 ORG=1600 !END
+
+# Entry points for TRITON L7.2 monitor #
+
+OUTCH=0013 # Character output routine; outputs to the VDU #
+SWAPCASE=01E2 # Undocumented: swap case of A #
+
+# Main loop #
+
+LOOP:
+IN 00; MOV B,A      # input from port 00 and save in B #
+ANI 80; JZ !LOOP    # loop back if strobe bit is not set #
+MOV A,B; ANI 7F     # recover from B and remove strobe bit #
+CPI 03; RZ          # return to monitor if ctrl-C #
+CALL !SWAPCASE      # swap case and print out to screen #
+CALL !OUTCH 
+JMP !LOOP

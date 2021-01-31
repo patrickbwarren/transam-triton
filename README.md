@@ -83,6 +83,9 @@ minilanguage.
 `tapeout.tri` (tape header `TAPEOUT`) -- get a character and output to
 tape, repeat indefinitely (used to test the RS-232 interface).
 
+`kbdtest.tri` (tape header `KBDTEST`) -- continuously read from keyboard
+port and output to screen (for testing keyboard emulators).
+
 `rawsave.tri` (tape header `RAWSAVE`) -- outputs a block of memory to
 tape and used to manufacture the ROM dumps.
 
