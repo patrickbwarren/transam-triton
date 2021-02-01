@@ -231,7 +231,7 @@ void parse(char *file) {
             }
             break;
           case '\'': /* Encountered a character in single quotes */
-            if (strlen(tok) != 3 || tok[2] != '\'') {
+	    if (strlen(tok) != 3 || tok[2] != '\'') {
               warn("invalid character"); break;
             }
             for (i=0; i<nrpt; i++) byte_out((int)tok[1]);
@@ -437,6 +437,7 @@ int myscmp(char *s, char *t) {
 
 /* Read in next token in s, return length of token, or EOF */
 /* An error occurs if the token is longer than maxlen */
+
 int tokin(char *s, FILE *fp, int maxlen) {
   int i = 0;
   int verbatim = 0;
@@ -447,7 +448,7 @@ int tokin(char *s, FILE *fp, int maxlen) {
   }
   if (cc == EOF) return EOF;
   while (!whitespace(cc) || verbatim) {
-    if (cc == '"') verbatim = !verbatim;
+    if (cc == '"' || cc == '\'') verbatim = !verbatim;
     if (i == maxlen) error("token too long, probable syntax error");
     s[i++] = cc;
     if ((cc = getc(fp)) == EOF) break;
@@ -457,6 +458,7 @@ int tokin(char *s, FILE *fp, int maxlen) {
 }
 
 /* Return true if character c is whitespace */
+
 int whitespace(char c) {
   return ((c > EOF && c <= ' ') || c == ',' || c == ';' || c == '#');
 }
