@@ -297,10 +297,11 @@ Where stated, copyright &copy; 1979-2021, 1995-2021, 2021
 Patrick B Warren (PBW).  
 Email: <patrickbwarren@gmail.com>.
 
-The file `invaders_raw.tri` is based on a hex dump in Computing Today
-(March 1980; page 32).  Copyright (c) is claimed in the magazine (page
-3) but the copyright holder is not identified.  No license terms were
-given - the hex dump is hereby presumed to be clonable under the
-equivalent of a modern open source license.  The changes made to the
-code are hereby released into the public domain (PBW, January 2021).
+The file [`invaders.tri`](invaders.tri) is based on a hex dump in
+Computing Today (March 1980; page 32).  Copyright (c) is claimed in
+the magazine (page 3) but the copyright holder is not identified.  No
+license terms were given - the hex dump is hereby presumed to be
+clonable under the equivalent of a modern open source license.  The
+changes made to the code are hereby released into the public domain
+(PBW, January 2021).
 
