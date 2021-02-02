@@ -106,10 +106,10 @@ left; '2' : stop; '3' : right; 'SPACE' : fire. Enjoy!
 
 [`invaders.tri`](invaders.tri) (tape header `INVADERS`) and
 [`invaders_raw.tri`](invaders_raw.tri) -- [Space
-Invaders](https://en.wikipedia.org/wiki/Space_Invaders) based on a hex
-dump in Computing Today (March 1980) and converted to run with Triton
-L7.2.  Keys as above: '1' : left; '3' : right; 'SPACE' : fire; and
-when the game is over 'G' to start a new game.  Surprisingly good!
+Invaders](https://en.wikipedia.org/wiki/Space_Invaders) modified from
+a hex dump in Computing Today (March 1980).  Keys as above: '1' :
+left; '3' : right; 'SPACE' : fire; and when the game is over 'G' to
+start a new game.  Surprisingly good!
 
 Note the tape header format is incorporated into these files: 64 ASCII
 carriage return markers (`0D`, or ctrl-M), followed by the title (in
@@ -297,11 +297,11 @@ Where stated, copyright &copy; 1979-2021, 1995-2021, 2021
 Patrick B Warren (PBW).  
 Email: <patrickbwarren@gmail.com>.
 
-The file [`invaders_raw.tri`](invaders_raw.tri) is based on a hex dump in
-Computing Today (March 1980; page 32).  Copyright (c) is claimed in
-the magazine (page 3) but the copyright holder is not identified.  No
-license terms were given - the hex dump is hereby presumed to be
-clonable under the equivalent of a modern open source license.  The
-changes made to the code are hereby released into the public domain
-(PBW, January 2021).
+The file [`invaders_raw.tri`](invaders_raw.tri) is modified from a hex
+dump in Computing Today (March 1980; page 32).  Copyright (c) is
+claimed in the magazine (page 3) but the copyright holder is not
+identified.  No license terms were given - the hex dump is hereby
+presumed to be clonable under the equivalent of a modern open source
+license.  The current changes made are hereby released into the
+public domain (PBW, January 2021).
 
