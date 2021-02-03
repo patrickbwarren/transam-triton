@@ -117,9 +117,7 @@ TRANSMISSION marker (0x04, or ctrl-D).  After this header, the rest of
 the bytes are loaded into memory starting from address 1600.  The
 first two bytes at 1600 are conventionally used to indicate the end
 point for tape storage, so that the usual entry point for the
-executable part of the code is the address 1602.  After loading any of
-the above compiled binaries the codes can be run by typing 'G'
-followed by '1602', at the Level 7.2 monitor.
+executable part of the code is the address 1602.
 
 ### TriMCC minilanguage
 
