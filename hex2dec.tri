@@ -28,16 +28,14 @@ GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
 # Constants #
 A=%10000 B=%1000 C=%100 D=%10 E=%1
 
-### Main program loops indefinitely ###
-
+# Main program loops indefinitely #
 ENTRY:
 LXI D !SMESSG; CALL !GETADR;
 LXI D !SVALUE; CALL !PSTRNG;
 CALL !PDEC; CALL !PCRLF
 JMP !ENTRY
 
-### Print HL in decimal format ###
-
+# Print HL in decimal format #
 PDEC:
 LXI D !A; CALL !SUB
 LXI D !B; CALL !SUB
@@ -46,8 +44,7 @@ LXI D !D; CALL !SUB
 LXI D !E; CALL !SUB
 RET
 
-### Obtain a decimal digit and print it out ###
-
+# Obtain a decimal digit and print it out #
 SUB:
 MVI B '0'; DCR B;
 LOOP: INR B; MOV A,L; SUB E; MOV L,A; MOV A,H; SBB D; MOV H,A; JNC !LOOP
@@ -55,7 +52,6 @@ MOV A,L; ADD E; MOV L,A; MOV A,H; ADC D; MOV H,A;
 MOV A,B; CALL !OUTCH;
 RET
 
-### Text for messages ###
-
+# Text for messages #
 SMESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
 SVALUE: "VALUE IS " 04

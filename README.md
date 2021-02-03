@@ -2,7 +2,7 @@
 
 The
 [Triton](https://sites.google.com/site/patrickbwarren/electronics/transam-triton)
-was an [8080](https://en.wikipedia.org/wiki/Intel_8080)-based
+was an [8080-based](https://en.wikipedia.org/wiki/Intel_8080)
 microcomputer released in late 1978 by Transam Components Ltd, a
 British company based at 12 Chapel Street, off the Edgeware Road in
 north London.  Some basic information can be found in the online
@@ -10,6 +10,8 @@ north London.  Some basic information can be found in the online
 Recently a [YouTube
 video](https://www.youtube.com/watch?v=0cSRgJ68_tM) has appeared, and
 a Facebook group ('ETI Triton Single Board Computer') has sprung up.
+I have a small web page detailing some of the history
+[here](https://sites.google.com/site/patrickbwarren/electronics/transam-triton).
 
 There is now also an excellent [Triton
 emulator](https://github.com/woo-j/triton) written by Robin Stuart,
@@ -17,10 +19,11 @@ that uses the [SFML library](https://www.sfml-dev.org/).  Some of the
 original Triton documentation can also be found in Robin's repository.
 
 Storage for Triton was provided by tape cassette with an interface
-driven by an
-[AY-5-1013](https://datasheetspdf.com/datasheet/AY-5-1013A.html)
+driven by a
 [UART](https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter)
-chip. This serialised each data byte as 8 bits, followed by a parity
+chip (the
+[AY-5-1013](https://datasheetspdf.com/datasheet/AY-5-1013A.html)).
+This serialised each data byte as 8 bits, followed by a parity
 bit and 2 STOP bits, transmitted at a rate of 300 baud.  This
 interface was not very reliable so at a later date (circa 1995) it was
 hacked to drive an [RS-232](https://en.wikipedia.org/wiki/RS-232)
@@ -31,16 +34,10 @@ signal modulation stage.
 To manage this RS-232 interface, a serial data receiver (`tridat.c`)
 and transmitter (`trimcc.c`) were written, to run on a standard linux
 machine.  It is these codes that are in the present repository.
-
-They can be compiled by
-```
-gcc -O -Wall trimcc.c -o trimcc
-gcc -O -Wall tridat.c -o tridat
-```
-(implemented as `make codes` in the Makefile).
+They can be compiled by issuing the command `make codes`.
 
 The transmitter `trimcc` implements a rudimentary minilanguage
-(detailed below) and can be used to compile the `.tri` source codes
+(detailed below) and can be used to compile `.tri` source codes
 (below) to `TAPE` binaries which can be loaded by Robin Stuart's
 emulator.
 
@@ -74,8 +71,8 @@ directory).
 
 ### Other TriMCC codes
 
-All codes can be compiled to `TAPE` binaries suitable for Robin
-Stuart's emulator by
+All `.tri` codes below an be compiled to `TAPE` binaries suitable for
+Robin Stuart's emulator by
 ```
 ./trimcc <src_file> -o TAPE
 ```
@@ -99,13 +96,13 @@ RS-232 interface).
 [`rawsave.tri`](rawsave.tri) (tape header `RAWSAVE`) -- outputs a
 block of memory to tape and used to manufacture the ROM dumps.
 
-[`galaxian.tri`](galaxian.tri) (tape header `GALAXIAN`) and
-[`galaxian_raw.tri`](galaxian_raw.tri) -- hand-coded
+[`galaxian.tri`](galaxian.tri) (tape header `GALAXIAN`) wraps
+[`galaxian_raw.tri`](galaxian_raw.tri) -- a hand-coded
 [Galaxian](https://en.wikipedia.org/wiki/Galaxian) clone. Keys: '1' :
 left; '2' : stop; '3' : right; 'SPACE' : fire. Enjoy!
 
-[`invaders.tri`](invaders.tri) (tape header `INVADERS`) and
-[`invaders_raw.tri`](invaders_raw.tri) -- [Space
+[`invaders.tri`](invaders.tri) (tape header `INVADERS`) wraps
+[`invaders_raw.tri`](invaders_raw.tri) -- a [Space
 Invaders](https://en.wikipedia.org/wiki/Space_Invaders) clone modified
 from a hex dump in Computing Today (March 1980).  Keys as above: '1' :
 left; '3' : right; 'SPACE' : fire; and when the game is over 'G' to
@@ -113,14 +110,16 @@ start a new game. Currently if the complete fleet of invaders is wiped
 out, another fleet doesn't appear - this seems to be a bug.  Apart
 from this it's surprisingly good!
 
-Note the tape header format is incorporated into these files: 64 ASCII
-carriage return markers (`0D`, or ctrl-M), followed by the title (in
-ASCII), followed by an ASCII space (`20`), and followed by the ASCII
-END OF TRANSMISSION marker (`04`, or ctrl-D).  After this header, the
-rest of the bytes read from `TAPE` are loaded into memory starting
-from address 1600.  The first two bytes at 1600 are conventionally
-used to indicate the end point for tape storage, so the usual entry
-point for the executable part of the code is the address 1602.
+Note the tape header format is incorporated as 64 ASCII carriage
+return markers (0x0D, or ctrl-M), followed by the title (in ASCII),
+followed by an ASCII space (0x20), and followed by the ASCII END OF
+TRANSMISSION marker (0x04, or ctrl-D).  After this header, the rest of
+the bytes are loaded into memory starting from address 1600.  The
+first two bytes at 1600 are conventionally used to indicate the end
+point for tape storage, so that the usual entry point for the
+executable part of the code is the address 1602.  After loading any of
+the above compiled binaries the codes can be run by typing 'G'
+followed by '1602', at the Level 7.2 monitor.
 
 ### TriMCC minilanguage
 
@@ -130,9 +129,12 @@ text.  A `.tri` file is an ASCII-encoded text file consisting of a
 stream of tokens separated by white space characters, commas,
 semicolons, and/or newlines.  Other files can be included by using an
 `include <file>` directive, which is nestable to a certain level. For
-examples see `galaxian.tri` and `invaders.tri` which are wrappers for
-the raw data files.  This enables the raw data files to be separately
-compiled to binaries, without the tape headers.
+examples see [`galaxian.tri`](galaxian.tri) and
+[`invaders.tri`](invaders.tri) which are wrappers for
+[`galaxian_raw.tri`](galaxian_raw.tri) and
+[`invaders_raw.tri`](invaders_raw.tri) respectively.  This enables the
+raw data files to be separately compiled to binaries, without the tape
+headers.
 
 The token stream comprises:
 
@@ -144,10 +146,11 @@ to represent a single byte.
 An individual ASCII character is written as `'x'` where x is 0-9, A-Z
 etc, and is replaced by the corresponding ASCII byte code.
 
-The 8080 op-code mnemonics follow the standard naming scheme with the
-exception of 'Call subroutine if carry flip-flop = logic 1' for which
-the mnemonic `CCC` is used to avoid a clash with hexadecimal token
-`CC`.  These are all replaced by the corresponding byte code.
+The 8080 op-code mnemonics follow the naming scheme in the famous
+[8080A Bugbook](http://www.bugbookcomputermuseum.com/8080A-Bugbook.html),
+with the exception of 'Call subroutine if carry flip-flop = logic 1'
+for which the mnemonic `CCC` is used to avoid a clash with hexadecimal
+token `CC`.  These are all replaced by the corresponding byte code.
 
 An ASCII text string is designated by `"..."`, and is interpreted to
 the corresponding sequence of ASCII byte codes.
@@ -167,7 +170,7 @@ Additionally a label of the form `LABEL:` introduces a variable of the
 same name and assigns it to the value of the address counter for the
 next byte to be emitted.  Variables can be re-used and always
 take the latest assigned value.  This means that there can be multiple
-uses of `LOOP:` for instance, for local loops.
+instances of `LOOP:` for example, for local loops.
 
 The value of a variable can be inserted into the stream at any point
 by referencing the variable with an `!` character.  The value appears
@@ -222,16 +225,14 @@ GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
 # Constants #
 A=%10000 B=%1000 C=%100 D=%10 E=%1
 
-### Main program loops indefinitely ###
-
+# Main program loops indefinitely #
 ENTRY:
 LXI D !SMESSG; CALL !GETADR;
 LXI D !SVALUE; CALL !PSTRNG;
 CALL !PDEC; CALL !PCRLF
 JMP !ENTRY
 
-### Print HL in decimal format ###
- 
+# Print HL in decimal format #
 PDEC:
 LXI D !A; CALL !SUB
 LXI D !B; CALL !SUB
@@ -240,8 +241,7 @@ LXI D !D; CALL !SUB
 LXI D !E; CALL !SUB
 RET
 
-### Obtain a decimal digit and print it out ###
-
+# Obtain a decimal digit and print it out #
 SUB:
 MVI B '0'; DCR B;
 LOOP: INR B; MOV A,L; SUB E; MOV L,A; MOV A,H; SBB D; MOV H,A; JNC !LOOP
@@ -249,8 +249,7 @@ MOV A,L; ADD E; MOV L,A; MOV A,H; ADC D; MOV H,A;
 MOV A,B; CALL !OUTCH;
 RET
 
-### Text for messages ###
-
+# Text for messages #
 SMESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
 SVALUE: "VALUE IS " 04
 ```
