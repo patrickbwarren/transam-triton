@@ -244,7 +244,8 @@ void parse(char *file) {
 	  break;
 	case '!': /* Encountered a variable, dereference it therefore */
 	  wasplit = split(tok, pre, '.'); val = tokval(&pre[1]);
-	  if (wasplit) {
+	  if (!wasplit) for (i=0; i<nrpt; i++) word_out(val);
+	  else {
 	    valhi = val / 0x100; vallo = val - 0x100*valhi;
 	    switch (tok[0]) {
 	    case 'H': val = valhi; break;
@@ -252,7 +253,7 @@ void parse(char *file) {
 	    default: warn("invalid byte specification"); val = 0;
 	    }
 	    for (i=0; i<nrpt; i++) byte_out(val);
-	  } else for (i=0; i<nrpt; i++) word_out(val);
+	  }
 	  break;
 	default: /* See if it's a mnemonic or a piece of hex */
 	  for (i=0, found=0; i<NMN; i++) {

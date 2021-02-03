@@ -155,7 +155,7 @@ The token stream comprises:
   hexadecimal token `CC`;
 
 - an ASCII text string designated by `"..."`, which is exported as the
-  corresponding sequence of ASCII byte codes.
+  corresponding stream of ASCII bytes.
 
 Repeated tokens can be specified by a repeat count followed by `*`,
 thus for example `64*OD` generates 64 ASCII carriage return markers
