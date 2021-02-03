@@ -136,22 +136,27 @@ headers.
 
 The token stream comprises:
 
-- Raw machine code written using hexadecimal in the range `00` to `FF`.
+- hexadecimal in the range `00` to `FF` exported as single bytes;
 
-- Decimal numbers preceded by `%` but the range is limited to 0-255
-to represent a single byte.
+- hexadecimal in the range `0000` to `FFFF` which interpreted as
+  16-bit words and exported in little-endian order (low byte first
+  followed by high byte);
 
-- An individual ASCII character written as `'x'` where x is 0-9, A-Z
-etc, and is replaced by the corresponding ASCII byte code.
+- decimal numbers preceded by `%` but the range is limited to 0-255 to
+  represent a single byte, and 256-65535 to represent a 16-bit word;
 
-- 8080 op-code mnemonics which follow the naming scheme in the famous
-[8080A Bugbook](http://www.bugbookcomputermuseum.com/8080A-Bugbook.html),
-with the exception of 'Call subroutine if carry flip-flop = logic 1'
-for which the mnemonic `CCC` is used to avoid a clash with hexadecimal
-token `CC`.
+- an individual ASCII character written as `'x'` (where x is 0-9, A-Z
+  etc) which is exported as the corresponding ASCII byte code;
 
-- An ASCII text string designated by `"..."`, which is interpreted to
-the corresponding sequence of ASCII byte codes.
+- 8080 op-code mnemonics which are translated to single bytes following the
+  naming scheme in the famous
+  [8080A Bugbook](http://www.bugbookcomputermuseum.com/8080A-Bugbook.html),
+  with the exception of 'Call subroutine if carry flip-flop = logic 1'
+  for which the mnemonic `CCC` is used to avoid a clash with
+  hexadecimal token `CC`;
+
+- an ASCII text string designated by `"..."`, which is exportes as the
+  corresponding sequence of ASCII byte codes.
 
 Repeated tokens can be specified by a repeat count followed by `*`,
 thus for example `64*OD` generates 64 ASCII carriage return markers
@@ -160,23 +165,24 @@ as in the tape header below.
 Comments can be included at any point: they are delimited by `#...#`
 and can span multiple lines.
 
-Variables can be defined at any time with the syntax `VAR=<val>` where
-the value is represented a 16-bit word.  These can be used
-to define monitor entry points for example.  Decimal values in the
-range 0 to 65535 can be assigned using the `%` notation above.
+Variables represented by 16-bit words can be defined at any time with
+the syntax `VAR=<val>` where `<val>` is hexadecimal.  These can be
+used to define monitor entry points for example.  Decimal values in
+the range 0 to 65535 can be assigned using the `%` notation above.
 Additionally a label of the form `LABEL:` introduces a variable of the
 same name and assigns it to the value of the address counter for the
-next byte to be emitted.  Variables can be re-used and always
-take the latest assigned value.  This means that there can be multiple
+next byte to be emitted.  Variables can be re-used and always take the
+latest assigned value.  This means that there can be multiple
 instances of `LOOP:` for example, for local loops.
 
 The value of a variable can be inserted into the stream at any point
-by referencing the variable with an `!` character.  The value appears
-as a little-endian 16-bit word represented by a pair of bytes.  For
-example if `GETADR=020B` then `!GETADR` would generate 0x0B followed
-by 0x02.  The low and high bytes of the word can be individually
-accessed by appending `.L` and `.H` to the variable name.  Thus
-`!GETADR.L` would generate 0x0B and `!GETADR.H` would generate 0x02.
+by referencing the variable with an `!` character.  The value is
+exported as a 16-bit word in little-endian order (low byte first
+followed by high byte).  For example if `GETADR=020B` then `!GETADR`
+would generate 0x0B followed by 0x02.  The low and high bytes of the
+word can be individually accessed by appending `.L` and `.H` to the
+variable name.  Thus `!GETADR.L` would generate 0x0B and `!GETADR.H`
+would generate 0x02.
 
 A special variable `ORG` can be used to (re)set the address counter.
 Typically one would use this to set the origin of the compiled code to
@@ -201,9 +207,9 @@ look like
 ```
 STRING: "THIS IS A STRING" 04
 ```
-This can be printed to the VDU by `LXI D !STRING; CALL !PSTRNG` assuming that
-`PSTRNG=002B` has been assigned to the L7.2 monitor entry point to
-print a string preceded by CR/LF.
+This can be printed to the VDU by `LXI D !STRING; CALL 002B` where
+0x002B is the L7.2 monitor entry point to print a string preceded by
+CR/LF.
 
 The TriMCC compiler was written in C over twenty years ago and is
 certainly a bit clunky by modern standards.  An ongoing project is to

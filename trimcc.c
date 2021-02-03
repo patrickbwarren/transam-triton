@@ -40,6 +40,7 @@ int nparse = 0;       /* count number of times have parsed file */
 int transmit = 0;     /* Signals intention to transmit */
 int verbose = 0;      /* Verbosity in reporting results */
 int zcount;           /* Keeps track of number of bytes printed out */
+int extra_space = 0;  /* Whether to print a space after the 8th byte */
 char cc;              /* Keeps track of the current character */
 
 int origin, end_prog; /* Position variables */
@@ -93,6 +94,7 @@ int pairin(FILE *);
 int rstnin(FILE *);
 void zinit();
 void mninit();
+void word_out(int);
 void byte_out(int);
 int nvlistok();
 void printnvlist();
@@ -132,10 +134,11 @@ int main(int argc, char *argv[]) {
   char *s;
   char *src_file, *tape_file = NULL;
   /* Sort out command line options */
-  while ((c = getopt(argc, argv, "vhto:")) != -1) {
+  while ((c = getopt(argc, argv, "vhtso:")) != -1) {
     switch (c) {
     case 'v': verbose = 1; break;
     case 't': transmit = 1; break;
+    case 's': extra_space = 1; break;
     case 'o': tape_file = strdup(optarg); break;
     case 'h': fprint_help(stdout, argv[0]);
     }
@@ -180,6 +183,7 @@ int main(int argc, char *argv[]) {
 }
 
 /* Reads in tokens from src_file and generates 8080 machine code */
+
 void parse(char *file) {
   int i, j, len, val, valhi, vallo, nrpt, wasplit, found;
   int fpstackpos = 0;
@@ -191,9 +195,7 @@ void parse(char *file) {
   byte_count = 0;
   origin = addval("ORG", 0);
   if (nparse == 0) end_prog = addval("END", 0);
-
-/* Outer do loop around file inclusion levels */
-  do {
+  do { /* Outer do loop around file inclusion levels */
     cc = ' ';    /* set initial character properly */
     while (tokin(tok, fp, MAXTOK) != EOF) {
       if (myscmp("include", tok)) {     /* Process include files */
@@ -212,64 +214,65 @@ void parse(char *file) {
           else error("I'm out of file pointer stack space");
         }
       } else {    /* Process tokens normally */
-        if (split(tok, pre, '=')) { addval(pre, eval(tok)); continue; }
+        if (split(tok, pre, '=')) { addval(pre, eval(tok) & 0xFFFF); continue; }
         if (split(tok, pre, ':')) addval(pre, value[origin] + byte_count);
         if (split(tok, pre, '*')) sscanf(pre, "%i", &nrpt); else nrpt = 1;
         if (nrpt < 1 || nrpt > MAXRPT) {
           warn("bad repeat number, setting to unity"); nrpt = 1;
         }
         switch (tok[0]) {
-          case '\0': break; /* Case where there's nothing left of token */
-          case '"': /* Encountered a string in double quotes */
-            if ((len = strlen(tok)) < 2 || tok[len-1] != '"') {
-              warn("invalid string"); break;
-            }
-            for (i=0; i<nrpt; i++) {
-              for (j=0; j<len-1; j++) {
-                if (tok[j] == '"') continue; else byte_out((int)tok[j]);
+	case '\0': break; /* Case where there's nothing left of token */
+	case '"': /* Encountered a string in double quotes */
+	  if ((len = strlen(tok)) < 2 || tok[len-1] != '"') {
+	    warn("invalid string"); break;
+	  }
+	  for (i=0; i<nrpt; i++) {
+	    for (j=0; j<len-1; j++) {
+	      if (tok[j] == '"') continue; else byte_out((int)tok[j]);
+	    }
+	  }
+	  break;
+	case '\'': /* Encountered a character in single quotes */
+	  if (strlen(tok) != 3 || tok[2] != '\'') {
+	    warn("invalid character"); break;
+	  }
+	  for (i=0; i<nrpt; i++) byte_out((int)tok[1]);
+	  break;
+	case '%': /* Encountered a decimal number */
+	  if ((val = eval(tok)) < 0xff) for (i=0; i<nrpt; i++) byte_out(val);
+	  else for (i=0; i<nrpt; i++) word_out(val & 0xFFFF);
+	  break;
+	case '!': /* Encountered a variable, dereference it therefore */
+	  wasplit = split(tok, pre, '.'); val = tokval(&pre[1]);
+	  if (wasplit) {
+	    valhi = val / 0x100; vallo = val - 0x100*valhi;
+	    switch (tok[0]) {
+	    case 'H': val = valhi; break;
+	    case 'L': val = vallo; break;
+	    default: warn("invalid byte specification"); val = 0;
+	    }
+	    for (i=0; i<nrpt; i++) byte_out(val);
+	  } else for (i=0; i<nrpt; i++) word_out(val);
+	  break;
+	default: /* See if it's a mnemonic or a piece of hex */
+	  for (i=0, found=0; i<NMN; i++) {
+	    if (strcmp(tok, mnemonic[i]) == 0) { found = 1; break; }
+	  }
+	  if (found) { /* Encountered a mnemonic */
+	    val = mnval[i];
+	    switch (mntype[i]) {
+	    case 0: break;
+	    case 1: val |= regin(fp); break;
+	    case 2: val |= regin(fp) << 3; break;
+	    case 3: val |= regin(fp) << 3; val |= regin(fp); break;
+	    case 4: val |= pairin(fp) << 3; break;
+	    case 5: val |= rstnin(fp) << 3; break;
               }
-            }
-            break;
-          case '\'': /* Encountered a character in single quotes */
-	    if (strlen(tok) != 3 || tok[2] != '\'') {
-              warn("invalid character"); break;
-            }
-            for (i=0; i<nrpt; i++) byte_out((int)tok[1]);
-            break;
-          case '%': /* Encountered a decimal number */
-            if ((val = eval(tok)) < 0xff) for (i=0; i<nrpt; i++) byte_out(val);
-            else warn("invalid number, should be less than 255");
-            break;
-          case '!': /* Encountered a variable, dereference it therefore */
-            wasplit = split(tok, pre, '.'); val = tokval(&pre[1]);
-            valhi = val / 0x100; vallo = val - 0x100*valhi;
-            if (wasplit) {
-              switch (tok[0]) {
-                case 'H': val = valhi; break;
-                case 'L': val = vallo; break;
-                default: warn("invalid byte specification"); val = 0;
-              }
-              for (i=0; i<nrpt; i++) byte_out(val);
-            } else for (i=0; i<nrpt; i++) { byte_out(vallo); byte_out(valhi); }
-            break;
-          default: /* See if it's a mnemonic or a piece of hex */
-            for (i=0, found=0; i<NMN; i++) {
-              if (strcmp(tok, mnemonic[i]) == 0) { found = 1; break; }
-            }
-            if (found) { /* Encountered a mnemonic */
-              val = mnval[i];
-              switch (mntype[i]) {
-                case 0: break;
-                case 1: val |= regin(fp); break;
-                case 2: val |= regin(fp) << 3; break;
-                case 3: val |= regin(fp) << 3; val |= regin(fp); break;
-                case 4: val |= pairin(fp) << 3; break;
-                case 5: val |= rstnin(fp) << 3; break;
-              }
-            } else { /* Encountered hex code */
-              val = eval(tok);
-            }
-            for (i=0; i<nrpt; i++) byte_out(val);
+	    for (i=0; i<nrpt; i++) byte_out(val);
+	  } else { /* Encountered hex code */
+	    if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val);
+	    else for (i=0; i<nrpt; i++) word_out(val & 0xFFFF); /* remove 16-bit word flag */
+	  }
         }
       }
     }
@@ -282,6 +285,7 @@ void parse(char *file) {
 }
 
 /* Reads next token and returns code for register B,C,D,E,H,L,M, or A */
+
 int regin(FILE*fp) {
   char reg[MAXREG];
   if (tokin(reg, fp, MAXREG) == EOF) error("unexpected end of file");
@@ -299,6 +303,7 @@ int regin(FILE*fp) {
 }
 
 /* Reads next token and returns code for register pair B,D,H, or SP/PSW */
+
 int pairin(FILE*fp) {
   char reg[MAXREG];
   if (tokin(reg, fp, MAXREG) == EOF) error("unexpected end of file");
@@ -312,6 +317,7 @@ int pairin(FILE*fp) {
 }
 
 /* Reads next token after RST and returns value */
+
 int rstnin(FILE*fp) {
   int val = NOVAL;
   char reg[MAXREG];
@@ -322,6 +328,7 @@ int rstnin(FILE*fp) {
 }
 
 /* (Re)initialises printed byte counter, printing program counter */
+
 void zinit() {
   int pc;
   pc = value[origin] + byte_count;
@@ -330,6 +337,7 @@ void zinit() {
 }
 
 /* Initialises mnemonic codes */
+
 void mninit() {
   int i, v, t;
   for (i=0; i<NMN; i++) {
@@ -346,7 +354,17 @@ void mninit() {
   }
 }
 
+/* Save, print, and/or transmit a 16-bit word as a pair of bytes in
+   little-endian order */
+
+void word_out(int v) {
+  int hi, lo;
+  hi = v / 0x100; lo = v - 0x100*hi;
+  byte_out(lo); byte_out(hi);
+}
+
 /* Save, print, and/or transmit a byte */
+
 void byte_out(int v) {
   char buf[1], c;
   if (v<0 || v>0xff) { warn("invalid byte crept in somehow"); v = 0; }
@@ -354,11 +372,13 @@ void byte_out(int v) {
   if (transmit) { write(fd, buf, 1); usleep(50000); }
   if (fsp) fwrite(&c, sizeof(char), 1, fsp);
   if (verbose && (nparse > 0)) printf(" %02X", v);
-  byte_count++;
-  if (++zcount == 16) zinit();
+  byte_count++; zcount++;
+  if (extra_space && zcount == 8) printf(" ");
+  else if (zcount == 16) zinit();
 }
 
 /* Check name, value list for undefined names */
+
 int nvlistok() {
   int i;
   for (i=0; i<nnv; i++) if (value[i] == NOVAL) return 0;
@@ -366,6 +386,7 @@ int nvlistok() {
 }
 
 /* Prints out name, value list */
+
 void printnvlist() {
   int i, v;
   for (i=0; i<nnv; i++) {
@@ -378,6 +399,7 @@ void printnvlist() {
 
 /* Looks up the name in the name, value list and returns value, or 0 */
 /* If not in list, then entered with NOVAL, but 0 returned */
+
 int tokval(char *s) {
   int i;
   for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) {
@@ -402,6 +424,7 @@ int addval(char *s, int v) {
 }
 
 /* Adds a new name, value pair to the list */
+
 void newnv(char *s, int v) {
   if (nnv == MAXNNV) error("exceeded storage for name,value pairs");
   if ((name[nnv] = strdup(s)) == NULL) error("out of heap space");
@@ -409,18 +432,23 @@ void newnv(char *s, int v) {
 }
 
 /* Returns value of string, or 0 and a warning if invalid */
+/* To indicate s is a 16-bit word in the range 0x0000 - 0x00FF, */
+/* and not decimal, add 0x10000. */
+/* This flag can be silently stripped off by v & 0xFFFF */
+
 int eval(char *s) {
   int v = 0;
   if (sscanf(s, (*s == '%') ? "%%%i" : "%X", &v) != 1) {
-    warn("unrecognised value, using 0"); v = 0;
+    warn("unrecognised value for, using 0"); v = 0;
   }
   if (v<0 || v>0xffff) { warn("invalid number, using 0"); v = 0; }
-  return v;
+  return s[2] == '\0' ? v : 0x10000 + v; 
 }
 
 /* Return 0, 1 depending on occurence of character c in s1 */
 /* If it occurs, split into s1[] + c + s2[] */
 /* If it does not occur, copy s1[] into s2[] */
+
 int split(char *s1, char *s2, char c) {
   int i, j;
   for (i=0; (s2[i] = s1[i]) != c; i++) if (s1[i] == '\0') return 0;
@@ -430,6 +458,7 @@ int split(char *s1, char *s2, char c) {
 }
 
 /* Just a little routine to compare two strings */
+
 int myscmp(char *s, char *t) {
   do {
     if (*s == '\0') return 1;
@@ -467,6 +496,7 @@ int whitespace(char c) {
 }
 
 /* Initialise io port settings */
+
 void startio() {
 /* Open port for writing, and not as controlling tty */
   if ((fd = open(port, O_WRONLY | O_NOCTTY )) < 0) {
