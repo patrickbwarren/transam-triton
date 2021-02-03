@@ -119,7 +119,12 @@ void error(char *s) {
 }
 
 void fprint_help(FILE *fp, char *name) {
-  fprintf(fp, "%s [-v] [-t] [-o tapefile] srcfile\n", name);
+  fprintf(fp, "Usage: %s [-v] [-t] [-s] [-o tapefile] srcfile\n", name);
+  fprintf(fp, "-v (verbose): print the byte stream and variables\n");
+  fprintf(fp, "-t (transmit): attemp to transmit to %s\n", port);
+  fprintf(fp, "-s (spaced): add a column of spaces after the 7th byte\n");
+  fprintf(fp, "-o <file>: write the byte stream in binary to a file\n");
+  fprintf(fp, "-o pipe: write the byte stream in binary to stdout\n");
   exit(0);
 }
 
@@ -162,7 +167,8 @@ int main(int argc, char *argv[]) {
   if (verbose && tape_file) printf("Binary to %s\n", tape_file);
   if (!nvlistok()) { printnvlist(); error("undefined variables"); }
   if (tape_file) {
-    if ((fsp = fopen(tape_file, "wb")) == NULL) {
+    if (strcmp(tape_file, "pipe") == 0) fsp = stdout;
+    else if ((fsp = fopen(tape_file, "wb")) == NULL) {
       error("Couldn't open file for saving");
     }
   }
@@ -268,7 +274,7 @@ void parse(char *file) {
 	    case 3: val |= regin(fp) << 3; val |= regin(fp); break;
 	    case 4: val |= pairin(fp) << 3; break;
 	    case 5: val |= rstnin(fp) << 3; break;
-              }
+	    }
 	    for (i=0; i<nrpt; i++) byte_out(val);
 	  } else { /* Encountered hex code */
 	    if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val);

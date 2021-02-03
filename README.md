@@ -41,15 +41,17 @@ The transmitter `trimcc` implements a rudimentary minilanguage
 (below) to `TAPE` binaries which can be loaded by Robin Stuart's
 emulator.
 
-For `trimcc`, as well as the `-o` option to save the compiled binary
-output to a specified file, the `-v` option lists the compiled code
-plus the defined variables, and the `-t` option attempts to transmit
-the compiled bytes to a physically-connected Triton via the (default)
-serial port `/dev/ttyS0`.
+For `trimcc`, as well as the `-o <file>` option to write the compiled
+binary output to a specified file, the `-v` option lists the compiled
+code plus the defined variables (and the `-s` option adds an extra
+column of space), and the `-t` option attempts to transmit the
+compiled bytes to a physically-connected Triton via the (default)
+serial port `/dev/ttyS0`.  Using `-o pipe` sends the binary to stdout so
+for example one can do `./trimcc <srcfile> -o pipe | hexdump`.
 
 For `tridat` the default is to receive and print bytes from a
 physically-connected Triton using the (default) serial port
-`/dev/ttyS0`.  The `-o` option additionally saves these received bytes
+`/dev/ttyS0`.  The `-o` option additionally writes these received bytes
 to a file.
 
 Note that you may have to add yourself the `dialout` group to use the
