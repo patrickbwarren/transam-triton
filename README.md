@@ -136,26 +136,26 @@ headers.
 
 The token stream comprises:
 
-Raw machine code is written using hexadecimal tokens in the range `00` to `FF`.
+- Raw machine code written using hexadecimal in the range `00` to `FF`.
 
-Decimal numbers are preceded by `%` but the range is limited to 0-255
+- Decimal numbers preceded by `%` but the range is limited to 0-255
 to represent a single byte.
 
-An individual ASCII character is written as `'x'` where x is 0-9, A-Z
+- An individual ASCII character written as `'x'` where x is 0-9, A-Z
 etc, and is replaced by the corresponding ASCII byte code.
 
-The 8080 op-code mnemonics follow the naming scheme in the famous
+- 8080 op-code mnemonics which follow the naming scheme in the famous
 [8080A Bugbook](http://www.bugbookcomputermuseum.com/8080A-Bugbook.html),
 with the exception of 'Call subroutine if carry flip-flop = logic 1'
 for which the mnemonic `CCC` is used to avoid a clash with hexadecimal
-token `CC`.  These are all replaced by the corresponding byte code.
+token `CC`.
 
-An ASCII text string is designated by `"..."`, and is interpreted to
+- An ASCII text string designated by `"..."`, which is interpreted to
 the corresponding sequence of ASCII byte codes.
 
 Repeated tokens can be specified by a repeat count followed by `*`,
 thus for example `64*OD` generates 64 ASCII carriage return markers
-(see tape header below).
+as in the tape header below.
 
 Comments can be included at any point: they are delimited by `#...#`
 and can span multiple lines.
@@ -173,10 +173,10 @@ instances of `LOOP:` for example, for local loops.
 The value of a variable can be inserted into the stream at any point
 by referencing the variable with an `!` character.  The value appears
 as a little-endian 16-bit word represented by a pair of bytes.  For
-example if `GETADR=020B` then `!GETADR` would generate `OB` followed
-by `02`.  The low and high bytes of the word can be individually
+example if `GETADR=020B` then `!GETADR` would generate 0x0B followed
+by 0x02.  The low and high bytes of the word can be individually
 accessed by appending `.L` and `.H` to the variable name.  Thus
-`!GETADR.L` followed by `!GETADR.H` is equivalent to `!GETADR`.
+`!GETADR.L` would generate 0x0B and `!GETADR.H` would generate 0x02.
 
 A special variable `ORG` can be used to (re)set the address counter.
 Typically one would use this to set the origin of the compiled code to
@@ -196,7 +196,7 @@ required for the tape format.  Thus the actual code starts at the
 address 1602.
 
 Strings in Triton have to be explicitly terminated by the ASCII END OF
-TRANSMISSION marker (`04` or ctrl-D) so that a typical string would
+TRANSMISSION marker (0x04 or ctrl-D) so that a typical string would
 look like
 ```
 STRING: "THIS IS A STRING" 04
@@ -252,8 +252,8 @@ SMESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
 SVALUE: "VALUE IS " 04
 ```
 It works by subtracting the decimal numbers from 10000 to 1 from the
-provided 16-bit word, and incrementing the ASCII code for
-`'0'` to obtain the corresponding decimal digit (this relies on
+provided 16-bit word, and incrementing the ASCII code 0x30 for the digit 
+'0' to obtain the corresponding decimal digit (this relies on
 the ASCII codes for the digits 0-9 being contiguous).
 
 Compiling this with `./trimcc hex2dec.tri -v` results in the machine code
