@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
     printf("\nFinished transmitting down the wires\n");
     finishio();
   }
-  if (fsp) fclose(fsp);
+  if (fsp && fsp != stdout) fclose(fsp);
   if (verbose) {
     printf("\nVariable list\n\n"); printnvlist();
   }
