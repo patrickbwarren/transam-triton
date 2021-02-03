@@ -239,8 +239,8 @@ void parse(char *file) {
 	  for (i=0; i<nrpt; i++) byte_out((int)tok[1]);
 	  break;
 	case '%': /* Encountered a decimal number */
-	  if ((val = eval(tok)) < 0xff) for (i=0; i<nrpt; i++) byte_out(val);
-	  else for (i=0; i<nrpt; i++) word_out(val & 0xFFFF);
+	  if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val);
+	  else warn("decimal number too large, should be < 256");
 	  break;
 	case '!': /* Encountered a variable, dereference it therefore */
 	  wasplit = split(tok, pre, '.'); val = tokval(&pre[1]);
@@ -433,16 +433,16 @@ void newnv(char *s, int v) {
 
 /* Returns value of string, or 0 and a warning if invalid */
 /* To indicate s is a 16-bit word in the range 0x0000 - 0x00FF, */
-/* and not decimal, add 0x10000. */
+/* (and not decimal) 0x10000 is added setting the 17th bit. */
 /* This flag can be silently stripped off by v & 0xFFFF */
 
 int eval(char *s) {
   int v = 0;
-  if (sscanf(s, (*s == '%') ? "%%%i" : "%X", &v) != 1) {
+  if (sscanf(s, (s[0] == '%') ? "%%%i" : "%X", &v) != 1) {
     warn("unrecognised value for, using 0"); v = 0;
   }
   if (v<0 || v>0xffff) { warn("invalid number, using 0"); v = 0; }
-  return s[2] == '\0' ? v : 0x10000 + v; 
+  return (s[0] == '%' || s[2] == '\0') ? v : 0x10000 + v; 
 }
 
 /* Return 0, 1 depending on occurence of character c in s1 */
