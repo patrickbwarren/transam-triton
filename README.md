@@ -106,10 +106,12 @@ left; '2' : stop; '3' : right; 'SPACE' : fire. Enjoy!
 
 [`invaders.tri`](invaders.tri) (tape header `INVADERS`) and
 [`invaders_raw.tri`](invaders_raw.tri) -- [Space
-Invaders](https://en.wikipedia.org/wiki/Space_Invaders) modified from
-a hex dump in Computing Today (March 1980).  Keys as above: '1' :
+Invaders](https://en.wikipedia.org/wiki/Space_Invaders) clone modified
+from a hex dump in Computing Today (March 1980).  Keys as above: '1' :
 left; '3' : right; 'SPACE' : fire; and when the game is over 'G' to
-start a new game.  Surprisingly good!
+start a new game. Currently if the complete fleet of invaders is wiped
+out, another fleet doesn't appear - this seems to be a bug.  Apart
+from this it's surprisingly good!
 
 Note the tape header format is incorporated into these files: 64 ASCII
 carriage return markers (`0D`, or ctrl-M), followed by the title (in
@@ -158,12 +160,14 @@ Comments can be included at any point: they are delimited by `#...#`
 and can span multiple lines.
 
 Variables can be defined at any time with the syntax `VAR=<val>` where
-the value is represented a 16-bit word.  These can be used for example
+the value is represented a 16-bit word.  These can be used
 to define monitor entry points for example.  Decimal values in the
 range 0 to 65535 can be assigned using the `%` notation above.
 Additionally a label of the form `LABEL:` introduces a variable of the
-same name and assigns it to the value of the address counter
-for the next byte to be emitted.
+same name and assigns it to the value of the address counter for the
+next byte to be emitted.  Variables can be re-used and always
+take the latest assigned value.  This means that there can be multiple
+uses of `LOOP:` for instance, for local loops.
 
 The value of a variable can be inserted into the stream at any point
 by referencing the variable with an `!` character.  The value appears
@@ -207,7 +211,7 @@ replace this by something more modern written in python.
 ### Example TriMCC code
 
 An example which illustrates the features of the TriMCC minilanguage
-is provided in `hex2dec.tri` code
+is provided in [`hex2dec.tri`](hex2dec.tri):
 ```
 # Standard tape header #
 64*0D "HEX2DEC" 20 04 ORG=1600 !END
@@ -218,14 +222,17 @@ GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
 # Constants #
 A=%10000 B=%1000 C=%100 D=%10 E=%1
 
-# Main program loops indefinitely #
+### Main program loops indefinitely ###
+
 ENTRY:
 LXI D !SMESSG; CALL !GETADR;
 LXI D !SVALUE; CALL !PSTRNG;
 CALL !PDEC; CALL !PCRLF
 JMP !ENTRY
 
-PDEC: # Prints HL in decimal #
+### Print HL in decimal format ###
+ 
+PDEC:
 LXI D !A; CALL !SUB
 LXI D !B; CALL !SUB
 LXI D !C; CALL !SUB
@@ -233,14 +240,17 @@ LXI D !D; CALL !SUB
 LXI D !E; CALL !SUB
 RET
 
-SUB: # Obtain a decimal digit and print it out #
+### Obtain a decimal digit and print it out ###
+
+SUB:
 MVI B '0'; DCR B;
 LOOP: INR B; MOV A,L; SUB E; MOV L,A; MOV A,H; SBB D; MOV H,A; JNC !LOOP
 MOV A,L; ADD E; MOV L,A; MOV A,H; ADC D; MOV H,A;
 MOV A,B; CALL !OUTCH;
 RET
 
-# Text for messages #
+### Text for messages ###
+
 SMESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
 SVALUE: "VALUE IS " 04
 ```
@@ -251,11 +261,11 @@ the ASCII codes for the digits 0-9 being contiguous).
 
 Compiling this with `./trimcc hex2dec.tri -v` results in the machine code
 ```
-1600  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
-1610  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
-1620  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
-1630  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
-1640  48 45 58 32 44 45 43 20 04
+0000  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+0010  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+0020  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+0030  0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D 0D
+0040  48 45 58 32 44 45 43 20 04
 1600  78 16 11 4E 16 CD 0B 02 11 6E 16 CD 2B 00 CD 17
 1610  16 CD 33 00 C3 02 16 11 10 27 CD 36 16 11 E8 03
 1620  CD 36 16 11 64 00 CD 36 16 11 0A 00 CD 36 16 11
@@ -300,8 +310,8 @@ Email: <patrickbwarren@gmail.com>.
 The file [`invaders_raw.tri`](invaders_raw.tri) is modified from a hex
 dump in Computing Today (March 1980; page 32).  Copyright (c) is
 claimed in the magazine (page 3) but the copyright holder is not
-identified.  No license terms were given - the hex dump is hereby
-presumed to be clonable under the equivalent of a modern open source
-license.  The current changes made are hereby released into the
-public domain (PBW, January 2021).
+identified.  No license terms were given and the code is hereby presumed
+to be reproducible and modifiable under the equivalent of a modern
+open source license.  The current changes made to the code are hereby
+released into the public domain (PBW, January 2021).
 

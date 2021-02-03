@@ -5,16 +5,15 @@ This file is part of my Transam Triton code repository.
 # Space Invaders clone - runs with Triton L7.2 monitor. #
 
 # Modified from a hex dump in Computing Today (March 1980; page 32). #
-# Copyright (c) is claimed in the magazine (page 3) but the #
-# copyright holder is not identified. #
-# No license terms were given - the hex dump is hereby presumed to be #
-# clonable under the equivalent of a modern open source license. #
-# The changes listed below are hereby released into the public domain #
-# (PBW, January 2021). #
+# Copyright (c) is claimed in the magazine (page 3) but the copyright #
+# holder is not identified.  No license terms were given and the code #
+# is hereby presumed to be reproducible and modifiable under the #
+# equivalent of a modern open source license.  The changes listed below #
+# are hereby released into the public domain (PBW, January 2021). #
 
-# Note that a later Computing Today (May 1980; page 9), contains #
-# an erratum news item 'Begging your pardon' but just to say the #
-# printed hex dump is for a Level 5.2 Triton. #
+# A later Computing Today (May 1980; page 9), contains an news erratum #
+# entitled 'Begging Your Pardon' but just to say the printed hex dump is #
+# for a Level 5.2 Triton. #
 
 # Control keys (see below) are '1' and '3' for left and right, and #
 # 'SPACE' for fire. At the end of a game press 'G' to start a new game. #
@@ -22,33 +21,32 @@ This file is part of my Transam Triton code repository.
 # Currently if a complete set of invaders is wiped out, another fleet #
 # doesn't appear - this seems to be a bug. #
 
-# Summary of modifications from original. #
+# Summary of changes from original. #
 
-# 1600: changed 40 1C to 41 1C for the tape end; #
 # 18B6: changed CD BC 00 to CD 4A 01 (L7.2 'DLY'); #
 # 1A20: changed CD E3 00 to CD D4 00 (L7.2 'CLRSCN'); #
 # 1C32: changed 00 to 20 (ASCII space) - seems to be spurious. #
+# 1C40: with 20 (ASCII space) - also seems spurious and is dropped. #
 
 # Monitor routines : (undocumented) L7.2 replacements as above #
 
 # 00BC DLY    (3ms delay)    in L5.2  <-->  014A in L7.2 #
 # 00E3 CLRSCN (clear screen) in L5.2  <-->  00D4 in L7.2 #
 
-# The code segment 18D2-18FF was re-written to streamline the #
-# keyboard interface and make it easier to change the controls #
-
-# Following this, the location of the frame size variable was #
-# changed from 18E0 to 18F0, necessitating changes at the following #
-# locations: 1874, 18A9, 19C0, 19DD, 1B1C, 1B24, 1B57. #
-
-# Originally the code relied on testing for 0xFF byte to determine #
+# Originally the code relied on testing for an 0xFF byte to determine #
 # the memory top, and *assumed* this was at 0x2000 to correspond to #
 # the main-board RAM on a standard Triton.  This obviously fails if #
 # there is a larger memory (for example an additional 8k RAM card, or #
-# emulated).  This peculiarity has been fixed, with 17A5 - 17C4 being #
-# rewritten to explicitly not go past memory location 0x2000. This #
-# necessitated changing the entry point for one of the routines from #
-#17A6 to 17A5 at the following locations: 1649, 16EB, 1E38, 1A8B, 1BAE. #
+# emulated).  This peculiarity has been fixed, with 17A5 to 17C4 being #
+# rewritten to stop at memory location 0x1FFF. This necessitated changing #
+# the entry point for one of the routines from 17A6 to 17A5 at the #
+# following locations: 1649, 16EB, 1E38, 1A8B, 1BAE. #
+
+# The code segment 18D2-18FF was re-written to streamline the #
+# keyboard interface and make it easier to change the controls #
+# Following this, the location of the frame size variable was #
+# changed from 18E0 to 18F0, necessitating changes at the following #
+# locations: 1874, 18A9, 19C0, 19DD, 1B1C, 1B24, 1B57. #
 
 # According to the Computing Today (March 1980) article, #
 # the following variables are used #
@@ -67,8 +65,13 @@ This file is part of my Transam Triton code repository.
 # 18F0  Size of frame (changed here, was originally 18E0) #
 # 1842  Last Invader to fire #
 
+# The space 1C00-1FFF is apparently a work area for constructing #
+# the 64x16 VDU display at 1000-13FF.  The top line of the display #
+# at 1C00-1C3F is hard-coded below.  It appears this makes the #
+# final byte at 1C40 in the printed hex dump redundant. #
+
 #        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-# 1600 # 41 1C CD C0 1A 36 03 23 36 36 23 36 36 23 36 48
+# 1600 # 40 1C CD C0 1A 36 03 23 36 36 23 36 36 23 36 48
 # 1610 # 23 36 00 23 36 01 23 36 00 21 D6 17 3E 00 77 23
 # 1620 # 77 23 77 23 77 23 77 23 77 2A 01 17 22 DD 17 00
 # 1630 # 21 03 17 36 80 CD 20 1A 00 00 00 00 00 00 00 00
@@ -104,20 +107,23 @@ This file is part of my Transam Triton code repository.
 # 17B0   77 23 13 C3 AC 17 21 40 1C 7E FE FF C8 3E 20 77 #
 # 17C0   23 C3 B9 17 #
 
-### Revised code copies from 1C00-1FFF to 1000-13FF. ###
+### Revised code copies 1C00-1FFF to 1000-13FF. ###
+# Entry point should be 17A5 not 17A6 as in the original #
 
-ENTRY1: # should be 17A5 not 17A6 as in the original #
+COPY: 
 LXI D 00 1C ; LXI H 00 10;
-COPY: LDAX D; MOV M,A; INX D; INX H; MVI A 14; CMP H; JNZ !COPY;
+LOOP: LDAX D; MOV M,A; INX D; INX H; MVI A 14; CMP H; JNZ !LOOP;
 RET;
 
-### Revised code fills from 1C40 to 2000 with ASCII SPACE. ###
-# The 'cheat' here is to use 20 (ASCII SPACE) stored in the #
+### Revised code fills 1C40 to 2000 with ASCII spaces. ###
+# Entry point should be 17B6 as in the original #
+# The 'cheat' here is to use the 20 (ASCII SPACE) stored in the #
 # accumulator both to poke into memory and to compare H with. #
+# Note the repeat use of the LOOP variable #
 
-ENTRY2: # should be 17B6 as in the original #
+FILL: 
 LXI H 40 1C ; MVI A ' ';
-FILL: MOV M, A; INX H; CMP H; JNZ !FILL;
+LOOP: MOV M, A; INX H; CMP H; JNZ !LOOP;
 RET;
 
 NOP; NOP # to get back on track #
@@ -229,6 +235,5 @@ FRAME: 4F 01 # frame size variable: this should be at 18F0 #
 # 1C10 # 20 33 20 20 20 20 20 20 20 20 20 20 20 20 20 20
 # 1C20 # 20 20 20 59 4F 55 52 20 53 43 4F 52 45 20 20 31
 # 1C30 # 39 30 20 20 20 20 20 20 20 20 20 20 20 20 20 20
-# 1C40 # 20
 #        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
 

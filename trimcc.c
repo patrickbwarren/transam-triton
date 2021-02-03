@@ -153,13 +153,15 @@ int main(int argc, char *argv[]) {
   mninit();
   if (verbose) {
     printf("\nTriton relocatable Machine Code Compiler\n\n");
-    if (tape_file) printf("Parsing %s, storing result in %s\n", src_file, tape_file);
-    else printf("Parsing %s, not storing result\n", src_file);
+    printf("Parsing %s\n", src_file);
   }
   parse(src_file); /* First pass through */
+  if (verbose && tape_file) printf("Binary to %s\n", tape_file);
   if (!nvlistok()) { printnvlist(); error("undefined variables"); }
   if (tape_file) {
-    if ((fsp = fopen(tape_file, "wb")) == NULL) error("Couldn't open file for saving");
+    if ((fsp = fopen(tape_file, "wb")) == NULL) {
+      error("Couldn't open file for saving");
+    }
   }
   if (transmit) {
     printf("Transmitting down the wires...\n");
@@ -187,11 +189,9 @@ void parse(char *file) {
   FILE *fp, *fp2, *fpstack[MAXFP];
   if ((fp = fopen(file, "r")) == NULL) error("couldn't open file");
   byte_count = 0;
-  if (nparse == 0) {
-    origin = addval("ORG", 0);
-    end_prog = addval("END", 0);
-  }
-  zinit();
+  origin = addval("ORG", 0);
+  if (nparse == 0) end_prog = addval("END", 0);
+
 /* Outer do loop around file inclusion levels */
   do {
     cc = ' ';    /* set initial character properly */
@@ -321,10 +321,12 @@ int rstnin(FILE*fp) {
   warn("invalid number in RST N"); return 0;
 }
 
-/* (Re)initialises printed byte counter */
+/* (Re)initialises printed byte counter, printing program counter */
 void zinit() {
-  zcount = 0;
-  if (verbose && (nparse > 0)) printf("\n%04X ", value[origin] + byte_count);
+  int pc;
+  pc = value[origin] + byte_count;
+  if (verbose && (nparse > 0) && pc < value[end_prog]) printf("\n%04X ", pc);
+  zcount = 0; 
 }
 
 /* Initialises mnemonic codes */
@@ -387,6 +389,7 @@ int tokval(char *s) {
 /* Adds the name, value to the list, returning position of entry */
 /* if name is already there, then just alter value */
 /* if name = ORG then reset byte count and restart printing */
+
 int addval(char *s, int v) {
   int i;
   for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) {
