@@ -25,8 +25,8 @@ This file is part of my Transam Triton code repository.
 
 # 18B6: changed CD BC 00 to CD 4A 01 (L7.2 'DLY'); #
 # 1A20: changed CD E3 00 to CD D4 00 (L7.2 'CLRSCN'); #
-# 1C32: changed 00 to 20 (ASCII space) - seems to be spurious. #
-# 1C40: with 20 (ASCII space) - also seems spurious and is dropped. #
+# 1C32: changed 00 to 20 (ASCII space) - spurious; #
+# 1C40: with 20 (ASCII space) - redundant and therefore dropped. #
 
 # Monitor routines : (undocumented) L7.2 replacements as above #
 
@@ -51,7 +51,7 @@ This file is part of my Transam Triton code repository.
 # According to the Computing Today (March 1980) article, #
 # the following variables are used #
 
-# 17CE  Lase number #
+# 17CE  Laser number #
 # 17CF  Number of Invaders left #
 # 17D0  Display loop number #
 # 17D1  Displacement of Invaders #
@@ -65,10 +65,11 @@ This file is part of my Transam Triton code repository.
 # 18F0  Size of frame (changed here, was originally 18E0) #
 # 1842  Last Invader to fire #
 
+FRAME=18F0
+
 # The space 1C00-1FFF is apparently a work area for constructing #
 # the 64x16 VDU display at 1000-13FF.  The top line of the display #
-# at 1C00-1C3F is hard-coded below.  It appears this makes the #
-# final byte at 1C40 in the printed hex dump redundant. #
+# at 1C00-1C3F is hard-coded below. #
 
 #        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
 # 1600 # 40 1C CD C0 1A 36 03 23 36 36 23 36 36 23 36 48
@@ -108,25 +109,25 @@ This file is part of my Transam Triton code repository.
 # 17C0   23 C3 B9 17 #
 
 ### Revised code copies 1C00-1FFF to 1000-13FF. ###
-# Entry point should be 17A5 not 17A6 as in the original #
+# Entry point is 17A5 not 17A6 as in the original #
 
-COPY: 
+NOP>17A5 COPY: 
 LXI D 00 1C ; LXI H 00 10;
 LOOP: LDAX D; MOV M,A; INX D; INX H; MVI A 14; CMP H; JNZ !LOOP;
 RET;
 
 ### Revised code fills 1C40 to 2000 with ASCII spaces. ###
-# Entry point should be 17B6 as in the original #
+# Entry point is 17B6 as in the original #
 # The 'cheat' here is to use the 20 (ASCII SPACE) stored in the #
 # accumulator both to poke into memory and to compare H with. #
 # Note the repeat use of the LOOP variable #
 
-FILL: 
+NOP>17B6 FILL: 
 LXI H 40 1C ; MVI A ' ';
 LOOP: MOV M, A; INX H; CMP H; JNZ !LOOP;
 RET;
 
-NOP; NOP # to get back on track #
+NOP>17C4 # pad out to get back on track #
 
 # 17C0 #             21 D6 17 7E FE 01 CA 51 19 C9 00 23
 # 17D0 # 05 8A 00 FF 00 9B 01 00 1A 1E 00 9B 1F 03 21 00
@@ -167,11 +168,13 @@ LXI H D5 17; IN 00; MOV M,A; ANI 80; RZ; MOV A,M; ANI 7F
 CPI '1'; JZ 15 19 # move left #
 CPI '3'; JZ 00 19 # move right #
 CPI ' '; JZ 2A 19 # fire #
-RET; NOP; NOP # space added to get to 18F0 #
+RET;
 
-FRAME: 4F 01 # frame size variable: this should be at 18F0 #
+NOP>!FRAME # pad to get to where the frame size variable lives #
 
-14*NOP # space added to restart at 1900 #
+4F 01 # frame size variable (should be at 18F0) #
+
+NOP>1900 # pad to restart at 1900 #
 
 #        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
 # 1900 # 21 FE 1F 11 FD 1F 06 3E 1A FE 20 C0 1A 77 1B 2B
@@ -230,10 +233,7 @@ FRAME: 4F 01 # frame size variable: this should be at 18F0 #
 # 1BF0 # 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20
 #        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
 
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-# 1C00 # 20 20 20 20 20 4C 41 53 45 52 20 42 41 53 45 20
-# 1C10 # 20 33 20 20 20 20 20 20 20 20 20 20 20 20 20 20
-# 1C20 # 20 20 20 59 4F 55 52 20 53 43 4F 52 45 20 20 31
-# 1C30 # 39 30 20 20 20 20 20 20 20 20 20 20 20 20 20 20
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
+# 1C00-1C3F is the top line of the display (64 bytes) #
 
+"     LASER BASE  3                 YOUR SCORE  190"
+END=1C40 20>!END # pad to 1C40 with ASCII spaces #

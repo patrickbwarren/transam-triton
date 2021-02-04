@@ -30,7 +30,7 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 #define MAXTOK 200    /* Max token length (note include strings) */
 #define MAXREG 10     /* Max register (pair) name length */
 #define MAXNNV 200    /* Max # of name, value pairs */
-#define MAXRPT 300    /* Max repeat value for error trapping */
+#define MAXRPT 0x1000 /* Max repeat value for error trapping */
 #define NMN    78     /* # mnemonic codes */
 #define DELAY  10     /* Delay in ms after a byte transmitted */
 #define NOVAL -1      /* Signals no value assigned in name, value pair */
@@ -161,10 +161,10 @@ int main(int argc, char *argv[]) {
   mninit();
   if (verbose) {
     printf("\nTriton relocatable Machine Code Compiler\n\n");
-    printf("Parsing %s\n", src_file);
+    printf("Parsing tokens from %s\n", src_file);
   }
   parse(src_file); /* First pass through */
-  if (verbose && tape_file) printf("Binary to %s\n", tape_file);
+  if (verbose && tape_file) printf("Writing to %s\n", tape_file);
   if (!nvlistok()) { printnvlist(); error("undefined variables"); }
   if (tape_file) {
     if (strcmp(tape_file, "pipe") == 0) fsp = stdout;
@@ -194,7 +194,7 @@ void parse(char *file) {
   int i, j, len, val, valhi, vallo, nrpt, wasplit, found;
   int fpstackpos = 0;
   char tok[MAXTOK] = "";
-  char pre[MAXTOK] = "";
+  char mod[MAXTOK] = "";
   char *punkt, *tempfile;
   FILE *fp, *fp2, *fpstack[MAXFP];
   if ((fp = fopen(file, "r")) == NULL) error("couldn't open file");
@@ -211,7 +211,7 @@ void parse(char *file) {
           strcpy(tempfile, tok); strcat(tempfile, tri_ext);
         } else tempfile = strdup(tok);
         if (verbose && (nparse == 0)) {
-	  printf("Including commands from %s\n",tempfile);
+	  printf("Including tokens from %s\n",tempfile);
 	}
         if ((fp2 = fopen(tempfile, "r")) == NULL) {
           error("I couldn't find the file.");
@@ -219,12 +219,20 @@ void parse(char *file) {
           if (fpstackpos < MAXFP) { fpstack[fpstackpos++] = fp; fp = fp2; }
           else error("I'm out of file pointer stack space");
         }
-      } else {    /* Process tokens normally */
-        if (split(tok, pre, '=')) { addval(pre, eval(tok) & 0xFFFF); continue; }
-        if (split(tok, pre, ':')) addval(pre, value[origin] + byte_count);
-        if (split(tok, pre, '*')) sscanf(pre, "%i", &nrpt); else nrpt = 1;
-        if (nrpt < 1 || nrpt > MAXRPT) {
-          warn("bad repeat number, setting to unity"); nrpt = 1;
+      } else { /* Process tokens normally - first extract any modifiers */
+        if (split(tok, mod, '=')) { addval(mod, eval(tok) & 0xFFFF); continue; }
+        if (split(tok, mod, ':')) addval(mod, value[origin] + byte_count);
+        if (split(tok, mod, '*')) sscanf(mod, "%i", &nrpt); else nrpt = 1;
+	if (split(tok, mod, '>')) { /* here tok is the modifier */
+	  if (tok[0] == '!') val = tokval(&tok[1]);
+	  else val = eval(tok) & 0xFFFF;
+	  nrpt = val - value[origin] - byte_count;
+	  strcpy(tok, mod); /* to recover the token to be repeated */
+	}
+        if (nrpt < 0) {
+          warn("negative repeat number, setting to zero"); nrpt = 0;
+        } else if (nrpt > MAXRPT) {
+          warn("repeat number too large, ignoring"); nrpt = 0;
         }
         switch (tok[0]) {
 	case '\0': break; /* Case where there's nothing left of token */
@@ -249,7 +257,7 @@ void parse(char *file) {
 	  else warn("decimal number too large, should be < 256");
 	  break;
 	case '!': /* Encountered a variable, dereference it therefore */
-	  wasplit = split(tok, pre, '.'); val = tokval(&pre[1]);
+	  wasplit = split(tok, mod, '.'); val = tokval(&mod[1]);
 	  if (!wasplit) for (i=0; i<nrpt; i++) word_out(val);
 	  else {
 	    valhi = val / 0x100; vallo = val - 0x100*valhi;
