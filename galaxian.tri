@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this file.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
-64*0D "GALAXIAN" 20 04 ORG=1600 # Standard tape header #
+# Standard tape header #
+64*0D "GALAXIAN" 20 04
 
 include galaxian_raw 

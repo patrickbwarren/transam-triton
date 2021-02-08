@@ -71,6 +71,8 @@ FRAME=18F0
 # the 64x16 VDU display at 1000-13FF.  The top line of the display #
 # at 1C00-1C3F is hard-coded below. #
 
+ORG=1600 # Start of code #
+
 #        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
 # 1600 # 40 1C CD C0 1A 36 03 23 36 36 23 36 36 23 36 48
 # 1610 # 23 36 00 23 36 01 23 36 00 21 D6 17 3E 00 77 23
@@ -112,18 +114,18 @@ FRAME=18F0
 # Entry point is 17A5 not 17A6 as in the original #
 
 NOP>17A5 COPY: 
-LXI D 00 1C ; LXI H 00 10;
+LXI D 1C00; LXI H 1000;
 LOOP: LDAX D; MOV M,A; INX D; INX H; MVI A 14; CMP H; JNZ !LOOP;
 RET;
 
 ### Revised code fills 1C40 to 2000 with ASCII spaces. ###
-# Entry point is 17B6 as in the original #
 # The 'cheat' here is to use the 20 (ASCII SPACE) stored in the #
 # accumulator both to poke into memory and to compare H with. #
 # Note the repeat use of the LOOP variable #
+# Entry point is 17B6 as in the original #
 
 NOP>17B6 FILL: 
-LXI H 40 1C ; MVI A ' ';
+LXI H 1C40; MVI A ' ';
 LOOP: MOV M, A; INX H; CMP H; JNZ !LOOP;
 RET;
 
@@ -164,15 +166,15 @@ NOP>17C4 # pad out to get back on track #
 # if true remove the strobe bit (ANI 7F) and test against #
 # ASCII codes.  This makes it easier to change the controls. #
 
-LXI H D5 17; IN 00; MOV M,A; ANI 80; RZ; MOV A,M; ANI 7F
-CPI '1'; JZ 15 19 # move left #
-CPI '3'; JZ 00 19 # move right #
-CPI ' '; JZ 2A 19 # fire #
+LXI H 17D5; IN 00; MOV M,A; ANI 80; RZ; MOV A,M; ANI 7F
+CPI '1'; JZ 1915; # move left #
+CPI '3'; JZ 1900; # move right #
+CPI ' '; JZ 192A; # fire #
 RET;
 
 NOP>!FRAME # pad to get to where the frame size variable lives #
 
-4F 01 # frame size variable (should be at 18F0) #
+014F # frame size variable (should be at 18F0) #
 
 NOP>1900 # pad to restart at 1900 #
 
@@ -234,6 +236,8 @@ NOP>1900 # pad to restart at 1900 #
 #        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
 
 # 1C00-1C3F is the top line of the display (64 bytes) #
+# pad to 1C40 with ASCII spaces #
 
-"     LASER BASE  3                 YOUR SCORE  190"
-END=1C40 20>!END # pad to 1C40 with ASCII spaces #
+"     LASER BASE  3                 YOUR SCORE  190" ' '>1C40
+
+# End of code #
