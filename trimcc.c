@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
   }
   mninit();
   if (verbose) {
-    printf("\nTriton relocatable Machine Code Compiler\n\n");
+    printf("\nTriton Relocatable Machine Code Compiler\n\n");
     printf("Parsing tokens from %s\n", src_file);
   }
   parse(src_file); /* First pass through */

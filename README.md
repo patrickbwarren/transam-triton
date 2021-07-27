@@ -8,8 +8,9 @@ British company based at 12 Chapel Street, off the Edgeware Road in
 north London.  Some basic information can be found in the online
 [Centre for Computing History](http://www.computinghistory.org.uk/).
 Recently a [YouTube
-video](https://www.youtube.com/watch?v=0cSRgJ68_tM) has appeared, and
-a Facebook group ('ETI Triton Single Board Computer') has sprung up.
+video](https://www.youtube.com/watch?v=0cSRgJ68_tM) has appeared,
+another [web site](https://sites.google.com/view/transam-triton/) has sprung up, and
+a Facebook group ('ETI Triton 8080 Vintage Computer') has been started.
 I have a small web page detailing some of the history
 [here](https://sites.google.com/site/patrickbwarren/electronics/transam-triton).
 

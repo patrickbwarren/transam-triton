@@ -29,6 +29,8 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 
 OUTCH=0013 # Character output routine; outputs to the VDU #
 SWAPCASE=01E2 # Undocumented: swap case of A #
+PRTDAT=02AB # print accumulator in hex #
+PCRLF=0033 # print CR/LF #
 
 # Main loop #
 
@@ -38,5 +40,5 @@ ANI 80; JZ !LOOP    # loop back if strobe bit is not set #
 MOV A,B; ANI 7F     # recover from B and remove strobe bit #
 CPI 03; RZ          # return to monitor if ctrl-C #
 CALL !SWAPCASE      # swap case and print out to screen #
-CALL !OUTCH 
+CALL !OUTCH
 JMP !LOOP
