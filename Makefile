@@ -16,11 +16,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this file.  If not, see <http://www.gnu.org/licenses/>.
 
+FLAGS = -O2 -Wall
+OBJS = 8080.o triton.o
+LIBS = -lsfml-graphics -lsfml-window -lsfml-audio -lsfml-system
+
 default: all
 
-all: codes roms
+all: codes roms tapes
 
-codes: trimcc tridat
+codes: triton trimcc tridat
+
+triton: $(OBJS)
+	g++ $(FLAGS) -o $@ $^ $(LIBS)
+
+%.o : %.cpp 8080.hpp
+	g++ $(FLAGS) -c -o $@ $<
 
 tridat : tridat.c
 	gcc -O -Wall tridat.c -o tridat
@@ -32,10 +42,23 @@ roms:
 	./trimcc L72_0000-03ff.tri -o MONA72.ROM
 	./trimcc L72_0c00-0fff.tri -o MONB72.ROM
 	./trimcc L72_e000-ffff.tri -o BASIC72.ROM
+	./trimcc speedup_rom.tri -o USRA72.ROM
+
+tapes:
+	./trimcc hex2dec.tri -o HEX2DEC_TAPE
+	./trimcc kbdtest.tri -o KBDTEST_TAPE
+	./trimcc tapeout.tri -o TAPEOUT_TAPE
+	./trimcc rawsave.tri -o RAWSAVE_TAPE
+	./trimcc galaxian.tri -o GALAXIAN_TAPE
+	./trimcc invaders.tri -o INVADERS_TAPE
 
 clean : 
 	rm -f *~ *.o
+	rm -f $(OBJS)
 
 pristine: clean
-	rm -f  tridat trimcc
+	rm -f *~
+	rm -f triton tridat trimcc
+
+rom-clean: 
 	rm -f MONA72.ROM MONB72.ROM BASIC72.ROM

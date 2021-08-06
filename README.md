@@ -14,11 +14,6 @@ a Facebook group ('ETI Triton 8080 Vintage Computer') has been started.
 I have a small web page detailing some of the history
 [here](https://sites.google.com/site/patrickbwarren/electronics/transam-triton).
 
-There is now also an excellent [Triton
-emulator](https://github.com/woo-j/triton) written by Robin Stuart,
-that uses the [SFML library](https://www.sfml-dev.org/).  Some of the
-original Triton documentation can also be found in Robin's repository.
-
 Storage for Triton was provided by tape cassette with an interface
 driven by a
 [UART](https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter)
@@ -39,8 +34,8 @@ They can be compiled by issuing the command `make codes`.
 
 The transmitter `trimcc` implements a rudimentary minilanguage
 (detailed below) and can be used to compile `.tri` source codes
-(below) to `TAPE` binaries which can be loaded by Robin Stuart's
-emulator.
+(below) to `TAPE` binaries which can be loaded into the
+emulator described below.
 
 For `trimcc`, as well as the `-o <file>` option to write the compiled
 binary output to a specified file, the `-v` option lists the compiled
@@ -61,6 +56,25 @@ Note that you may have to add yourself the `dialout` group to use the
 default serial port (`/dev/ttyS0`).  This is not necessary if just
 compiling `.tri` codes with `trimcc -o`.
 
+### Triton emulator
+
+Robin Stuart has written a superb [Triton
+emulator](https://github.com/woo-j/triton) that uses the [SFML
+library](https://www.sfml-dev.org/).  Some of the original Triton
+documentation can also be found in Robin's repository.  A fork of this
+emulator is included in the present repository, to which a few small
+improvements have been made:
+
+- the keyboard emulation now correctly strobes the data into port 3 so that
+bit 8 is set the whole time that a key is depressed, and unset when
+it is released;
+
+- the `-m` command line option can be used to set the top of memory (for example `-m 0x4000`);
+
+- the `-t` option specifies the tape file, for example generated using `trimcc` below;
+
+- the `-u` option can be used to load a user ROM into memory at `0x400-0x7ff`.
+
 ### Triton Level 7.2 ROM dumps
 
 ROM dumps for the Triton L7.2 Monitor and BASIC are also
@@ -76,14 +90,20 @@ directory).
 
 ### Other TriMCC codes
 
-All `.tri` codes below an be compiled to `TAPE` binaries suitable for
+All `.tri` codes below can be compiled to binaries suitable for
 Robin Stuart's emulator by
 ```
-./trimcc <src_file> -o TAPE
+./trimcc <src_file> -o <tape_file>
 ```
-Copy the resulting `TAPE` file into the main directory for Robin
-Stuart's emulator and load it with the 'I' monitor command.  The 'tape
-headers' are listed below.  To run these codes in Triton, use the 'G'
+To load one of these into the emulator use the `-t <tape_file` command
+line option, and then from within the emulator load the tape file with
+the 'I' monitor command.  The 'tape headers' are listed below.  Note
+that you can concatenate the binaries into a singe tape file with `cat
+*_TAPE > COMBI_TAPE` for instance, then load this combi-tape into the
+emulator and pick out which code you want to load by using the I
+command with the appropriate tape header.
+
+To run these codes in Triton, use the 'G'
 monitor command, with the starting address 0x1602.
 
 [`hex2dec.tri`](hex2dec.tri) (tape header `HEX2DEC`) -- convert a
