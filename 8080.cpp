@@ -77,7 +77,7 @@ void printStatus(FILE *fp, State8080* state) {
   fprintf(fp, "%c", state->cc.p ? 'P' : 'p');
   fprintf(fp, "%c", state->cc.cy ? 'C' : 'c');
   fprintf(fp, "%c", state->cc.ac ? 'A' : 'a');
-  fprintf(fp, " %c\n", state->int_enable ? 'I' : 'D');
+  fprintf(fp, " %c\n", state->int_enable ? 'E' : 'D');
 }
 
 /* Memory map for L7.1:
@@ -97,7 +97,7 @@ void set_memory(State8080 *state, int address, uint8_t data) {
     fprintf(stderr, "Error: attempt to write to memory location %i (%x) outside addressable range\n ", address, address);
     address = address % 0xffff;
   }
-  if ((address >= 0x1000) && (address < mem_top)) state->memory[address] = data; // only write into RAM 
+  if ((address >= 0x1000) && (address < mem_top)) state->memory[address] = data; // only write into RAM
 }
 
 uint8_t get_memory(State8080* state, int address) {

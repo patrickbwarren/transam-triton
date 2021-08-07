@@ -62,9 +62,10 @@ using namespace std;
 class IOState {
 public:
   int  key_buffer;
-  int  led_buffer;
+  uint8_t led_buffer;
   int  vdu_buffer;
-  int  port6_bit8_count;
+  int  print_bit_count;
+  uint8_t print_byte;
   bool oscillator;
   bool tape_relay;
   int  cursor_position;
@@ -338,10 +339,10 @@ void MachineIN(State8080* state, uint8_t port, IOState* io, fstream &tape) {
       if (io->tape_status == ' ') {
 	tape.open(tape_file, ios::in | ios::binary);
 	if (tape.is_open()) {
-	  // std::clog << "Opened tape file " << tape_file << " for reading\n";
+	  // printf("Opened tape file " << tape_file << " for reading\n");
 	  io->tape_status = 'r';
 	} else {
-	  std::cerr << "Unable to open tape file " << tape_file << " for reading\n";
+	  fprintf(stderr, "Unable to open tape file %s for reading\n", tape_file);
 	  io->tape_relay = false;
 	}
       }
@@ -366,7 +367,7 @@ void MachineOUT(State8080* state, uint8_t port, IOState* io, fstream &tape) {
 	if (tape.is_open()) {
 	  io->tape_status = 'w';
 	} else {
-	  std::cerr << "Unable to open tape file " << tape_file << " for writing\n";
+	  fprintf(stderr, "Unable to open tape file %s for writing\n", tape_file);
 	}
       }
       if (io->tape_status == 'w') {
@@ -378,6 +379,7 @@ void MachineOUT(State8080* state, uint8_t port, IOState* io, fstream &tape) {
     break;
   case 3:
     // LED buffer (IC 50)
+    // printf("LED port: %02X\n", state->a);
     io->led_buffer = state->a;
     break;
   case 5:
@@ -389,11 +391,23 @@ void MachineOUT(State8080* state, uint8_t port, IOState* io, fstream &tape) {
     break;
   case 6:
     // Port 6 latches (IC 52)
-    // io->port6 = state->a >> 6;
-    int port6bit8high;
-    port6bit8high = (state->a & 0x80) == 0x80;
-    printf("%c", port6bit8high ? '0' : '1');
-    if (++io->port6_bit8_count % 16 == 0) printf("\n");
+    uint8_t byte;
+    byte = state->a & 0x80;
+    if (io->print_bit_count == 0) {
+      if (byte == 0x80) { // start bit
+	io->print_byte = 0x00;
+	io->print_bit_count = 1;
+      }
+    } else {
+      if (io->print_bit_count < 8) { // reading data
+	io->print_byte = (io->print_byte | byte) >> 1; // OR, and shift right 
+	io->print_bit_count++;
+      } else { // stop bit - this is a single output byte but delayed 
+	byte = ~io->print_byte & 0x7f; // complement and drop bit 8
+	printf("%c", (char)(byte)); // this is now a character and can be printed
+ 	io->print_bit_count = 0;
+      }
+    }
     break;
   case 7:
     // Port 7 latches (IC 52) and tape power switch (RLY 1)
@@ -417,10 +431,16 @@ void load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_
     rom.read ((char *) &memory[rom_start], rom_size);
     rom.close();
   } else {
-    std::cerr << "Unable to load" << rom_name << "\n";
+    fprintf(stderr, "Unable to load %s\n", rom_name);
     exit(1);
   }
-  fprintf(stderr, "%04X - %04X : %s\n", rom_start, rom_start+rom_size-1, rom_name);
+  printf(stdout, "%04X - %04X : %s\n", rom_start, rom_start+rom_size-1, rom_name);
+}
+
+void hardware_reset(State8080 *state) {
+  state->a = 0x00;
+  state->pc = 0x0000;
+  state->int_enable = false;
 }
 
 int hardware_interrupt(State8080 *state, uint8_t opcode) {
@@ -449,12 +469,6 @@ int hardware_interrupt(State8080 *state, uint8_t opcode) {
   return cycles;
 }
 
-void hardware_reset(State8080 *state) {
-  state->a = 0x00;
-  state->pc = 0x0000;
-  state->int_enable = false;
-}
-
 int main(int argc, char** argv) {
   uint8_t main_memory[MEM_SIZE];
   int time;
@@ -463,7 +477,7 @@ int main(int argc, char** argv) {
   int i;
   IOState io;
   int xpos, ypos;
-  uint8_t port, opcode;
+  uint8_t port, opcode, mask, byte;
   int framerate = 25;
   int operations_per_frame;
   int glyph;
@@ -476,12 +490,12 @@ int main(int argc, char** argv) {
   char *mem_top_opt = NULL;
   char *pend;
   int c;
-  
+
   // Shut GetOpt error messages down (return '?'):
   // From the docs: You don’t ordinarily need to copy the optarg
   // string, since it is a pointer into the original argv array, not
   // into a static area that might be overwritten.
-  
+
   opterr = 0;
   while ((c = getopt (argc, argv, "hm:t:u:")) != -1) switch (c) {
     case 'u':
@@ -499,67 +513,70 @@ int main(int argc, char** argv) {
     default:
       exit(0);
     }
-  
+
   if (tape_file == NULL) tape_file = strdup(tape_file_default);
-  
+
   // One microcycle is 1.25uS = effective clock rate of 800kHz
-  
+
   operations_per_frame = 800000 / framerate;
-  
+
   State8080 state;
   fstream tape;
-  
+
   mem_top = (mem_top_opt == NULL) ? mem_top_default : strtoul(mem_top_opt, &pend, 0);
-  
+
   sf::Int16 wave[11025]; // Quarter of a second at 44.1kHz
-  
+
   const double increment = 1000./44100;
   double x = 0;
-  
+
   for (i = 0; i < 11025; i++) {
     wave[i] = 10000 * sin(x * 6.28318);
     x += increment;
   }
-  
+
   sf::SoundBuffer Buffer;
   Buffer.loadFromSamples(wave, 11025, 1, 44100);
   sf::Sound beep;
   beep.setBuffer(Buffer);
   beep.setLoop(true);
-  
+
+  io.vdu_startrow = 0;
+
   io.uart_status = 0x11;
   io.tape_status = ' ';
-  io.vdu_startrow = 0;
-  io.port6_bit8_count = 0;
-  
+
+  io.print_byte = 0x00;
+  io.print_bit_count = 0;
+
   // Initialise memory to 0xFF
   for (i=0; i<MEM_SIZE; i++) main_memory[i] = 0xff;
-  
+
   load_rom(main_memory, "MONA72.ROM", 0x0000, 0x400);
   if (user_rom != NULL) load_rom(main_memory, user_rom, 0x0400, 0x400);
   load_rom(main_memory, "MONB72.ROM", 0x0c00, 0x400);
   load_rom(main_memory, "TRAP.ROM", 0xc000, 0x2000);
   load_rom(main_memory, "BASIC72.ROM", 0xe000, 0x2000);
-  
+
   state.memory = main_memory;
   hardware_reset(&state);
-  
+
   // Initialise window
   sf::RenderWindow window(sf::VideoMode(512, 414), "Transam Triton");
   window.setFramerateLimit(framerate);
   sf::Texture fontmap;
   if (!fontmap.loadFromFile("font.png")) {
-    std::cerr << "Error loading font file";
+    fprintf(stderr, "Error loading font file\n");
     exit(1);
   }
   sf::Texture tapemap;
   if (!tapemap.loadFromFile("tape.png")) {
-    std::cerr << "Error loading tape image";
+    fprintf(stderr, "Error loading tape image\n");
     exit(1);
   }
   sf::Sprite sprite[1024];
   sf::CircleShape led[8];
-  sf::Color ledoff = sf::Color(50,0,0);
+  sf::Color ledoff = sf::Color(150,0,0);
   sf::Color ledon = sf::Color(250,0,0);
   sf::Sprite tape_indicator;
   sf::RectangleShape cursor(sf::Vector2f(8.0f, 2.0f));
@@ -575,7 +592,7 @@ int main(int argc, char** argv) {
   }
   tape_indicator.setTexture(tapemap);
   tape_indicator.setPosition(sf::Vector2f(462.0f, 386.0f));
-  
+
   while (window.isOpen()) {
     sf::Event event;
     while (window.pollEvent(event)) {
@@ -609,10 +626,10 @@ int main(int argc, char** argv) {
 	  case sf::Keyboard::F4: // Toggle pause
 	    pause = !pause;
 	    break;
-	  case sf::Keyboard::F5: // Print states
+	  case sf::Keyboard::F5: // Print status
 	    printStatus(stdout, &state);
 	    break;
-	  case sf::Keyboard::F9: // Exit application 
+	  case sf::Keyboard::F9: // Exit application
 	    window.close();
 	    break;
 	  default:
@@ -625,8 +642,10 @@ int main(int argc, char** argv) {
 	}
       }
     }
-    
-    if (pause == false) {
+
+    if (pause) {
+      beep.pause();
+    } else {
       // Send as many clock pulses to the CPU as would happen
       // between screen frames
       running_time = 0;
@@ -659,9 +678,9 @@ int main(int argc, char** argv) {
         sprite[i].setTextureRect(sf::IntRect(xpos, ypos, 8, 24));
         window.draw(sprite[i]);
       }
-      for (i = 0; i < 8; i++) {
-        if ((io.led_buffer & (0xf0 >> i)) == 0) led[i].setFillColor(ledon); // note LEDs are on for "0"
-	else led[i].setFillColor(ledoff);
+      for (i = 0, mask = 0x80; i < 8; i++) {
+	byte = io.led_buffer & mask; mask = mask >> 1;
+	led[i].setFillColor(byte == 0x00 ? ledon : ledoff); // note LEDs are on for "0"
         window.draw(led[i]);
       }
       if (io.tape_relay == false) {
@@ -698,8 +717,6 @@ int main(int argc, char** argv) {
       window.display();
       if (io.oscillator) beep.play();
       else beep.pause();
-    } else { // if pause == true
-      beep.pause();
     }
   }
   return 0;
