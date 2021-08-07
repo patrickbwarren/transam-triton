@@ -423,29 +423,36 @@ void load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_
   fprintf(stderr, "%04X - %04X : %s\n", rom_start, rom_start+rom_size-1, rom_name);
 }
 
-int interrupt_service(State8080 *state, uint8_t opcode) {
-  int offset;
+int hardware_interrupt(State8080 *state, uint8_t opcode) {
+  int cycles;
+  state->int_enable = false; // disable interrupts after a hardware interrupt
   switch (opcode) {
-  case 0xc7: // RST 0 - Restart, etc
+  case 0xc7: // handle the RST 0 etc opcodes
   case 0xcf:
   case 0xd7:
   case 0xdf:
   case 0xe7:
   case 0xef:
   case 0xf7:
-  case 0xff: // execute as a call subroutine
-    offset = state->pc + 1;
-    set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-    set_memory(state, state->sp - 2, (offset & 0xff));
+  case 0xff:
+    state->pc++;
+    set_memory(state, state->sp - 2, state->pc & 0xff);
+    set_memory(state, state->sp - 1, state->pc >> 8);
     state->sp -= 2;
-    state->pc = (int) opcode & 0x38; // 0x38 = 070 octal 
-    // printf("Interrupt service called with opcode %02X, PC = %04X\n", opcode, state->pc);
+    state->pc = (int) opcode & 0x38;
+    cycles = 11;
     break;
   default:
-    fprintf(stderr, "Error: interrupt service called with bad opcode %02X\n", opcode);
+    fprintf(stderr, "Error: hardware interrupt with unimplemented opcode %02X\n", opcode);
   }
-  // state->int_enable = false; // apparently this should not happen
-  return 11; // number of cycles if anyone is counting
+  // printf("hardware_interrupt: opcode %02X, PC = %04X\n", opcode, state->pc);
+  return cycles;
+}
+
+void hardware_reset(State8080 *state) {
+  state->a = 0x00;
+  state->pc = 0x0000;
+  state->int_enable = false;
 }
 
 int main(int argc, char** argv) {
@@ -534,9 +541,8 @@ int main(int argc, char** argv) {
   load_rom(main_memory, "TRAP.ROM", 0xc000, 0x2000);
   load_rom(main_memory, "BASIC72.ROM", 0xe000, 0x2000);
   
-  state.a = 0x00;
-  state.pc = 0x0000;
   state.memory = main_memory;
+  hardware_reset(&state);
   
   // Initialise window
   sf::RenderWindow window(sf::VideoMode(512, 414), "Transam Triton");
@@ -589,27 +595,22 @@ int main(int argc, char** argv) {
       }
       if (inFocus) {
         // Respond to key presses
-        if (event.type == sf::Event::KeyPressed || event.type == sf::Event::KeyReleased) {
+        if (event.type == sf::Event::KeyPressed) {
           switch(event.key.code) {
-	  case sf::Keyboard::F1: // Reset button (PB 1)
-	    if (event.type == sf::Event::KeyPressed) {
-	      interrupt_service(&state, 0xc7); // RST 0
-	    }
+	  case sf::Keyboard::F1: // jam RST 1 instruction (clear screen)
+	    if (state.int_enable) hardware_interrupt(&state, 0xcf);
 	    break;
-	  case sf::Keyboard::F2: // Clear Screen button (PB 2)
-	    if (event.type == sf::Event::KeyPressed && state.int_enable) {
-	      //state.int_enable = false;
-	      interrupt_service(&state, 0xcf); // RST 1
-	    }
+	  case sf::Keyboard::F2: // jam RST 2 instruction (print registers and flags)
+	    if (state.int_enable) hardware_interrupt(&state, 0xd7);
 	    break;
-	  case sf::Keyboard::F3: // Initialise button (PB 3)
-	    if (event.type == sf::Event::KeyPressed && state.int_enable) {
-	      //state.int_enable = false;
-	      interrupt_service(&state, 0xd7); // RST 2
-	    }
+	  case sf::Keyboard::F3: // Perform a hardware reset
+	    hardware_reset(&state);
 	    break;
 	  case sf::Keyboard::F4: // Toggle pause
-	    if (event.type == sf::Event::KeyPressed) pause = !pause;
+	    pause = !pause;
+	    break;
+	  case sf::Keyboard::F5: // Print states
+	    printStatus(stdout, &state);
 	    break;
 	  case sf::Keyboard::F9: // Exit application 
 	    window.close();
@@ -618,6 +619,9 @@ int main(int argc, char** argv) {
 	    io.key_press(event.type, event.key.code, shifted, ctrl);
 	    break;
 	  }
+	}
+	if (event.type == sf::Event::KeyReleased) {
+	  io.key_press(event.type, event.key.code, shifted, ctrl);
 	}
       }
     }

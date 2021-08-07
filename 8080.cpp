@@ -48,8 +48,7 @@ uint16_t mem_top;
 int warn_flag = 1;
 
 void UnimplementedInstruction(State8080* state) {
-  std::cout << "Error: Unimplemented Instruction\n";
-  std::cout << "Address " << state->pc << " Instruction " << state->memory[state->pc];
+  fprintf(stderr, "Error: unimplemented opcode %02x at address %04X\n", state->memory[state->pc], state->pc);
   exit(1);
 }
 
@@ -65,21 +64,20 @@ bool Parity(int data) {
   else return false;
 }
 
-void printStatus(State8080* state) {
-  std::cout << std::hex << "PC " << state->pc << " I " << state->memory[state->pc] << " SP " << state->sp;
-  std::cout << " A " << state->a << " B " << state->b << " C " << state->c << " D " << state->d << " E " << state->e;
-  std::cout << " H " << state-> h << " L " << state->l << " ";
-  if (state->cc.z) std::cout << "Z";
-  else std::cout << " ";
-  if (state->cc.s) std::cout << "S";
-  else std::cout << " ";
-  if (state->cc.p) std::cout << "P";
-  else std::cout << " ";
-  if (state->cc.cy) std::cout << "C";
-  else std::cout << " ";
-  if (state->cc.ac) std::cout << "A";
-  else std::cout << " ";
-  std::cout << "\n";
+void printStatus(FILE *fp, State8080* state) {
+  fprintf(fp, "A=%02X ", state->a);
+  fprintf(fp, "BC=%02X%02X ", state->b, state->c);
+  fprintf(fp, "DE=%02X%02X ", state->d, state->e);
+  fprintf(fp, "HL=%02X%02X ", state->h, state->l);
+  fprintf(fp, "SP=%04X ", state->sp);
+  fprintf(fp, "PC=%04X ", state->pc);
+  //fprintf(fp, "PC=%04X (%02X) ", state->pc, state->memory[state->pc]);
+  fprintf(fp, "%c", state->cc.z ? 'Z' : 'z');
+  fprintf(fp, "%c", state->cc.s ? 'S' : 's');
+  fprintf(fp, "%c", state->cc.p ? 'P' : 'p');
+  fprintf(fp, "%c", state->cc.cy ? 'C' : 'c');
+  fprintf(fp, "%c", state->cc.ac ? 'A' : 'a');
+  fprintf(fp, " %c\n", state->int_enable ? 'I' : 'D');
 }
 
 /* Memory map for L7.1:
@@ -90,23 +88,23 @@ void printStatus(State8080* state) {
  * 1400 - 15FF = Monitor/BASIC RAM
  * 1600 - 1FFF = On board user RAM
  * 2000 - BFFF = For off-board expansion
- * C000 - DFFF = TRAP (not currently available)
+ * C000 - DFFF = TRAP
  * E000 - FFFF = BASIC 7.1
  */
 
 void set_memory(State8080 *state, int address, uint8_t data) {
   if ((address < 0x00) || (address > 0xffff)) {
-    std::cerr << "Error writing to memory location " << address << "\n";
+    fprintf(stderr, "Error: attempt to write to memory location %i (%x) outside addressable range\n ", address, address);
     address = address % 0xffff;
-  }/* only write into RAM */
-  if ((address >= 0x1000) && (address < mem_top)) state->memory[address] = data;
+  }
+  if ((address >= 0x1000) && (address < mem_top)) state->memory[address] = data; // only write into RAM 
 }
 
 uint8_t get_memory(State8080* state, int address) {
   if ((address < 0x00) || (address > 0xffff)) {
     if (warn_flag) {
-      std::cerr << "Error reading from memory location " <<  address << "\n";
-      std::cerr << "Further warnings of this type will be suppressed\n";
+      fprintf(stderr, "Error: attempt to read from memory location %i (%x) outside addressable range\n ", address, address);
+      fprintf(stderr, "Further warnings of this type will be suppressed\n");
       warn_flag = 0;
     }
     address = address % 0xffff;
@@ -1482,7 +1480,7 @@ int Emulate8080Op(State8080* state) {
     set_memory(state, state->sp - 1, state->pc >> 8);
     state->sp -= 2;
     state->pc = (int) opcode[0] & 0x38;
-    state->pc--;
+    state->pc--; // to cancel the generic increment PC at the end
     cycles = 11;
     break;
   case 0xc8: // RZ - Return if zero

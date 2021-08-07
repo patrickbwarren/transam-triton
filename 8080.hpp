@@ -56,6 +56,7 @@ typedef struct State8080 {
   bool    int_enable;
 } State8080;
 
+void printStatus(FILE *fp, State8080* state);
 int Emulate8080Op(State8080* state);
 void set_memory(State8080 *state, int address, uint8_t data);
 uint8_t get_memory(State8080* state, int address);
