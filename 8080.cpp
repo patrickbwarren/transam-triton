@@ -47,24 +47,13 @@
 uint16_t mem_top;
 int warn_flag = 1;
 
-void UnimplementedInstruction(State8080* state) {
-  fprintf(stderr, "Error: unimplemented opcode %02x at address %04X\n", state->memory[state->pc], state->pc);
-  exit(1);
-}
-
 bool Parity(int data) {
-  int i, t;
-  t = 0;
-  for (i = 0; i < 8; i++) {
-    if (data & (0x01 << i)) {
-      t++;
-    }
-  }
-  if ((t % 2) - 1) return true;
-  else return false;
+  int i, t=0;
+  for (i=0; i<8; i++) if (data & (0x01 << i)) t++;
+  return ((t % 2) - 1) ? true : false;
 }
 
-void printStatus(FILE *fp, State8080* state) {
+void printStatus(FILE *fp, State8080 *state) {
   fprintf(fp, "A=%02X ", state->a);
   fprintf(fp, "BC=%02X%02X ", state->b, state->c);
   fprintf(fp, "DE=%02X%02X ", state->d, state->e);
@@ -78,6 +67,16 @@ void printStatus(FILE *fp, State8080* state) {
   fprintf(fp, "%c", state->cc.cy ? 'C' : 'c');
   fprintf(fp, "%c", state->cc.ac ? 'A' : 'a');
   fprintf(fp, " %c\n", state->int_enable ? 'E' : 'D');
+}
+
+void Reset8080(State8080 *state) {
+  state->a = 0x00;
+  state->pc = 0x0000;
+  state->int_enable = false;
+  state->interrupt = 0x00;
+  state->port_out = false;
+  state->port_in = false;
+  state->port = 0x00;
 }
 
 /* Memory map for L7.1:
@@ -112,13 +111,23 @@ uint8_t get_memory(State8080* state, int address) {
   return state->memory[address];
 }
 
-int Emulate8080Op(State8080* state) {
+int SingleStep8080(State8080* state) {
   uint8_t *opcode = &state->memory[state->pc];
+  uint8_t instruction;
   int cycles;
   int answer;
   int offset;
   //printStatus(state);
-  switch(*opcode) {
+  //if (state->interrupt != 0x00 && state->int_enable) { // service the interrupt
+  //instruction = state->interrupt; probably need a state->pc--; in here
+  //state->interrupt = 0x00;
+  //state->int_enable = false;
+  //printf("servicing interrupt: opcode %02X\n", instruction);
+  //} else { // normal execution
+  //instruction = *opcode;
+  //}
+  instruction = *opcode;
+  switch(instruction) {
   case 0x00: // NOP - No-operation
   case 0x08:
   case 0x10:
@@ -1480,9 +1489,8 @@ int Emulate8080Op(State8080* state) {
     set_memory(state, state->sp - 1, state->pc >> 8);
     state->sp -= 2;
     state->pc = (int) opcode[0] & 0x38;
-    state->pc--; // to cancel the generic increment PC at the end
     cycles = 11;
-    break;
+    return cycles; // direct return avoids the generic state->pc++ at the end
   case 0xc8: // RZ - Return if zero
     if (state->cc.z) {
       state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
@@ -1562,8 +1570,11 @@ int Emulate8080Op(State8080* state) {
     } else state->pc += 2;
     cycles = 10;
     break;
-  case 0xd3: // IN - Input
-    UnimplementedInstruction(state);
+  case 0xd3: // OUT - output to port
+    state->port_out = true;
+    state->port = opcode[1];
+    state->pc++;
+    cycles = 10;
     break;
   case 0xd4: // CNC - Call if no carry
     if (state->cc.cy == false) {
@@ -1610,8 +1621,11 @@ int Emulate8080Op(State8080* state) {
     } else state->pc += 2;
     cycles = 10;
     break;
-  case 0xdb: // OUT - Output
-    UnimplementedInstruction(state);
+  case 0xdb: // IN - Input from port
+    state->port_in = true;
+    state->port = opcode[1];
+    state->pc++;
+    cycles = 10;
     break;
   case 0xdc: // CC - Call if carry
     if (state->cc.cy) {

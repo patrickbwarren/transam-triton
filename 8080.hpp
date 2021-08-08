@@ -34,29 +34,34 @@
  */
 
 typedef struct ConditionCodes {
-  bool    z;
-  bool    s;
-  bool    p;
-  bool    cy;
-  bool    ac;
+  bool z;
+  bool s;
+  bool p;
+  bool cy;
+  bool ac;
 } ConditionCodes;
 
 typedef struct State8080 {
-  uint8_t     a;
-  uint8_t     b;
-  uint8_t     c;
-  uint8_t     d;
-  uint8_t     e;
-  uint8_t     h;
-  uint8_t     l;
-  uint16_t   sp;
-  uint16_t   pc;
-  uint8_t     *memory;
-  struct  ConditionCodes   cc;
-  bool    int_enable;
+  uint8_t a;
+  uint8_t b;
+  uint8_t c;
+  uint8_t d;
+  uint8_t e;
+  uint8_t h;
+  uint8_t l;
+  uint16_t sp;
+  uint16_t pc;
+  uint8_t *memory;
+  struct  ConditionCodes cc;
+  uint8_t port;
+  bool port_in;
+  bool port_out;
+  bool int_enable;
+  uint8_t interrupt;
 } State8080;
 
-void printStatus(FILE *fp, State8080* state);
-int Emulate8080Op(State8080* state);
+void printStatus(FILE *fp, State8080 *state);
+void Reset8080(State8080 *state);
+int SingleStep8080(State8080 *state);
 void set_memory(State8080 *state, int address, uint8_t data);
-uint8_t get_memory(State8080* state, int address);
+uint8_t get_memory(State8080 *state, int address);
