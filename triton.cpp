@@ -53,7 +53,6 @@
 #include <unistd.h>
 
 #define MEM_SIZE 0x10000
-#define ASCII_SPACE 0x20
 
 extern uint16_t mem_top; /* declared in 8080.cpp */
 
@@ -112,7 +111,7 @@ void IOState::vdu_strobe(State8080* state) {
       vdu_startrow++;
       if (vdu_startrow > 15) vdu_startrow = 0;
       for (i=0; i<64; i++) {
-	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = ASCII_SPACE;
+	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = 0x20;
       }
     }
     break;
@@ -123,7 +122,7 @@ void IOState::vdu_strobe(State8080* state) {
     break;
   case 0x0c:
     // Clear screen/reset cursor
-    for (i=0; i<1024; i++) state->memory[0x1000 + i] = ASCII_SPACE;
+    for (i=0; i<1024; i++) state->memory[0x1000 + i] = 0x20;
     cursor_position = 0;
     vdu_startrow = 0;
     break;
@@ -131,7 +130,7 @@ void IOState::vdu_strobe(State8080* state) {
     // Carriage return / clear line
     if (cursor_position % 64 != 0) {
       while(cursor_position % 64 != 0) {
-	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position) % 1024)] = ASCII_SPACE;
+	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position) % 1024)] = 0x20;
 	cursor_position++;
       }
       cursor_position -= 64;
@@ -160,7 +159,7 @@ void IOState::vdu_strobe(State8080* state) {
       vdu_startrow++;
       if (vdu_startrow > 15) vdu_startrow = 0;
       for (i=0; i<64; i++) {
-	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = ASCII_SPACE;
+	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = 0x20;
       }
     }
     break;
@@ -322,8 +321,8 @@ void IOState::key_press(sf::Event::EventType event, int key, bool shifted, bool 
 }
 
 void MachineInOut(State8080* state, IOState* io, fstream &tape) {
-  if (state->port_op == PORT_IN) { // input
-    state->port_op = PORT_NOOP;
+  if (state->port_op == 0xdb) { // input
+    state->port_op = 0x00;
     switch(state->port) {
     case 0:
       // Keyboard buffer (IC 49)
@@ -355,8 +354,8 @@ void MachineInOut(State8080* state, IOState* io, fstream &tape) {
       }
       break;
     }
-  } else if (state->port_op == PORT_OUT) { // output
-    state->port_op = PORT_NOOP;
+  } else if (state->port_op == 0xd3) { // output
+    state->port_op = 0x00;
     switch(state->port) {
     case 2:
       // Output data to tape
@@ -515,17 +514,16 @@ int main(int argc, char** argv) {
   io.print_byte = 0x00;
   io.print_bit_count = 0;
 
-  /* Memory map for L7.1:
-   * 0000 - 03FF = Monitor 'A'
-   * 0400 - 0BFF = User roms
-   * 0C00 - 1000 = Monitor 'B'
-   * 1000 - 13FF = VDU
-   * 1400 - 15FF = Monitor/BASIC RAM
-   * 1600 - 1FFF = On board user RAM
-   * 2000 - BFFF = For off-board expansion
-   * C000 - DFFF = TRAP
-   * E000 - FFFF = BASIC 7.1
-   */
+  // Memory map for L7.1:
+  // 0000 - 03FF = Monitor 'A'
+  // 0400 - 0BFF = User roms
+  // 0C00 - 1000 = Monitor 'B'
+  // 1000 - 13FF = VDU
+  // 1400 - 15FF = Monitor/BASIC RAM
+  // 1600 - 1FFF = On board user RAM
+  // 2000 - BFFF = For off-board expansion
+  // C000 - DFFF = TRAP
+  // E000 - FFFF = BASIC
 
   // Initialise memory to 0xFF
   for (i=0; i<MEM_SIZE; i++) main_memory[i] = 0xff;
@@ -622,7 +620,10 @@ int main(int argc, char** argv) {
 
     if (pause) beep.pause(); else {
       // Send as many clock pulses to the CPU as would happen between screen frames
-      for (ops=0; ops<ops_per_frame; ops+=SingleStep8080(&state)) if (state.port_op) MachineInOut(&state, &io, tape);
+      for (ops=0; ops<ops_per_frame; ops+=SingleStep8080(&state)) {
+	if (state.halted) break;
+	if (state.port_op) MachineInOut(&state, &io, tape);
+      }
       cursor_count++;
       // Draw screen from VDU memory - font texture acts as ROMs (IC 69 and 70)
       window.clear();

@@ -46,7 +46,6 @@
 #include "8080.hpp"
 
 uint16_t mem_top;
-int warn_flag = 1;
 
 // 8-bit parity calculator from
 // https://stackoverflow.com/questions/21617970/how-to-check-if-value-has-even-parity-of-bits-or-odd/21618038
@@ -81,28 +80,16 @@ void Reset8080(State8080 *state) {
   state->pc = 0x0000;
   state->int_enable = false;
   state->interrupt = 0x00;
-  state->port_op = PORT_NOOP;
+  state->port_op = 0x00;
   state->port = 0x00;
   state->halted = false;
 }
 
-void set_memory(State8080 *state, int address, uint8_t data) {
-  if ((address < 0x00) || (address > 0xffff)) {
-    fprintf(stderr, "Error: attempt to write to %i (%x) outside addressable range\n ", address, address);
-    address = address % 0xffff;
-  }
-  if ((address >= 0x1000) && (address < mem_top)) state->memory[address] = data; // only write into RAM
+void set_memory(State8080 *state, uint16_t address, uint8_t byte) {
+  if ((address >= 0x1000) && (address < mem_top)) state->memory[address] = byte; // only write into RAM
 }
 
-uint8_t get_memory(State8080* state, int address) {
-  if ((address < 0x00) || (address > 0xffff)) {
-    if (warn_flag) {
-      fprintf(stderr, "Error: attempt to read from %i (%x) outside addressable range\n ", address, address);
-      fprintf(stderr, "Further warnings of this type will be suppressed\n");
-      warn_flag = 0;
-    }
-    address = address % 0xffff;
-  }
+uint8_t get_memory(State8080* state, uint16_t address) {
   return state->memory[address];
 }
 
@@ -111,14 +98,13 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   uint8_t current_opcode;
   int answer;
   int offset;
-  if (state->halted) return 100;
   //printStatus(state);
+  if (state->halted) return 0;
   if (state->interrupt && state->int_enable) { // service the interrupt
     current_opcode = state->interrupt;
     state->interrupt = 0x00;
     state->int_enable = false;
     state->pc--; // necessary to cancel the increment in RST handler below
-    // printf("servicing interrupt: opcode %02X\n", current_opcode);
   } else current_opcode = opcode[0]; // normal operation
   switch(current_opcode) {
   case 0x00: // NOP - No-operation
@@ -1515,7 +1501,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     else state->pc += 3;
     return 10;
   case 0xd3: // OUT - output to port
-    state->port_op = PORT_OUT;
+    state->port_op = current_opcode;
     state->port = opcode[1];
     state->pc += 2;
     return 10;
@@ -1557,7 +1543,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     else state->pc += 3;
     return 10;
   case 0xdb: // IN - Input from port
-    state->port_op = PORT_IN;
+    state->port_op = current_opcode;
     state->port = opcode[1];
     state->pc += 2;
     return 10;

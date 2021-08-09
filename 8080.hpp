@@ -33,8 +33,6 @@
  * Copyright (c) 2021 Patrick B Warren (PBW) <patrickbwarren@gmail.com>.
  */
 
-typedef enum {PORT_NOOP, PORT_IN, PORT_OUT} port_t;
-
 typedef struct ConditionCodes {
   bool z;
   bool s;
@@ -56,7 +54,7 @@ typedef struct State8080 {
   uint8_t *memory;
   struct  ConditionCodes cc;
   uint8_t port;
-  port_t port_op;
+  uint8_t port_op;
   bool int_enable;
   uint8_t interrupt;
   bool halted;
@@ -65,4 +63,3 @@ typedef struct State8080 {
 void WriteStatus8080(FILE *fp, State8080 *state);
 void Reset8080(State8080 *state);
 int SingleStep8080(State8080 *state);
-//void set_memory(State8080 *state, int address, uint8_t data);

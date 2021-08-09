@@ -1,0 +1,36 @@
+###
+This file is part of my Transam Triton code repository.
+
+This is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+Copyright (c) 1979-2021 Patrick B Warren <patrickbwarren@gmail.com>.
+
+You should have received a copy of the GNU General Public License
+along with this file.  If not, see <http://www.gnu.org/licenses/>.
+###
+
+### Wrapper for fastvdu to generate a user ROM ###
+
+STACK=1470 # initial stack pointer #
+REENTRY=0182 # re-entry point after call out to 0400 from monitor #
+
+ORG=0400
+END=0800
+
+# Intercept video output routine at hook #
+LXI SP, !STACK
+LXI H, !MAIN
+SHLD !OUTVEC
+JMP !REENTRY
+
+include fastvdu_core.tri
+
+FF>!END

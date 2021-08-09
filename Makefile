@@ -42,13 +42,14 @@ roms:
 	./trimcc L72_0000-03ff.tri -o MONA72.ROM
 	./trimcc L72_0c00-0fff.tri -o MONB72.ROM
 	./trimcc L72_e000-ffff.tri -o BASIC72.ROM
-	./trimcc speedup_rom.tri -o USRA72.ROM
+	./trimcc fastvdu_rom.tri -o FASTVDU.ROM
 
 tapes:
 	./trimcc hex2dec.tri -o HEX2DEC_TAPE
 	./trimcc kbdtest.tri -o KBDTEST_TAPE
 	./trimcc tapeout.tri -o TAPEOUT_TAPE
 	./trimcc rawsave.tri -o RAWSAVE_TAPE
+	./trimcc fastvdu.tri -o FASTVDU_TAPE
 	./trimcc galaxian.tri -o GALAXIAN_TAPE
 	./trimcc invaders.tri -o INVADERS_TAPE
 
