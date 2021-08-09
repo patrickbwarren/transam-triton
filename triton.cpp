@@ -30,7 +30,7 @@
 
 /* Forked from https://github.com/woo-j/triton
  * Additional modifications:
- * Copyright (c) Patrick B Warren <patrickbwarren@gmail.com>.
+ * Copyright (c) 2021 Patrick B Warren (PBW) <patrickbwarren@gmail.com>.
  */
 
 /* Emulator for the Transam Triton
@@ -111,7 +111,7 @@ void IOState::vdu_strobe(State8080* state) {
       cursor_position -= 64;
       vdu_startrow++;
       if (vdu_startrow > 15) vdu_startrow = 0;
-      for (i = 0; i < 64; i++) {
+      for (i=0; i<64; i++) {
 	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = ASCII_SPACE;
       }
     }
@@ -123,7 +123,7 @@ void IOState::vdu_strobe(State8080* state) {
     break;
   case 0x0c:
     // Clear screen/reset cursor
-    for (i = 0; i < 1024; i++) state->memory[0x1000 + i] = ASCII_SPACE;
+    for (i=0; i<1024; i++) state->memory[0x1000 + i] = ASCII_SPACE;
     cursor_position = 0;
     vdu_startrow = 0;
     break;
@@ -159,7 +159,7 @@ void IOState::vdu_strobe(State8080* state) {
       cursor_position -= 64;
       vdu_startrow++;
       if (vdu_startrow > 15) vdu_startrow = 0;
-      for (i = 0; i < 64; i++) {
+      for (i=0; i<64; i++) {
 	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = ASCII_SPACE;
       }
     }
@@ -322,8 +322,8 @@ void IOState::key_press(sf::Event::EventType event, int key, bool shifted, bool 
 }
 
 void MachineInOut(State8080* state, IOState* io, fstream &tape) {
-  if (state->port_in) { // input
-    state->port_in = false;
+  if (state->port_op == PORT_IN) { // input
+    state->port_op = PORT_NOOP;
     switch(state->port) {
     case 0:
       // Keyboard buffer (IC 49)
@@ -355,8 +355,8 @@ void MachineInOut(State8080* state, IOState* io, fstream &tape) {
       }
       break;
     }
-  } else if (state->port_out) { // output
-    state->port_out = false;
+  } else if (state->port_op == PORT_OUT) { // output
+    state->port_op = PORT_NOOP;
     switch(state->port) {
     case 2:
       // Output data to tape
@@ -434,45 +434,18 @@ void load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_
     fprintf(stderr, "Unable to load %s\n", rom_name);
     exit(1);
   }
-  printf("%04X - %04X : %s\n", rom_start, rom_start+rom_size-1, rom_name);
-}
-
-int hardware_interrupt(State8080 *state, uint8_t opcode) {
-  int cycles;
-  state->int_enable = false; // disable interrupts after a hardware interrupt
-  switch (opcode) {
-  case 0xc7: // handle only the RST opcodes
-  case 0xcf:
-  case 0xd7:
-  case 0xdf:
-  case 0xe7:
-  case 0xef:
-  case 0xf7:
-  case 0xff:
-    set_memory(state, state->sp - 2, state->pc & 0xff);
-    set_memory(state, state->sp - 1, state->pc >> 8);
-    state->sp -= 2;
-    state->pc = (int) opcode & 0x38;
-    cycles = 11;
-    break;
-  default:
-    fprintf(stderr, "Error: hardware interrupt with unimplemented opcode %02X\n", opcode);
-  }
-  // printf("hardware_interrupt: opcode %02X, PC = %04X\n", opcode, state->pc);
-  return cycles;
+  //printf("%04X - %04X : %s\n", rom_start, rom_start+rom_size-1, rom_name);
 }
 
 int main(int argc, char** argv) {
   uint8_t main_memory[MEM_SIZE];
-  int time;
-  int running_time;
   int cursor_count = 0;
   int i;
   IOState io;
   int xpos, ypos;
   uint8_t mask, byte;
   int framerate = 25;
-  int operations_per_frame;
+  int ops, ops_per_frame;
   int glyph;
   int vdu_rolloffset;
   bool inFocus = true;
@@ -511,7 +484,7 @@ int main(int argc, char** argv) {
 
   // One microcycle is 1.25uS = effective clock rate of 800kHz
 
-  operations_per_frame = 800000 / framerate;
+  ops_per_frame = 800000 / framerate;
 
   State8080 state;
   fstream tape;
@@ -523,7 +496,7 @@ int main(int argc, char** argv) {
   const double increment = 1000./44100;
   double x = 0;
 
-  for (i = 0; i < 11025; i++) {
+  for (i=0; i<11025; i++) {
     wave[i] = 10000 * sin(x * 6.28318);
     x += increment;
   }
@@ -541,6 +514,18 @@ int main(int argc, char** argv) {
 
   io.print_byte = 0x00;
   io.print_bit_count = 0;
+
+  /* Memory map for L7.1:
+   * 0000 - 03FF = Monitor 'A'
+   * 0400 - 0BFF = User roms
+   * 0C00 - 1000 = Monitor 'B'
+   * 1000 - 13FF = VDU
+   * 1400 - 15FF = Monitor/BASIC RAM
+   * 1600 - 1FFF = On board user RAM
+   * 2000 - BFFF = For off-board expansion
+   * C000 - DFFF = TRAP
+   * E000 - FFFF = BASIC 7.1
+   */
 
   // Initialise memory to 0xFF
   for (i=0; i<MEM_SIZE; i++) main_memory[i] = 0xff;
@@ -569,17 +554,17 @@ int main(int argc, char** argv) {
   }
   sf::Sprite sprite[1024];
   sf::CircleShape led[8];
-  sf::Color ledoff = sf::Color(150,0,0);
+  sf::Color ledoff = sf::Color(100,0,0);
   sf::Color ledon = sf::Color(250,0,0);
   sf::Sprite tape_indicator;
   sf::RectangleShape cursor(sf::Vector2f(8.0f, 2.0f));
-  for (i = 0; i < 1024; i++) {
+  for (i=0; i<1024; i++) {
     sprite[i].setTexture(fontmap);
     ypos = ((i - (i % 8)) / 64) * 24;
     xpos = (i % 64) * 8;
     sprite[i].setPosition(sf::Vector2f((float) xpos,(float) ypos));
   }
-  for (i = 0; i < 8; i++) {
+  for (i=0; i<8; i++) {
     led[i].setRadius(7.0f);
     led[i].setPosition(15.0f + (i * 15), 396.0f);
   }
@@ -603,17 +588,14 @@ int main(int argc, char** argv) {
         if ((event.key.code == sf::Keyboard::LShift) || (event.key.code == sf::Keyboard::RShift)) shifted = false;
         if ((event.key.code == sf::Keyboard::LControl) || (event.key.code == sf::Keyboard::RControl)) ctrl = false;
       }
-      if (inFocus) {
-        // Respond to key presses
+      if (inFocus) { // Respond to key presses
         if (event.type == sf::Event::KeyPressed) {
           switch(event.key.code) {
 	  case sf::Keyboard::F1: // jam RST 1 instruction (clear screen)
-	    if (state.int_enable) hardware_interrupt(&state, 0xcf);
-	    // state.interrupt = 0xcf;
+	    state.interrupt = 0xcf;
 	    break;
 	  case sf::Keyboard::F2: // jam RST 2 instruction (print registers and flags)
-	    if (state.int_enable) hardware_interrupt(&state, 0xd7);
-	    // state.interrupt = 0xd7;
+	    state.interrupt = 0xd7;
 	    break;
 	  case sf::Keyboard::F3: // Perform a hardware reset
 	    Reset8080(&state);
@@ -622,7 +604,7 @@ int main(int argc, char** argv) {
 	    pause = !pause;
 	    break;
 	  case sf::Keyboard::F5: // Print status
-	    printStatus(stdout, &state);
+	    WriteStatus8080(stdout, &state);
 	    break;
 	  case sf::Keyboard::F9: // Exit application
 	    window.close();
@@ -638,23 +620,14 @@ int main(int argc, char** argv) {
       }
     }
 
-    if (pause) beep.pause();
-    else {
-      // Send as many clock pulses to the CPU as would happen
-      // between screen frames
-      running_time = 0;
-      while (running_time < operations_per_frame) {
-	time = SingleStep8080(&state);
-	if (state.port_in | state.port_out) MachineInOut(&state, &io, tape);
-        running_time += time;
-      }
+    if (pause) beep.pause(); else {
+      // Send as many clock pulses to the CPU as would happen between screen frames
+      for (ops=0; ops<ops_per_frame; ops+=SingleStep8080(&state)) if (state.port_op) MachineInOut(&state, &io, tape);
       cursor_count++;
-
-      // Draw screen from VDU memory
-      // Font texture acts as ROMs (IC 69 and 70)
+      // Draw screen from VDU memory - font texture acts as ROMs (IC 69 and 70)
       window.clear();
       vdu_rolloffset = 64 * io.vdu_startrow;
-      for (i = 0; i < 1024; i++) {
+      for (i=0; i<1024; i++) {
         glyph = main_memory[0x1000 + ((vdu_rolloffset + i) % 1024)] & 0x7f;
         xpos = (glyph % 16) * 8;
         ypos = ((glyph / 16) * 24);
@@ -698,8 +671,8 @@ int main(int argc, char** argv) {
       cursor.setPosition(sf::Vector2f((float) xpos,(float) ypos));
       window.draw(cursor);
       window.display();
-      if (io.oscillator) beep.play();
-      else beep.pause();
+      // if (io.oscillator) beep.play(); else beep.pause();
+      io.oscillator ? beep.play() : beep.pause();
     }
   }
   return 0;

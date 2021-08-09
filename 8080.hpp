@@ -30,8 +30,10 @@
 
 /* Forked from https://github.com/woo-j/triton
  * Additional modifications:
- * Copyright (c) Patrick B Warren <patrickbwarren@gmail.com>.
+ * Copyright (c) 2021 Patrick B Warren (PBW) <patrickbwarren@gmail.com>.
  */
+
+typedef enum {PORT_NOOP, PORT_IN, PORT_OUT} port_t;
 
 typedef struct ConditionCodes {
   bool z;
@@ -54,14 +56,13 @@ typedef struct State8080 {
   uint8_t *memory;
   struct  ConditionCodes cc;
   uint8_t port;
-  bool port_in;
-  bool port_out;
+  port_t port_op;
   bool int_enable;
   uint8_t interrupt;
+  bool halted;
 } State8080;
 
-void printStatus(FILE *fp, State8080 *state);
+void WriteStatus8080(FILE *fp, State8080 *state);
 void Reset8080(State8080 *state);
 int SingleStep8080(State8080 *state);
-void set_memory(State8080 *state, int address, uint8_t data);
-uint8_t get_memory(State8080 *state, int address);
+//void set_memory(State8080 *state, int address, uint8_t data);
