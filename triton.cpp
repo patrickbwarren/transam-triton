@@ -603,8 +603,8 @@ int main(int argc, char** argv) {
 	  case sf::Keyboard::F4: // Toggle pause
 	    pause = !pause;
 	    break;
-	  case sf::Keyboard::F5: // Print status
-	    WriteStatus8080(stdout, &state);
+	  case sf::Keyboard::F5: // Write status
+	    WriteStatus8080(stderr, &state);
 	    break;
 	  case sf::Keyboard::F9: // Exit application
 	    window.close();
