@@ -54,7 +54,7 @@
 
 #define MEM_SIZE 0x10000
 
-extern uint16_t mem_top; /* declared in 8080.cpp */
+uint16_t mem_top;
 
 using namespace std;
 
@@ -71,7 +71,7 @@ public:
   int  tape_status;
   int  uart_status;
   int  vdu_startrow;
-  void vdu_strobe(State8080* state);
+  void vdu_strobe(State8080 *state, uint8_t *memory);
   void key_press(sf::Event::EventType event, int key, bool shifted, bool ctrl);
 };
 
@@ -81,7 +81,7 @@ const char *tape_file_default = "TAPE";
 char *tape_file = NULL;
 char *user_rom = NULL;
 
-void IOState::vdu_strobe(State8080* state) {
+void IOState::vdu_strobe(State8080 *state, uint8_t *memory) {
   // Takes input from port 5 buffer (IC 51) and attempts to duplicate
   // Thomson-CSF VDU controller (IC 61) interface with video RAM
   int i;
@@ -111,7 +111,7 @@ void IOState::vdu_strobe(State8080* state) {
       vdu_startrow++;
       if (vdu_startrow > 15) vdu_startrow = 0;
       for (i=0; i<64; i++) {
-	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = 0x20;
+	memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = 0x20;
       }
     }
     break;
@@ -122,7 +122,7 @@ void IOState::vdu_strobe(State8080* state) {
     break;
   case 0x0c:
     // Clear screen/reset cursor
-    for (i=0; i<1024; i++) state->memory[0x1000 + i] = 0x20;
+    for (i=0; i<1024; i++) memory[0x1000 + i] = 0x20;
     cursor_position = 0;
     vdu_startrow = 0;
     break;
@@ -130,7 +130,7 @@ void IOState::vdu_strobe(State8080* state) {
     // Carriage return / clear line
     if (cursor_position % 64 != 0) {
       while(cursor_position % 64 != 0) {
-	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position) % 1024)] = 0x20;
+	memory[0x1000 + (((64 * vdu_startrow) + cursor_position) % 1024)] = 0x20;
 	cursor_position++;
       }
       cursor_position -= 64;
@@ -152,14 +152,14 @@ void IOState::vdu_strobe(State8080* state) {
     cursor_position -= (cursor_position % 64);
     break;
   default:
-    state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position) % 1024)] = input;
+    memory[0x1000 + (((64 * vdu_startrow) + cursor_position) % 1024)] = input;
     cursor_position++;
     if (cursor_position >= 1024) {
       cursor_position -= 64;
       vdu_startrow++;
       if (vdu_startrow > 15) vdu_startrow = 0;
       for (i=0; i<64; i++) {
-	state->memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = 0x20;
+	memory[0x1000 + (((64 * vdu_startrow) + cursor_position + i) % 1024)] = 0x20;
       }
     }
     break;
@@ -320,7 +320,7 @@ void IOState::key_press(sf::Event::EventType event, int key, bool shifted, bool 
   }
 }
 
-void MachineInOut(State8080* state, IOState* io, fstream &tape) {
+void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape) {
   if (state->port_op == 0xdb) { // input
     state->port_op = 0x00;
     switch(state->port) {
@@ -384,7 +384,7 @@ void MachineInOut(State8080* state, IOState* io, fstream &tape) {
       // VDU buffer (IC 51)
       if (io->vdu_buffer != state->a) {
 	io->vdu_buffer = state->a;
-	if (state->a >= 0x80) io->vdu_strobe(state);
+	if (state->a >= 0x80) io->vdu_strobe(state, memory);
       }
       break;
     case 6:
@@ -534,7 +534,7 @@ int main(int argc, char** argv) {
   load_rom(main_memory, "TRAP.ROM", 0xc000, 0x2000);
   load_rom(main_memory, "BASIC72.ROM", 0xe000, 0x2000);
 
-  state.memory = main_memory;
+  //state.memory = main_memory;
   Reset8080(&state);
 
   // Initialise window
@@ -620,9 +620,9 @@ int main(int argc, char** argv) {
 
     if (pause) beep.pause(); else {
       // Send as many clock pulses to the CPU as would happen between screen frames
-      for (ops=0; ops<ops_per_frame; ops+=SingleStep8080(&state)) {
+      for (ops=0; ops<ops_per_frame; ops+=SingleStep8080(&state, main_memory)) {
 	if (state.halted) break;
-	if (state.port_op) MachineInOut(&state, &io, tape);
+	if (state.port_op) MachineInOut(&state, main_memory, &io, tape);
       }
       cursor_count++;
       // Draw screen from VDU memory - font texture acts as ROMs (IC 69 and 70)

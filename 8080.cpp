@@ -45,7 +45,15 @@
 #include <iostream>
 #include "8080.hpp"
 
-uint16_t mem_top;
+#define MEM_BASE 0x1000
+extern uint16_t mem_top; // should be defined in triton.cpp
+
+// Macros: make sure we only write into user addressable RAM
+
+#define MEM_READ(address) memory[(uint16_t)(address)]
+
+#define MEM_WRITE(address, byte) { uint16_t addr_ = address;		\
+    if ((addr_ >= MEM_BASE) && (addr_ < mem_top)) memory[addr_] = (uint8_t)(byte); }
 
 // 8-bit parity calculator from
 // https://stackoverflow.com/questions/21617970/how-to-check-if-value-has-even-parity-of-bits-or-odd/21618038
@@ -85,16 +93,8 @@ void Reset8080(State8080 *state) {
   state->halted = false;
 }
 
-void set_memory(State8080 *state, uint16_t address, uint8_t byte) {
-  if ((address >= 0x1000) && (address < mem_top)) state->memory[address] = byte; // only write into RAM
-}
-
-uint8_t get_memory(State8080* state, uint16_t address) {
-  return state->memory[address];
-}
-
-int SingleStep8080(State8080* state) { // return the number of machine cycles
-  uint8_t *opcode = &state->memory[state->pc];
+int SingleStep8080(State8080 *state, uint8_t *memory) { // return the number of machine cycles
+  uint8_t *opcode = &memory[state->pc];
   uint8_t current_opcode;
   int answer;
   int offset;
@@ -124,7 +124,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 10;
   case 0x02: // STAX B - Store accumulator
     offset = (state->b << 8) | (state->c);
-    set_memory(state, offset, state->a);
+    MEM_WRITE(offset, state->a);
     state->pc++;
     return 7;
   case 0x03: // INX B - Increment register pair
@@ -174,7 +174,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 10;
   case 0x0a: // LDAX B - Load accumulator
     offset = (state->b << 8) | (state->c);
-    state->a = get_memory(state, offset);
+    state->a = MEM_READ(offset);
     state->pc++;
     return 7;
   case 0x0b: // DCX B - Decrement register pair
@@ -220,7 +220,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 10;
   case 0x12: // STAX D - Store accumulator
     offset = (state->d << 8) | (state->e);
-    set_memory(state, offset, state->a);
+    MEM_WRITE(offset, state->a);
     state->pc++;
     return 7;
   case 0x13: // INX D - Increment register pair
@@ -271,7 +271,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 10;
   case 0x1a: // LDAX D - Load accumulator
     offset = (state->d << 8) | (state->e);
-    state->a = get_memory(state, offset);
+    state->a = MEM_READ(offset);
     state->pc++;
     return 7;
   case 0x1b: // DCX D - Decrement register pair
@@ -318,8 +318,8 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 10;
   case 0x22: // SHLD - Store H and L direct
     offset = (opcode[2] << 8) | opcode[1];
-    set_memory(state, offset, state->l);
-    set_memory(state, offset + 1, state->h);
+    MEM_WRITE(offset, state->l);
+    MEM_WRITE(offset + 1, state->h);
     state->pc += 3;
     return 16;
   case 0x23: // INX H - Increment register pair
@@ -377,8 +377,8 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 10;
   case 0x2a: // LHLD - Load H and L direct
     offset = (opcode[2] << 8) | opcode[1];
-    state->l = get_memory(state, offset);
-    state->h = get_memory(state, offset + 1);
+    state->l = MEM_READ(offset);
+    state->h = MEM_READ(offset + 1);
     state->pc += 3;
     return 16;
   case 0x2b: // DCX H - Decrement register pair
@@ -421,7 +421,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 10;
   case 0x32: // STA - Store accumulator direct
     offset = (opcode[2] << 8) | opcode[1];
-    set_memory(state, offset, state->a);
+    MEM_WRITE(offset, state->a);
     state->pc += 3;
     return 13;
   case 0x33: // INX SP - Increment register pair
@@ -430,27 +430,27 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 5;
   case 0x34: // INR M - Increment memory
     offset = (state->h << 8) | (state->l);
-    answer = (int) get_memory(state, offset) + 1;
+    answer = (int) MEM_READ(offset) + 1;
     state->cc.z = ((answer & 0xff) == 0);
     state->cc.s = ((answer & 0x80) != 0);
-    state->cc.ac = ((get_memory(state, offset) & 0x0f) + 1 > 0x0f);
+    state->cc.ac = ((MEM_READ(offset) & 0x0f) + 1 > 0x0f);
     state->cc.p = Parity(answer & 0xff);
-    set_memory(state, offset, answer & 0xff);
+    MEM_WRITE(offset, answer & 0xff);
     state->pc++;
     return 10;
   case 0x35: // DCR M - Decrement memory
     offset = (state->h << 8) | (state->l);
-    answer = (int) get_memory(state, offset) + 0xff;
+    answer = (int) MEM_READ(offset) + 0xff;
     state->cc.z = ((answer & 0xff) == 0);
     state->cc.s = ((answer & 0x80) != 0);
-    state->cc.ac = ((get_memory(state, offset) & 0x0f) + 1 > 0x0f);
+    state->cc.ac = ((MEM_READ(offset) & 0x0f) + 1 > 0x0f);
     state->cc.p = Parity(answer & 0xff);
-    set_memory(state, offset, answer & 0xff);
+    MEM_WRITE(offset, answer & 0xff);
     state->pc++;
     return 10;
   case 0x36: // MVI M - Move immediate memory
     offset = (state->h << 8) | (state->l);
-    set_memory(state, offset, opcode[1]);
+    MEM_WRITE(offset, opcode[1]);
     state->pc += 2;
     return 10;
   case 0x37: // STC - Set Carry
@@ -469,7 +469,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 10;
   case 0x3a: // LDA - Load accumulator direct
     offset = (opcode[2] << 8) | opcode[1];
-    state->a = get_memory(state, offset);
+    state->a = MEM_READ(offset);
     state->pc += 3;
     return 13;
   case 0x3b: // DCX SP - Decrement register pair
@@ -533,7 +533,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 5;
   case 0x46: // MOV B,M - Move memory to register
     offset = (state->h << 8) | (state->l);
-    state->b = get_memory(state, offset);
+    state->b = MEM_READ(offset);
     state->pc++;
     return 7;
   case 0x47: // MOV B,A - Move register to register
@@ -563,7 +563,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 5;
   case 0x4e: // MOV C,M - Move memory to register
     offset = (state->h << 8) | (state->l);
-    state->c = get_memory(state, offset);
+    state->c = MEM_READ(offset);
     state->pc++;
     return 7;
   case 0x4f: // MOV C,A - Move register to register
@@ -593,7 +593,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 5;
   case 0x56: // MOV D,M - Move memory to register
     offset = (state->h << 8) | (state->l);
-    state->d = get_memory(state, offset);
+    state->d = MEM_READ(offset);
     state->pc++;
     return 7;
   case 0x57: // MOV D,A - Move register to register
@@ -623,7 +623,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 5;
   case 0x5e: // MOV E,M - Move memory to register
     offset = (state->h << 8) | (state->l);
-    state->e = get_memory(state, offset);
+    state->e = MEM_READ(offset);
     state->pc++;
     return 7;
   case 0x5f: // MOV E,A - Move register to register
@@ -653,7 +653,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 5;
   case 0x66: // MOV H,M - Move memory to register
     offset = (state->h << 8) | (state->l);
-    state->h = get_memory(state, offset);
+    state->h = MEM_READ(offset);
     state->pc++;
     return 7;
   case 0x67: // MOV H,A - Move register to register
@@ -683,7 +683,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     //case 0x6d: // MOV L,L = NOP
   case 0x6e: // MOV L,M - Move memory to register
     offset = (state->h << 8) | (state->l);
-    state->l = get_memory(state, offset);
+    state->l = MEM_READ(offset);
     state->pc++;
     return 7;
   case 0x6f: // MOV L,A - Move register to register
@@ -692,32 +692,32 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 5;
   case 0x70: // MOV M,B - Move register to memory
     offset = (state->h << 8) | (state->l);
-    set_memory(state, offset, state->b);
+    MEM_WRITE(offset, state->b);
     state->pc++;
     return 7;
   case 0x71: // MOV M,C - Move register to memory
     offset = (state->h << 8) | (state->l);
-    set_memory(state, offset, state->c);
+    MEM_WRITE(offset, state->c);
     state->pc++;
     return 7;
   case 0x72: // MOV M,D - Move register to memory
     offset = (state->h << 8) | (state->l);
-    set_memory(state, offset, state->d);
+    MEM_WRITE(offset, state->d);
     state->pc++;
     return 7;
   case 0x73: // MOV M,E - Move register to memory
     offset = (state->h << 8) | (state->l);
-    set_memory(state, offset, state->e);
+    MEM_WRITE(offset, state->e);
     state->pc++;
     return 7;
   case 0x74: // MOV M,H - Move register to memory
     offset = (state->h << 8) | (state->l);
-    set_memory(state, offset, state->h);
+    MEM_WRITE(offset, state->h);
     state->pc++;
     return 7;
   case 0x75: // MOV M,L - Move register to memory
     offset = (state->h << 8) | (state->l);
-    set_memory(state, offset, state->l);
+    MEM_WRITE(offset, state->l);
     state->pc++;
     return 7;
   case 0x76: // HLT - Halt
@@ -725,7 +725,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 7;
   case 0x77: // MOV M,A - Move register to memory
     offset = (state->h << 8) | (state->l);
-    set_memory(state, offset, state->a);
+    MEM_WRITE(offset, state->a);
     state->pc++;
     return 7;
   case 0x78: // MOV A,B - Move register to register
@@ -754,7 +754,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 5;
   case 0x7e: // MOV A,M - Move memory to register
     offset = (state->h << 8) | (state->l);
-    state->a = get_memory(state, offset);
+    state->a = MEM_READ(offset);
     state->pc++;
     return 7;
     //case 0x7f: // MOV A,A = NOP
@@ -820,10 +820,10 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 4;
   case 0x86: // ADD M - Add memory to A
     offset = (state->h << 8) | (state->l);
-    answer = (int) state->a + get_memory(state, offset);
+    answer = (int) state->a + MEM_READ(offset);
     state->cc.z = ((answer & 0xff) == 0);
     state->cc.s = ((answer & 0x80) != 0);
-    state->cc.ac = ((state->a & 0x0f) + (get_memory(state, offset) & 0x0f) > 0x0f);
+    state->cc.ac = ((state->a & 0x0f) + (MEM_READ(offset) & 0x0f) > 0x0f);
     state->cc.cy = (answer > 0xff);
     state->cc.p = Parity(answer & 0xff);
     state->a = answer & 0xff;
@@ -901,10 +901,10 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 4;
   case 0x8e: // ADC M - Add memory to A with carry
     offset = (state->h << 8) | (state->l);
-    answer = (int) state->a + (int) get_memory(state, offset) + (int) state->cc.cy;
+    answer = (int) state->a + (int) MEM_READ(offset) + (int) state->cc.cy;
     state->cc.z = ((answer & 0xff) == 0);
     state->cc.s = ((answer & 0x80) != 0);
-    state->cc.ac = ((state->a & 0x0f) + (get_memory(state, offset) & 0x0f) + state->cc.cy > 0x0f);
+    state->cc.ac = ((state->a & 0x0f) + (MEM_READ(offset) & 0x0f) + state->cc.cy > 0x0f);
     state->cc.cy = (answer > 0xff);
     state->cc.p = Parity(answer & 0xff);
     state->a = answer & 0xff;
@@ -982,10 +982,10 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 4;
   case 0x96: // SUB M - Subtract memory from A
     offset = (state->h << 8) | (state->l);
-    answer = (int) state->a + (int) (~get_memory(state, offset) & 0xff) + 1;
+    answer = (int) state->a + (int) (~MEM_READ(offset) & 0xff) + 1;
     state->cc.z = ((answer & 0xff) == 0);
     state->cc.s = ((answer & 0x80) != 0);
-    state->cc.ac = ((state->a & 0x0f) + (~get_memory(state, offset) & 0x0f) + 1 > 0x0f);
+    state->cc.ac = ((state->a & 0x0f) + (~MEM_READ(offset) & 0x0f) + 1 > 0x0f);
     state->cc.cy = (answer <= 0xff);
     state->cc.p = Parity(answer & 0xff);
     state->a = answer & 0xff;
@@ -1069,11 +1069,11 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 4;
   case 0x9e: // SBB M - Subtract memory from A with borrow
     offset = (state->h << 8) | (state->l);
-    answer = (int) state->a + (int) (~get_memory(state, offset) & 0xff) + 1;
+    answer = (int) state->a + (int) (~MEM_READ(offset) & 0xff) + 1;
     answer -= (int) state->cc.cy;
     state->cc.z = ((answer & 0xff) == 0);
     state->cc.s = ((answer & 0x80) != 0);
-    state->cc.ac = ((state->a & 0x0f) + (~get_memory(state, offset) & 0x0f) + 1 + state->cc.cy > 0x0f);
+    state->cc.ac = ((state->a & 0x0f) + (~MEM_READ(offset) & 0x0f) + 1 + state->cc.cy > 0x0f);
     state->cc.cy = (answer <= 0xff);
     state->cc.p = Parity(answer & 0xff);
     state->a = answer & 0xff;
@@ -1146,7 +1146,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 4;
   case 0xa6: // ANA M - Logical AND memory with accumulator
     offset = (state->h << 8) | (state->l);
-    state->a &= get_memory(state, offset);
+    state->a &= MEM_READ(offset);
     state->cc.z = ((state->a & 0xff) == 0);
     state->cc.s = ((state->a & 0x80) != 0);
     state->cc.p = Parity(state->a & 0xff);
@@ -1218,7 +1218,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 4;
   case 0xae: // XRA M - Logical exclusive-OR register with memory
     offset = (state->h << 8) | (state->l);
-    state->a ^= get_memory(state, offset);
+    state->a ^= MEM_READ(offset);
     state->cc.z = ((state->a & 0xff) == 0);
     state->cc.s = ((state->a & 0x80) != 0);
     state->cc.p = Parity(state->a & 0xff);
@@ -1291,7 +1291,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 4;
   case 0xb6: // ORA M - Logical OR register with memory
     offset = (state->h << 8) | (state->l);
-    state->a |= get_memory(state, offset);
+    state->a |= MEM_READ(offset);
     state->cc.z = ((state->a & 0xff) == 0);
     state->cc.s = ((state->a & 0x80) != 0);
     state->cc.p = Parity(state->a & 0xff);
@@ -1363,7 +1363,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 4;
   case 0xbe: // CMP M - Compare memory with accumulator
     offset = (state->h << 8) | (state->l);
-    answer = (int) state->a + (int) (~get_memory(state, offset) & 0xff) + 1;
+    answer = (int) state->a + (int) (~MEM_READ(offset) & 0xff) + 1;
     state->cc.z = ((answer & 0xff) == 0);
     state->cc.s = ((answer & 0x80) != 0);
     state->cc.ac = ((state->a & 0x0f) + (~state->l & 0x0f) + 1 > 0x0f);
@@ -1381,13 +1381,13 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 4;
   case 0xc0: // RNZ - Return if not zero
     if (state->cc.z == false) {
-      state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
+      state->pc = MEM_READ(state->sp) | (MEM_READ(state->sp + 1) << 8);
       state->sp += 2;
     } else state->pc++;
     return 11;
   case 0xc1: // POP B - Pop data off stack
-    state->c = get_memory(state, state->sp);
-    state->b = get_memory(state, state->sp + 1);
+    state->c = MEM_READ(state->sp);
+    state->b = MEM_READ(state->sp + 1);
     state->sp += 2;
     state->pc++;
     return 10;
@@ -1402,15 +1402,15 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   case 0xc4: // CNZ - Call if no zero
     if (state->cc.z == false) {
       offset = state->pc + 3;
-      set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-      set_memory(state, state->sp - 2, (offset & 0xff));
+      MEM_WRITE(state->sp - 1, (offset >> 8) & 0xff);
+      MEM_WRITE(state->sp - 2, (offset & 0xff));
       state->sp -= 2;
       state->pc = (opcode[2] << 8) | opcode[1];
     } else state->pc += 3;
     return 11;
   case 0xc5: // PUSH B - Push data onto stack
-    set_memory(state, state->sp - 1, state->b);
-    set_memory(state, state->sp - 2, state->c);
+    MEM_WRITE(state->sp - 1, state->b);
+    MEM_WRITE(state->sp - 2, state->c);
     state->sp -= 2;
     state->pc++;
     return 11;
@@ -1433,20 +1433,20 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   case 0xf7:
   case 0xff:
     state->pc++;
-    set_memory(state, state->sp - 2, state->pc & 0xff);
-    set_memory(state, state->sp - 1, state->pc >> 8);
+    MEM_WRITE(state->sp - 2, state->pc & 0xff);
+    MEM_WRITE(state->sp - 1, state->pc >> 8);
     state->sp -= 2;
     state->pc = (int) current_opcode & 0x38; // not opcode[0] since may be servicing an interrupt
     return 11;
   case 0xc8: // RZ - Return if zero
     if (state->cc.z) {
-      state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
+      state->pc = MEM_READ(state->sp) | (MEM_READ(state->sp + 1) << 8);
       state->sp += 2;
     } else state->pc++;
     return 11;
   case 0xc9: // RET - Return
   case 0xd9:
-    state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
+    state->pc = MEM_READ(state->sp) | (MEM_READ(state->sp + 1) << 8);
     state->sp += 2;
     return 10;
   case 0xca: // JZ - Jump if zero
@@ -1457,8 +1457,8 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   case 0xcc: // CZ - Call on zero
     if (state->cc.z) {
       offset = state->pc + 3;
-      set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-      set_memory(state, state->sp - 2, (offset & 0xff));
+      MEM_WRITE(state->sp - 1, (offset >> 8) & 0xff);
+      MEM_WRITE(state->sp - 2, (offset & 0xff));
       state->sp -= 2;
       state->pc = (opcode[2] << 8) | opcode[1];
     } else state->pc += 3;
@@ -1468,8 +1468,8 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   case 0xed:
   case 0xfd:
     offset = state->pc + 3;
-    set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-    set_memory(state, state->sp - 2, (offset & 0xff));
+    MEM_WRITE(state->sp - 1, (offset >> 8) & 0xff);
+    MEM_WRITE(state->sp - 2, (offset & 0xff));
     state->sp -= 2;
     state->pc = (opcode[2] << 8) | opcode[1];
     return 17;
@@ -1486,13 +1486,13 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     //case 0xcf: Restart
   case 0xd0: // RC - Return if no carry
     if (state->cc.cy == false) {
-      state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
+      state->pc = MEM_READ(state->sp) | (MEM_READ(state->sp + 1) << 8);
       state->sp += 2;
     } else state->pc++;
     return 11;
   case 0xd1: // POP D - Pop data off stack
-    state->e = get_memory(state, state->sp);
-    state->d = get_memory(state, state->sp + 1);
+    state->e = MEM_READ(state->sp);
+    state->d = MEM_READ(state->sp + 1);
     state->sp += 2;
     state->pc++;
     return 10;
@@ -1508,15 +1508,15 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   case 0xd4: // CNC - Call if no carry
     if (state->cc.cy == false) {
       offset = state->pc + 3;
-      set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-      set_memory(state, state->sp - 2, (offset & 0xff));
+      MEM_WRITE(state->sp - 1, (offset >> 8) & 0xff);
+      MEM_WRITE(state->sp - 2, (offset & 0xff));
       state->sp -= 2;
       state->pc = (opcode[2] << 8) | opcode[1];
     } else state->pc += 3;
     return 11;
   case 0xd5: // PUSH D - Push data onto stack
-    set_memory(state, state->sp - 1, state->d);
-    set_memory(state, state->sp - 2, state->e);
+    MEM_WRITE(state->sp - 1, state->d);
+    MEM_WRITE(state->sp - 2, state->e);
     state->sp -= 2;
     state->pc++;
     return 11;
@@ -1533,7 +1533,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     //case 0xd7: Restart
   case 0xd8: // RC - Return if carry
     if (state->cc.cy) {
-      state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
+      state->pc = MEM_READ(state->sp) | (MEM_READ(state->sp + 1) << 8);
       state->sp += 2;
     } else state->pc++;
     return 11;
@@ -1550,8 +1550,8 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   case 0xdc: // CC - Call if carry
     if (state->cc.cy) {
       offset = state->pc + 3;
-      set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-      set_memory(state, state->sp - 2, (offset & 0xff));
+      MEM_WRITE(state->sp - 1, (offset >> 8) & 0xff);
+      MEM_WRITE(state->sp - 2, (offset & 0xff));
       state->sp -= 2;
       state->pc = (opcode[2] << 8) | opcode[1];
     } else state->pc += 3;
@@ -1571,13 +1571,13 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     //case 0xdf: Restart
   case 0xe0: // RPO - Return if parity odd
     if (state->cc.p == false) {
-      state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
+      state->pc = MEM_READ(state->sp) | (MEM_READ(state->sp + 1) << 8);
       state->sp += 2;
     } else state->pc++;
     return 11;
   case 0xe1: // POP H - Pop data off stack
-    state->l = get_memory(state, state->sp);
-    state->h = get_memory(state, state->sp + 1);
+    state->l = MEM_READ(state->sp);
+    state->h = MEM_READ(state->sp + 1);
     state->sp += 2;
     state->pc++;
     return 10;
@@ -1587,24 +1587,24 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     return 10;
   case 0xe3: // XTHL - Exchange stack
     offset = (state->h << 8) | (state->l);
-    state->l = get_memory(state, state->sp);
-    state->h = get_memory(state, state->sp + 1);
-    set_memory(state, state->sp + 1, offset >> 8);
-    set_memory(state, state->sp, offset & 0xff);
+    state->l = MEM_READ(state->sp);
+    state->h = MEM_READ(state->sp + 1);
+    MEM_WRITE(state->sp + 1, offset >> 8);
+    MEM_WRITE(state->sp, offset & 0xff);
     state->pc++;
     return 18;
   case 0xe4: // CPO - Call if parity odd
     if (state->cc.p == false) {
       offset = state->pc + 3;
-      set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-      set_memory(state, state->sp - 2, (offset & 0xff));
+      MEM_WRITE(state->sp - 1, (offset >> 8) & 0xff);
+      MEM_WRITE(state->sp - 2, (offset & 0xff));
       state->sp -= 2;
       state->pc = (opcode[2] << 8) | opcode[1];
     } else state->pc += 3;
     return 11;
   case 0xe5: // PUSH H - Push data onto stack
-    set_memory(state, state->sp - 1, state->h);
-    set_memory(state, state->sp - 2, state->l);
+    MEM_WRITE(state->sp - 1, state->h);
+    MEM_WRITE(state->sp - 2, state->l);
     state->sp -= 2;
     state->pc++;
     return 11;
@@ -1619,7 +1619,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     //case 0xe7: Restart
   case 0xe8: // RPE - Return if parity even
     if (state->cc.p) {
-      state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
+      state->pc = MEM_READ(state->sp) | (MEM_READ(state->sp + 1) << 8);
       state->sp += 2;
     } else state->pc++;
     return 11;
@@ -1641,8 +1641,8 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   case 0xec: // CPC - Call if parity even
     if (state->cc.p) {
       offset = state->pc + 3;
-      set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-      set_memory(state, state->sp - 2, (offset & 0xff));
+      MEM_WRITE(state->sp - 1, (offset >> 8) & 0xff);
+      MEM_WRITE(state->sp - 2, (offset & 0xff));
       state->sp -= 2;
       state->pc = (opcode[2] << 8) | opcode[1];
     } else state->pc += 3;
@@ -1659,17 +1659,17 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     //case 0xef: Restart
   case 0xf0: // RP - Return if plus
     if (state->cc.s == false) {
-      state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
+      state->pc = MEM_READ(state->sp) | (MEM_READ(state->sp + 1) << 8);
       state->sp += 2;
     } else state->pc++;
     return 11;
   case 0xf1: // POP PSW - Pop data off stack
-    state->cc.s = ((get_memory(state, state->sp) & 0x80) > 0);
-    state->cc.z = ((get_memory(state, state->sp) & 0x40) > 0);
-    state->cc.ac = ((get_memory(state, state->sp) & 0x10) > 0);
-    state->cc.p = ((get_memory(state, state->sp) & 0x04) > 0);
-    state->cc.cy = ((get_memory(state, state->sp) & 0x01) > 0);
-    state->a = get_memory(state, state->sp + 1);
+    state->cc.s = ((MEM_READ(state->sp) & 0x80) > 0);
+    state->cc.z = ((MEM_READ(state->sp) & 0x40) > 0);
+    state->cc.ac = ((MEM_READ(state->sp) & 0x10) > 0);
+    state->cc.p = ((MEM_READ(state->sp) & 0x04) > 0);
+    state->cc.cy = ((MEM_READ(state->sp) & 0x01) > 0);
+    state->a = MEM_READ(state->sp + 1);
     state->sp += 2;
     state->pc++;
     return 10;
@@ -1684,8 +1684,8 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   case 0xf4: // CP - Call if plus
     if (state->cc.s == false) {
       offset = state->pc + 3;
-      set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-      set_memory(state, state->sp - 2, (offset & 0xff));
+      MEM_WRITE(state->sp - 1, (offset >> 8) & 0xff);
+      MEM_WRITE(state->sp - 2, (offset & 0xff));
       state->sp -= 2;
       state->pc = (opcode[2] << 8) | opcode[1];
     } else state->pc += 3;
@@ -1696,8 +1696,8 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     answer += state->cc.ac << 4;
     answer += state->cc.z << 6;
     answer += state->cc.s << 7;
-    set_memory(state, state->sp - 2, answer & 0xff);
-    set_memory(state, state->sp - 1, state->a);
+    MEM_WRITE(state->sp - 2, answer & 0xff);
+    MEM_WRITE(state->sp - 1, state->a);
     state->sp -= 2;
     state->pc++;
     return 11;
@@ -1712,7 +1712,7 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
     //case 0xf7: Restart
   case 0xf8: // RM - Return if minus
     if (state->cc.s) {
-      state->pc = get_memory(state, state->sp) | (get_memory(state, state->sp + 1) << 8);
+      state->pc = MEM_READ(state->sp) | (MEM_READ(state->sp + 1) << 8);
       state->sp += 2;
     } else state->pc++;
     return 11;
@@ -1731,8 +1731,8 @@ int SingleStep8080(State8080* state) { // return the number of machine cycles
   case 0xfc: // CM - Call if minus
     if (state->cc.s) {
       offset = state->pc + 3;
-      set_memory(state, state->sp - 1, (offset >> 8) & 0xff);
-      set_memory(state, state->sp - 2, (offset & 0xff));
+      MEM_WRITE(state->sp - 1, (offset >> 8) & 0xff);
+      MEM_WRITE(state->sp - 2, (offset & 0xff));
       state->sp -= 2;
       state->pc = (opcode[2] << 8) | opcode[1];
     } else state->pc += 3;

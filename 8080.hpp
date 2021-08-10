@@ -51,7 +51,7 @@ typedef struct State8080 {
   uint8_t l;
   uint16_t sp;
   uint16_t pc;
-  uint8_t *memory;
+  //  uint8_t *memory;
   struct  ConditionCodes cc;
   uint8_t port;
   uint8_t port_op;
@@ -62,4 +62,4 @@ typedef struct State8080 {
 
 void WriteStatus8080(FILE *fp, State8080 *state);
 void Reset8080(State8080 *state);
-int SingleStep8080(State8080 *state);
+int SingleStep8080(State8080 *state, uint8_t *memory);
