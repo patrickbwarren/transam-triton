@@ -103,7 +103,7 @@ int SingleStep8080(State8080 *state, uint8_t *memory) { // return the number of 
   if (state->interrupt && state->int_enable) { // service the interrupt
     current_opcode = state->interrupt;
     state->interrupt = 0x00;
-    state->int_enable = false;
+    state->int_enable = false; // disable interrupts
     state->pc--; // necessary to cancel the increment in RST handler below
   } else current_opcode = opcode[0]; // normal operation
   switch(current_opcode) {
@@ -1424,7 +1424,7 @@ int SingleStep8080(State8080 *state, uint8_t *memory) { // return the number of 
     state->a = answer & 0xff;
     state->pc += 2;
     return 7;
-  case 0xc7: // RST - Restart
+  case 0xc7: // RST - call subroutine at specified location
   case 0xcf:
   case 0xd7:
   case 0xdf:
@@ -1747,9 +1747,6 @@ int SingleStep8080(State8080 *state, uint8_t *memory) { // return the number of 
     state->cc.p = Parity(answer & 0xff);
     state->pc += 2;
     return 7;
-    //case 0xff: Restart
+    //case 0xff: RST 7 
   }
-  // The following should not happen !
-  fprintf(stderr, "Instruction fell through in SingleStep8080!\n");
-  return 0;
 }
