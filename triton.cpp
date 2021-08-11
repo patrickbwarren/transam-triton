@@ -14,7 +14,6 @@
     3. Neither the name of the project nor the names of its contributors
        may be used to endorse or promote products derived from this software
        without specific prior written permission.
-
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
     IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -63,7 +62,7 @@ public:
   int  key_buffer;
   uint8_t led_buffer;
   int  vdu_buffer;
-  int  print_bit_count;
+  unsigned int port6_bit8_count;
   uint8_t print_byte;
   bool oscillator;
   bool tape_relay;
@@ -87,24 +86,17 @@ void IOState::vdu_strobe(State8080 *state, uint8_t *memory) {
   int i;
   int input = vdu_buffer & 0x7f;
   switch(input) {
-  case 0x00:
-    // NUL
-    break;
-  case 0x04:
-    // EOT (End of Text)
-    break;
-  case 0x08:
-    // Backspace
+  case 0x00: break; // NUL
+  case 0x04: break; // EOT (End of Text)
+  case 0x08: // Backspace
     cursor_position--;
     if (cursor_position < 0) cursor_position += 1024;
     break;
-  case 0x09:
-    // Step cursor RIGHT
+  case 0x09: // Step cursor RIGHT
     cursor_position++;
     if (cursor_position >= 1024) cursor_position -= 1024;
     break;
-  case 0x0a:
-    // Line feed
+  case 0x0a: // Line feed
     cursor_position += 64;
     if (cursor_position >= 1024) {
       cursor_position -= 64;
@@ -115,19 +107,16 @@ void IOState::vdu_strobe(State8080 *state, uint8_t *memory) {
       }
     }
     break;
-  case 0x0b:
-    // Step cursor UP
+  case 0x0b: // Step cursor UP
     cursor_position -=64;
     if (cursor_position < 0) cursor_position += 1024;
     break;
-  case 0x0c:
-    // Clear screen/reset cursor
+  case 0x0c: // Clear screen/reset cursor
     for (i=0; i<1024; i++) memory[0x1000 + i] = 0x20;
     cursor_position = 0;
     vdu_startrow = 0;
     break;
-  case 0x0d:
-    // Carriage return / clear line
+  case 0x0d: // Carriage return / clear line
     if (cursor_position % 64 != 0) {
       while(cursor_position % 64 != 0) {
 	memory[0x1000 + (((64 * vdu_startrow) + cursor_position) % 1024)] = 0x20;
@@ -136,19 +125,16 @@ void IOState::vdu_strobe(State8080 *state, uint8_t *memory) {
       cursor_position -= 64;
     }
     break;
-  case 0x1b:
-    // Screen roll (changes which memory location represents top of screen)
+  case 0x1b: // Screen roll (changes which memory location represents top of screen)
     vdu_startrow++;
     if (vdu_startrow > 15) vdu_startrow = 0;
     cursor_position -= 64;
     if (cursor_position < 0) cursor_position += 1024;
     break;
-  case 0x1c:
-    // Reset cursor
+  case 0x1c: // Reset cursor
     cursor_position = 0;
     break;
-  case 0x1d:
-    // Carriage return (no clear)
+  case 0x1d: // Carriage return (no clear)
     cursor_position -= (cursor_position % 64);
     break;
   default:
@@ -169,153 +155,69 @@ void IOState::vdu_strobe(State8080 *state, uint8_t *memory) {
 void IOState::key_press(sf::Event::EventType event, int key, bool shifted, bool ctrl) {
   // Handles keyboard input, placing data in port 0 (IC 49)
   // Assumes PC has UK keyboard - because that's all I have to test it with!
-  int temp = 0xFF;
+  uint8_t byte = 0xFF;
   if (ctrl == false) {
     switch(key) {
-    case sf::Keyboard::Escape:
-      temp = 0x1B;
-      break; // escape
-    case sf::Keyboard::Space:
-      temp = 0x20;
-      break; // space
-    case sf::Keyboard::Enter:
-      temp = 0x0D;
-      break; // carriage return
-    case sf::Keyboard::Backspace:
-      temp = 0x08;
-      break; // backspace
-    case sf::Keyboard::Left:
-      temp = 0x08;
-      break; // Ctrl+H
-    case sf::Keyboard::Right:
-      temp = 0x09;
-      break; // Ctrl+I
-    case sf::Keyboard::Down:
-      temp = 0x0A;
-      break; // Ctrl+J
-    case sf::Keyboard::Up:
-      temp = 0x0B;
-      break; // Ctrl+K
+    case sf::Keyboard::Escape: byte = 0x1B; break; // escape
+    case sf::Keyboard::Space: byte = 0x20; break; // space
+    case sf::Keyboard::Enter: byte = 0x0D; break; // carriage return
+    case sf::Keyboard::Backspace: byte = 0x08; break; // backspace
+    case sf::Keyboard::Left: byte = 0x08; break; // Ctrl+H
+    case sf::Keyboard::Right: byte = 0x09; break; // Ctrl+I
+    case sf::Keyboard::Down: byte = 0x0A; break; // Ctrl+J
+    case sf::Keyboard::Up: byte = 0x0B; break; // Ctrl+K
     }
     if (shifted == false) { // No shift
-      if ((key >= sf::Keyboard::A) && (key <= sf::Keyboard::Z)) temp = key + 0x61; // Letters A - Z
-      if ((key >= sf::Keyboard::Num0) && (key <= sf::Keyboard::Num9)) temp = key + 0x16; // Numbers 0 to 9
+      if ((key >= sf::Keyboard::A) && (key <= sf::Keyboard::Z)) byte = key + 0x61; // Letters A - Z
+      if ((key >= sf::Keyboard::Num0) && (key <= sf::Keyboard::Num9)) byte = key + 0x16; // Numbers 0 to 9
       switch (key) {
-      case sf::Keyboard::LBracket:
-	temp = 0x5B;
-	break; // left bracket
-      case sf::Keyboard::RBracket:
-	temp = 0x5D;
-	break; // right bracket
-      case sf::Keyboard::Semicolon:
-	temp = 0x3B;
-	break; // semicolon
-      case sf::Keyboard::Comma:
-	temp = 0x2C;
-	break; // comma
-      case sf::Keyboard::Period:
-	temp = 0x2E;
-	break; // stop
-      case sf::Keyboard::Quote:
-	temp = 0x27;
-	break; // quote
-      case sf::Keyboard::Slash:
-	temp = 0x2F;
-	break; // slash
-      case sf::Keyboard::Backslash:
-	temp = 0x5C;
-	break; // backslash
-      case sf::Keyboard::Equal:
-	temp = 0x3D;
-	break; // equal
-      case sf::Keyboard::Hyphen:
-	temp = 0x2D;
-	break; // hyphen
+      case sf::Keyboard::LBracket: byte = 0x5B; break; // left bracket
+      case sf::Keyboard::RBracket: byte = 0x5D; break; // right bracket
+      case sf::Keyboard::Semicolon: byte = 0x3B; break; // semicolon
+      case sf::Keyboard::Comma: byte = 0x2C; break; // comma
+      case sf::Keyboard::Period: byte = 0x2E; break; // stop
+      case sf::Keyboard::Quote: byte = 0x27; break; // quote
+      case sf::Keyboard::Slash: byte = 0x2F; break; // slash
+      case sf::Keyboard::Backslash: byte = 0x5C; break; // backslash
+      case sf::Keyboard::Equal: byte = 0x3D; break; // equal
+      case sf::Keyboard::Hyphen: byte = 0x2D; break; // hyphen
       }
     } else {   // Shift key pressed
-      if ((key >= sf::Keyboard::A) && (key <= sf::Keyboard::Z)) temp = key + 0x41; // Graphic 34-59
+      if ((key >= sf::Keyboard::A) && (key <= sf::Keyboard::Z)) byte = key + 0x41; // Graphic 34-59
       switch (key) {
-      case sf::Keyboard::Num0:
-	temp = 0x29;
-	break; // close brace
-      case sf::Keyboard::Num1:
-	temp = 0x21;
-	break; // exclamation
-      case sf::Keyboard::Num2:
-	temp = 0x22;
-	break; // double quote
-      case sf::Keyboard::Num3:
-	temp = 0x23;
-	break; // hash
-      case sf::Keyboard::Num4:
-	temp = 0x24;
-	break; // dollar
-      case sf::Keyboard::Num5:
-	temp = 0x25;
-	break; // percent
-      case sf::Keyboard::Num6:
-	temp = 0x5E;
-	break; // carrat
-      case sf::Keyboard::Num7:
-	temp = 0x26;
-	break; // ampusand
-      case sf::Keyboard::Num8:
-	temp = 0x2A;
-	break; // asterisk
-      case sf::Keyboard::Num9:
-	temp = 0x28;
-	break; // open brace
-      case sf::Keyboard::LBracket:
-	temp = 0x7B;
-	break; // graphic 60 - arrow up
-      case sf::Keyboard::RBracket:
-	temp = 0x7D;
-	break; // graphic 62 - arrow left
-      case sf::Keyboard::Semicolon:
-	temp = 0x3A;
-	break; // colon
-      case sf::Keyboard::Comma:
-	temp = 0x3C;
-	break; // less than
-      case sf::Keyboard::Period:
-	temp = 0x3E;
-	break; // greater than
-      case sf::Keyboard::Quote:
-	temp = 0x40;
-	break; // at
-      case sf::Keyboard::Slash:
-	temp = 0x3F;
-	break; // question
-      case sf::Keyboard::Backslash:
-	temp = 0x7C;
-	break; // graphic 61 - arrow down
-      case sf::Keyboard::Equal:
-	temp = 0x2B;
-	break; // plus
-      case sf::Keyboard::Hyphen:
-	temp = 0x5F;
-	break; // underscore
+      case sf::Keyboard::Num0: byte = 0x29; break; // close brace
+      case sf::Keyboard::Num1: byte = 0x21; break; // exclamation
+      case sf::Keyboard::Num2: byte = 0x22; break; // double quote
+      case sf::Keyboard::Num3: byte = 0x23; break; // hash
+      case sf::Keyboard::Num4: byte = 0x24; break; // dollar
+      case sf::Keyboard::Num5: byte = 0x25; break; // percent
+      case sf::Keyboard::Num6: byte = 0x5E; break; // carrat
+      case sf::Keyboard::Num7: byte = 0x26; break; // ampusand
+      case sf::Keyboard::Num8: byte = 0x2A; break; // asterisk
+      case sf::Keyboard::Num9: byte = 0x28; break; // open brace
+      case sf::Keyboard::LBracket: byte = 0x7B; break; // graphic 60 - arrow up
+      case sf::Keyboard::RBracket: byte = 0x7D; break; // graphic 62 - arrow left
+      case sf::Keyboard::Semicolon: byte = 0x3A; break; // colon
+      case sf::Keyboard::Comma: byte = 0x3C; break; // less than
+      case sf::Keyboard::Period: byte = 0x3E; break; // greater than
+      case sf::Keyboard::Quote: byte = 0x40; break; // at
+      case sf::Keyboard::Slash: byte = 0x3F; break; // question
+      case sf::Keyboard::Backslash: byte = 0x7C; break; // graphic 61 - arrow down
+      case sf::Keyboard::Equal: byte = 0x2B; break; // plus
+      case sf::Keyboard::Hyphen: byte = 0x5F; break; // underscore
       }
     }
   } else {   // Control characters
-    if ((key >= sf::Keyboard::A) && (key <= sf::Keyboard::Z)) temp = key + 0x01; // CTRL A - Z
+    if ((key >= sf::Keyboard::A) && (key <= sf::Keyboard::Z)) byte = key + 0x01; // CTRL A - Z
     switch (key) {
-    case sf::Keyboard::Quote:
-      temp = 0x00;
-      break; // control + at
-    case sf::Keyboard::Backslash:
-      temp = 0x1C;
-      break; // control + backslash
-    case sf::Keyboard::LBracket:
-      temp = 0x1B;
-      break; // control + left bracket
-    case sf::Keyboard::RBracket:
-      temp = 0x1D;
-      break; // control + right bracket
+    case sf::Keyboard::Quote: byte = 0x00; break; // control + at
+    case sf::Keyboard::Backslash: byte = 0x1C; break; // control + backslash
+    case sf::Keyboard::LBracket: byte = 0x1B; break; // control + left bracket
+    case sf::Keyboard::RBracket: byte = 0x1D; break; // control + right bracket
     }
   }
-  if (temp != 0xFF) { // check if the key press was recognised
-    key_buffer = temp; // set the key buffer
+  if (byte != 0xFF) { // check if the key press was recognised
+    key_buffer = byte; // set the key buffer
     if (event == sf::Event::KeyPressed) key_buffer |= 0x80; // set the strobe bit
   }
 }
@@ -362,11 +264,8 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
       if (io->tape_relay) {
 	if (io->tape_status == ' ') {
 	  tape.open(tape_file, ios::out | ios::app | ios::binary);
-	  if (tape.is_open()) {
-	    io->tape_status = 'w';
-	  } else {
-	    fprintf(stderr, "Unable to open tape file %s for writing\n", tape_file);
-	  }
+	  if (tape.is_open())  io->tape_status = 'w';
+	  else fprintf(stderr, "Unable to open tape file %s for writing\n", tape_file);
 	}
 	if (io->tape_status == 'w') {
 	  char c;
@@ -390,20 +289,20 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
     case 6:
       // Port 6 latches (IC 52)
       uint8_t byte;
-      byte = state->a & 0x80;
-      if (io->print_bit_count == 0) {
+      byte = state->a & 0x80; // keep only bit 8 of the output
+      if (io->port6_bit8_count == 0) {
 	if (byte == 0x80) { // start bit
-	  io->print_byte = 0x00;
-	  io->print_bit_count = 1;
+	  io->print_byte = 0x00; // keep track of bit-banged output
+	  io->port6_bit8_count = 1;
 	}
       } else {
-	if (io->print_bit_count < 8) { // reading data
-	  io->print_byte = (io->print_byte | byte) >> 1; // OR, and shift right 
-	  io->print_bit_count++;
-	} else { // stop bit - this is a single output byte but delayed 
-	  byte = ~io->print_byte & 0x7f; // complement and drop bit 8
-	  printf("%c", (char)(byte)); // this is now a character and can be printed
-	  io->print_bit_count = 0;
+	if (io->port6_bit8_count < 9) { // seven data bits, with eighth (fake parity) bit always set
+	  io->print_byte = (io->print_byte >> 1) | byte;
+	  io->port6_bit8_count++;
+	} else { // stop bit - process captured output to ASCII character
+	  byte = ~io->print_byte; // complement; fake parity bit is now unset
+	  printf("%c", (char)byte); // this is now an ASCII character and can be printed
+	  io->port6_bit8_count = 0; // reset counter and look out for next start bit
 	}
       }
       break;
@@ -512,7 +411,7 @@ int main(int argc, char** argv) {
   io.tape_status = ' ';
 
   io.print_byte = 0x00;
-  io.print_bit_count = 0;
+  io.port6_bit8_count = 0;
 
   // Memory map for L7.1:
   // 0000 - 03FF = Monitor 'A'
