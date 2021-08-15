@@ -224,17 +224,13 @@ void IOState::key_press(sf::Event::EventType event, int key, bool shifted, bool 
 
 void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape) {
   switch(state->port) {
-  case 0:
-    // Keyboard buffer (IC 49)
+  case 0: // Keyboard buffer (IC 49)
     state->a = io->key_buffer;
-    // printf("%02X\n", io->key_buffer); // for debugging
     break;
-  case 1:
-    // Get UART status
+  case 1: // Get UART status
     state->a = io->uart_status;
     break;
-  case 2:
-    // Output data to tape
+  case 2: // Output data to tape
     if (io->tape_relay) {
       if (io->tape_status == ' ') {
 	tape.open(tape_file, ios::out | ios::app | ios::binary);
@@ -248,13 +244,10 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
       }
     }
     break;
-  case 3:
-    // LED buffer (IC 50)
-    // printf("LED port: %02X\n", state->a);
+  case 3: // LED buffer (IC 50)
     io->led_buffer = state->a;
     break;
-  case 4:
-    // Input data from tape
+  case 4: // Input data from tape
     if (io->tape_relay) {
       if (io->tape_status == ' ') {
 	tape.open(tape_file, ios::in | ios::binary);
@@ -273,15 +266,13 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
       } else state->a = 0x00;
     }
     break;
-  case 5:
-    // VDU buffer (IC 51)
+  case 5: // VDU buffer (IC 51)
     if (io->vdu_buffer != state->a) {
       io->vdu_buffer = state->a;
       if (state->a >= 0x80) io->vdu_strobe(state, memory);
     }
     break;
-  case 6:
-    // port 6 latches (IC 52)
+  case 6: // port 6 latches (IC 52) -- printer emulation
     uint8_t byte;
     byte = state->a & 0x80; // keep only bit 8 of the output
     if (io->port6_bit8_count == 0) {
@@ -300,8 +291,7 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
       }
     }
     break;
-  case 7:
-    // port 7 latches (IC 52) and tape power switch (RLY 1)
+  case 7: // port 7 latches (IC 52) and tape power switch (RLY 1)
     io->oscillator = ((state->a & 0x40) != 0);
     if (((state->a & 0x80) != 0) && (io->tape_relay == false)) io->tape_relay = true;
     if (((state->a & 0x80) == 0) && io->tape_relay) {
@@ -312,7 +302,7 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
       io->tape_relay = false;
     }
     break;
-  default:
+  default: // all other ports, such as EPROM programmer
     if (state->port_op == 0xd3) {
       printf("port %02X output %02x\n", state->port, state->a);
     } else {
