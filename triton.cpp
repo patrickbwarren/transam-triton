@@ -223,103 +223,103 @@ void IOState::key_press(sf::Event::EventType event, int key, bool shifted, bool 
 }
 
 void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape) {
-  if (state->port_op == 0xdb) { // input
-    state->port_op = 0x00;
-    switch(state->port) {
-    case 0:
-      // Keyboard buffer (IC 49)
-      state->a = io->key_buffer;
-      // printf("%02X\n", io->key_buffer); // for debugging
-      break;
-    case 1:
-      // Get UART status
-      state->a = io->uart_status;
-      break;
-    case 4:
-      // Input data from tape
-      if (io->tape_relay) {
-	if (io->tape_status == ' ') {
-	  tape.open(tape_file, ios::in | ios::binary);
-	  if (tape.is_open()) {
-	    // printf("Opened tape file " << tape_file << " for reading\n");
-	    io->tape_status = 'r';
-	  } else {
-	    fprintf(stderr, "Unable to open tape file %s for reading\n", tape_file);
-	    io->tape_relay = false;
-	  }
-	}
-	if ((io->tape_status == 'r') && (tape.eof() == false)) {
-	  char c;
-	  tape.get(c);
-	  state->a = (uint8_t)c;
-	} else state->a = 0x00;
+  switch(state->port) {
+  case 0:
+    // Keyboard buffer (IC 49)
+    state->a = io->key_buffer;
+    // printf("%02X\n", io->key_buffer); // for debugging
+    break;
+  case 1:
+    // Get UART status
+    state->a = io->uart_status;
+    break;
+  case 2:
+    // Output data to tape
+    if (io->tape_relay) {
+      if (io->tape_status == ' ') {
+	tape.open(tape_file, ios::out | ios::app | ios::binary);
+	if (tape.is_open())  io->tape_status = 'w';
+	else fprintf(stderr, "Unable to open tape file %s for writing\n", tape_file);
       }
-      break;
+      if (io->tape_status == 'w') {
+	char c;
+	c = (char)state->a;
+	tape.put(c);
+      }
     }
-  } else if (state->port_op == 0xd3) { // output
-    state->port_op = 0x00;
-    switch(state->port) {
-    case 2:
-      // Output data to tape
-      if (io->tape_relay) {
-	if (io->tape_status == ' ') {
-	  tape.open(tape_file, ios::out | ios::app | ios::binary);
-	  if (tape.is_open())  io->tape_status = 'w';
-	  else fprintf(stderr, "Unable to open tape file %s for writing\n", tape_file);
-	}
-	if (io->tape_status == 'w') {
-	  char c;
-	  c = (char)state->a;
-	  tape.put(c);
-	}
-      }
-      break;
-    case 3:
-      // LED buffer (IC 50)
-      // printf("LED port: %02X\n", state->a);
-      io->led_buffer = state->a;
-      break;
-    case 5:
-      // VDU buffer (IC 51)
-      if (io->vdu_buffer != state->a) {
-	io->vdu_buffer = state->a;
-	if (state->a >= 0x80) io->vdu_strobe(state, memory);
-      }
-      break;
-    case 6:
-      // Port 6 latches (IC 52)
-      uint8_t byte;
-      byte = state->a & 0x80; // keep only bit 8 of the output
-      if (io->port6_bit8_count == 0) {
-	if (byte == 0x80) { // start bit
-	  io->print_byte = 0x00; // keep track of bit-banged output
-	  io->port6_bit8_count = 1;
-	}
-      } else {
-	if (io->port6_bit8_count < 9) { // seven data bits, with eighth (fake parity) bit always set
-	  io->print_byte = (io->print_byte >> 1) | byte;
-	  io->port6_bit8_count++;
-	} else { // stop bit - process captured output to ASCII character
-	  byte = ~io->print_byte; // complement; fake parity bit is now unset
-	  printf("%c", (char)byte); // this is now an ASCII character and can be printed
-	  io->port6_bit8_count = 0; // reset counter and look out for next start bit
+    break;
+  case 3:
+    // LED buffer (IC 50)
+    // printf("LED port: %02X\n", state->a);
+    io->led_buffer = state->a;
+    break;
+  case 4:
+    // Input data from tape
+    if (io->tape_relay) {
+      if (io->tape_status == ' ') {
+	tape.open(tape_file, ios::in | ios::binary);
+	if (tape.is_open()) {
+	  // printf("Opened tape file " << tape_file << " for reading\n");
+	  io->tape_status = 'r';
+	} else {
+	  fprintf(stderr, "Unable to open tape file %s for reading\n", tape_file);
+	  io->tape_relay = false;
 	}
       }
-      break;
-    case 7:
-      // Port 7 latches (IC 52) and tape power switch (RLY 1)
-      io->oscillator = ((state->a & 0x40) != 0);
-      if (((state->a & 0x80) != 0) && (io->tape_relay == false)) io->tape_relay = true;
-      if (((state->a & 0x80) == 0) && io->tape_relay) {
-	if ((io->tape_status == 'w') || (io->tape_status == 'r')) {
-	  tape.close();
-	  io->tape_status = ' ';
-	}
-	io->tape_relay = false;
+      if ((io->tape_status == 'r') && (tape.eof() == false)) {
+	char c;
+	tape.get(c);
+	state->a = (uint8_t)c;
+      } else state->a = 0x00;
+    }
+    break;
+  case 5:
+    // VDU buffer (IC 51)
+    if (io->vdu_buffer != state->a) {
+      io->vdu_buffer = state->a;
+      if (state->a >= 0x80) io->vdu_strobe(state, memory);
+    }
+    break;
+  case 6:
+    // port 6 latches (IC 52)
+    uint8_t byte;
+    byte = state->a & 0x80; // keep only bit 8 of the output
+    if (io->port6_bit8_count == 0) {
+      if (byte == 0x80) { // start bit
+	io->print_byte = 0x00; // keep track of bit-banged output
+	io->port6_bit8_count = 1;
       }
-      break;
+    } else {
+      if (io->port6_bit8_count < 9) { // seven data bits, with eighth (fake parity) bit always set
+	io->print_byte = (io->print_byte >> 1) | byte;
+	io->port6_bit8_count++;
+      } else { // stop bit - process captured output to ASCII character
+	byte = ~io->print_byte; // complement; fake parity bit is now unset
+	printf("%c", (char)byte); // this is now an ASCII character and can be printed
+	io->port6_bit8_count = 0; // reset counter and look out for next start bit
+      }
+    }
+    break;
+  case 7:
+    // port 7 latches (IC 52) and tape power switch (RLY 1)
+    io->oscillator = ((state->a & 0x40) != 0);
+    if (((state->a & 0x80) != 0) && (io->tape_relay == false)) io->tape_relay = true;
+    if (((state->a & 0x80) == 0) && io->tape_relay) {
+      if ((io->tape_status == 'w') || (io->tape_status == 'r')) {
+	tape.close();
+	io->tape_status = ' ';
+      }
+      io->tape_relay = false;
+    }
+    break;
+  default:
+    if (state->port_op == 0xd3) {
+      printf("port %02X output %02x\n", state->port, state->a);
+    } else {
+      printf("port %02X input\n", state->port);
     }
   }
+  state->port_op = 0x00;
 }
 
 void load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_t rom_size) {
@@ -519,7 +519,7 @@ int main(int argc, char** argv) {
 
     if (pause) beep.pause(); else {
       // Send as many clock pulses to the CPU as would happen between screen frames
-      for (ops=0; ops<ops_per_frame; ops+=SingleStep8080(&state, main_memory)) {
+      for (ops = 0; ops < ops_per_frame; ops += SingleStep8080(&state, main_memory)) {
 	if (state.halted) break;
 	if (state.port_op) MachineInOut(&state, main_memory, &io, tape);
       }
