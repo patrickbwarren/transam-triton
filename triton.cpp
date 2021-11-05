@@ -62,7 +62,7 @@ public:
   int  key_buffer;
   uint8_t led_buffer;
   int  vdu_buffer;
-  unsigned int port6_bit8_count;
+  unsigned int port6_bit_count;
   uint8_t print_byte;
   bool oscillator;
   bool tape_relay;
@@ -79,6 +79,7 @@ const char *tape_file_default = "TAPE";
 
 char *tape_file = NULL;
 char *user_rom = NULL;
+char *zap_rom = NULL;
 
 void IOState::vdu_strobe(State8080 *state, uint8_t *memory) {
   // Takes input from port 5 buffer (IC 51) and attempts to duplicate
@@ -275,19 +276,19 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
   case 6: // port 6 latches (IC 52) -- printer emulation
     uint8_t byte;
     byte = state->a & 0x80; // keep only bit 8 of the output
-    if (io->port6_bit8_count == 0) {
+    if (io->port6_bit_count == 0) {
       if (byte == 0x80) { // start bit
 	io->print_byte = 0x00; // keep track of bit-banged output
-	io->port6_bit8_count = 1;
+	io->port6_bit_count = 1;
       }
     } else {
-      if (io->port6_bit8_count < 9) { // seven data bits, with eighth (fake parity) bit always set
+      if (io->port6_bit_count < 9) { // seven data bits, with eighth (fake parity) bit always set
 	io->print_byte = (io->print_byte >> 1) | byte;
-	io->port6_bit8_count++;
+	io->port6_bit_count++;
       } else { // stop bit - process captured output to ASCII character
 	byte = ~io->print_byte; // complement; fake parity bit is now unset
 	printf("%c", (char)byte); // this is now an ASCII character and can be printed
-	io->port6_bit8_count = 0; // reset counter and look out for next start bit
+	io->port6_bit_count = 0; // reset counter and look out for next start bit
       }
     }
     break;
@@ -351,7 +352,10 @@ int main(int argc, char** argv) {
   // into a static area that might be overwritten.
 
   opterr = 0;
-  while ((c = getopt (argc, argv, "hm:t:u:")) != -1) switch (c) {
+  while ((c = getopt (argc, argv, "hm:t:u:z:")) != -1) switch (c) {
+    case 'z':
+      zap_rom = optarg;
+      break;
     case 'u':
       user_rom = optarg;
       break;
@@ -363,7 +367,7 @@ int main(int argc, char** argv) {
       break;
     case 'h':
     case '?':
-      printf("Usage: %s -m <mem_top> -t <tape_file> -u <user_rom>\n", argv[0]);
+      printf("Usage: %s -m <mem_top> -t <tape_file> -u <user_rom> -z <zap_rom>\n", argv[0]);
     default:
       exit(0);
     }
@@ -401,7 +405,7 @@ int main(int argc, char** argv) {
   io.tape_status = ' ';
 
   io.print_byte = 0x00;
-  io.port6_bit8_count = 0;
+  io.port6_bit_count = 0;
 
   // Memory map for L7.1:
   // 0000 - 03FF = Monitor 'A'
@@ -492,6 +496,10 @@ int main(int argc, char** argv) {
 	    break;
 	  case sf::Keyboard::F5: // Write status
 	    WriteStatus8080(stderr, &state);
+	    break;
+	  case sf::Keyboard::F8: // Write zapped EPROM
+	    if (zap_rom != NULL) printf("Writing EPROM to %s\n", zap_rom);
+	    else printf("No file given to write EPROM\n");
 	    break;
 	  case sf::Keyboard::F9: // Exit application
 	    window.close();
