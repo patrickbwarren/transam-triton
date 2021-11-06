@@ -200,6 +200,6 @@ along with these programs.  If not, see
 
 ### Copyright
 
-Where stated, copyright &copy; 1979-2021 Patrick B Warren
-<patrickbwarren@gmail.com>.
+Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
+<patrickbwarren@gmail.com>
 

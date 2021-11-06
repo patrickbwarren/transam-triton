@@ -51,9 +51,9 @@
 #include <string>
 #include <unistd.h>
 
-#define _64K 0x10000
 #define _1K 0x400
 #define _8K 0x2000
+#define _64K 0x10000
 
 uint16_t mem_top;
 
