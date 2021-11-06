@@ -419,6 +419,7 @@ int main(int argc, char** argv) {
   // E000 - FFFF = BASIC
 
   // Initialise memory to 0xFF
+  
   for (i=0; i<MEM_SIZE; i++) main_memory[i] = 0xff;
 
   load_rom(main_memory, "MONA72.ROM", 0x0000, 0x400);

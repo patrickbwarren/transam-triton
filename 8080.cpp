@@ -105,8 +105,8 @@ int SingleStep8080(State8080 *state, uint8_t *memory) { // return the number of 
     state->interrupt = 0x00;
     state->int_enable = false; // disable interrupts
     state->pc--; // necessary to cancel the increment in RST handler below
-  } else {
-    current_opcode = opcode[0]; // normal operation
+  } else { // normal operation
+    current_opcode = opcode[0];
   }
   switch(current_opcode) {
   case 0x00: // NOP - No-operation

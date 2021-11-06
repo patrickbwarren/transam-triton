@@ -39,9 +39,10 @@ trimcc : trimcc.c
 	gcc -O -Wall trimcc.c -o trimcc
 
 roms:
-	./trimcc L72_0000-03ff.tri -o MONA72.ROM
-	./trimcc L72_0c00-0fff.tri -o MONB72.ROM
-	./trimcc L72_e000-ffff.tri -o BASIC72.ROM
+	./trimcc mona72_rom.tri -o MONA72.ROM
+	./trimcc monb72_rom.tri -o MONB72.ROM
+	./trimcc basic72_rom.tri -o BASIC72.ROM
+	./trimcc trap_rom.tri -o TRAP.ROM
 	./trimcc fastvdu_rom.tri -o FASTVDU.ROM
 
 tapes:

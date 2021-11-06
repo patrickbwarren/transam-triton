@@ -56,6 +56,12 @@ Note that you may have to add yourself the `dialout` group to use the
 default serial port (`/dev/ttyS0`).  This is not necessary if just
 compiling `.tri` codes with `trimcc -o`.
 
+#### Notes
+
+The 'Y' function is vectored through RAM at 1473 so to change the vector change the locations at 1474/5.
+
+Printer speed is controlled by the pair of bytes at 1402/3.
+
 ### Triton emulator
 
 Robin Stuart has written a superb [Triton
