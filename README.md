@@ -86,9 +86,10 @@ it is released;
 ROM dumps for the Triton L7.2 Monitor and BASIC are also
 included.  These can be compiled to binaries by
 ```
-./trimcc L72_0000-03ff.tri -o MONA72.ROM
-./trimcc L72_0c00-0fff.tri -o MONB72.ROM
-./trimcc L72_e000-ffff.tri -o BASIC72.ROM
+./trimcc mona72_rom.tri -o MONA72.ROM
+./trimcc monb72_rom.tri -o MONB72.ROM
+./trimcc basic72_rom.tri -o BASIC72.ROM
+./trimcc trap_rom.tri -o TRAP.ROM
 ```
 (implemented as `make roms` in the Makefile).  These `.ROM` files can
 be used directly with Robin Stuart's emulator (copy them into the main
