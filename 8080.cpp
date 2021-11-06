@@ -45,15 +45,20 @@
 #include <iostream>
 #include "8080.hpp"
 
-#define MEM_BASE 0x1000
 extern uint16_t mem_top; // should be defined in triton.cpp
 
-// Macros: make sure we only write into user addressable RAM
+// Macros: make sure we only write into user addressable RAM between
+// VDU which starts at 0x1000 and mem_top.  Similarly an attempt to
+// read from VDU memory (0x1000 to 0x13ff) should result in 0xff.
 
-#define MEM_READ(address) memory[(uint16_t)(address)]
+// Note the apparently excessive use of brackets in MEM_READ is
+// because we sometimes want to bitwise negate the result ~MEM_READ in
+// handling the op codes below.
 
-#define MEM_WRITE(address, byte) { uint16_t addr_ = address;		\
-    if ((addr_ >= MEM_BASE) && (addr_ < mem_top)) memory[addr_] = (uint8_t)(byte); }
+#define MEM_WRITE(address, byte) { uint16_t addr_ = address; \
+    if ((addr_ >= 0x1000) && (addr_ < mem_top)) memory[addr_] = (uint8_t)(byte); }
+
+#define MEM_READ(address) (((address >= 0x1000) && (address < 0x1400)) ? 0xff : memory[(uint16_t)(address)])
 
 // 8-bit parity calculator from
 // https://stackoverflow.com/questions/21617970/how-to-check-if-value-has-even-parity-of-bits-or-odd/21618038
