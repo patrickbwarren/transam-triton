@@ -58,9 +58,10 @@ compiling `.tri` codes with `trimcc -o`.
 
 #### Notes
 
-The 'Y' function is vectored through RAM at 1473 so to change the vector change the locations at 1474/5.
+The 'Y' function is vectored through RAM at 0x1473 so to change the
+vector change the locations at 0x1474/5.
 
-Printer speed is controlled by the pair of bytes at 1402/3.
+Printer speed is controlled by the pair of bytes at 0x1402/3.
 
 ### Triton emulator
 
@@ -83,17 +84,17 @@ it is released;
 
 ### Triton Level 7.2 ROM dumps
 
-ROM dumps for the Triton L7.2 Monitor and BASIC are also
-included.  These can be compiled to binaries by
+ROM dumps for the Triton L7.2 Monitor and BASIC, and TRAP (Triton
+Resident Assembly Language Package), are also included.  These can be
+compiled to binaries by
 ```
-./trimcc mona72_rom.tri -o MONA72.ROM
-./trimcc monb72_rom.tri -o MONB72.ROM
-./trimcc trap_rom.tri -o TRAP.ROM
-./trimcc basic72_rom.tri -o BASIC72.ROM
+./trimcc mona72_rom.tri -o  MONA72_ROM
+./trimcc monb72_rom.tri -o  MONB72_ROM
+./trimcc trap_rom.tri -o    TRAP_ROM
+./trimcc basic72_rom.tri -o BASIC72_ROM
 ```
-(implemented as `make roms` in the Makefile).  These `.ROM` files can
-be used directly with Robin Stuart's emulator (copy them into the main
-directory).
+(implemented as `make roms` in the Makefile).  These `_ROM` files can
+be used directly with Robin Stuart's emulator.
 
 ### Other TriMCC codes
 
@@ -151,7 +152,7 @@ first two bytes at 0x1600 are conventionally used to indicate the end
 point for tape storage, so that the usual entry point for the
 executable part of the code is the address 0x1602.
 
-More details of the TriMCC minilanguage are given in [TRIMCC.md].
+More details of the TriMCC minilanguage are given in [TRIMCC.md](TRIMCC.md).
 
 ### Copying
 
@@ -171,9 +172,11 @@ along with these programs.  If not, see
 
 ### Copyright
 
-Where stated, copyright &copy; 1979-2021, 1995-2021, 2021
-Patrick B Warren (PBW).  
-Email: <patrickbwarren@gmail.com>.
+Where stated, copyright &copy; 1979-2021 Patrick B Warren (PBW)
+<patrickbwarren@gmail.com>
+
+Apart from the modifications the emulator is copyright &copy; 2020
+Robin Stuart <rstuart114@gmail.com>
 
 The file [`invaders_raw.tri`](invaders_raw.tri) is modified from a hex
 dump in Computing Today (March 1980; page 32).  Copyright (c) is

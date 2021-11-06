@@ -434,17 +434,17 @@ int main(int argc, char** argv) {
   
   for (i=0; i<_64K; i++) main_memory[i] = 0xff;
 
-  load_rom(main_memory, "MONA72.ROM", 0x0000, _1K);
-  load_rom(main_memory, "MONB72.ROM", 0x0c00, _1K);
-  load_rom(main_memory, "TRAP.ROM", 0xc000, _8K);
-  load_rom(main_memory, "BASIC72.ROM", 0xe000, _8K);
+  load_rom(main_memory, "MONA72_ROM",  0x0000, _1K);
+  load_rom(main_memory, "MONB72_ROM",  0x0c00, _1K);
+  load_rom(main_memory, "TRAP_ROM",    0xc000, _8K);
+  load_rom(main_memory, "BASIC72_ROM", 0xe000, _8K);
 
   if (user_rom != NULL) {
-    if (char *s = strchr(user_rom, ',')) {
-      s[0] = '\0'; s++;
-      load_rom(main_memory, s, 0x0800, _1K);
+    if (char *s = strchr(user_rom, ',')) { // check for a comma
+      s[0] = '\0'; // if found, truncate the user_rom string at the comma
+      load_rom(main_memory, ++s, 0x0800, _1K); // use the remainder to load the second user ROM
     }
-    load_rom(main_memory, user_rom, 0x0400, _1K);
+    load_rom(main_memory, user_rom, 0x0400, _1K); // load the first user ROM
   }
 
 

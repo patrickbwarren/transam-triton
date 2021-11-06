@@ -39,11 +39,11 @@ trimcc : trimcc.c
 	gcc -O -Wall trimcc.c -o trimcc
 
 roms:
-	./trimcc mona72_rom.tri -o MONA72.ROM
-	./trimcc monb72_rom.tri -o MONB72.ROM
-	./trimcc trap_rom.tri -o TRAP.ROM
-	./trimcc basic72_rom.tri -o BASIC72.ROM
-	./trimcc fastvdu_rom.tri -o FASTVDU.ROM
+	./trimcc mona72_rom.tri  -o MONA72_ROM
+	./trimcc monb72_rom.tri  -o MONB72_ROM
+	./trimcc trap_rom.tri    -o TRAP_ROM
+	./trimcc basic72_rom.tri -o BASIC72_ROM
+	./trimcc fastvdu_rom.tri -o FASTVDU_ROM
 
 tapes:
 	./trimcc hex2dec.tri -o HEX2DEC_TAPE
@@ -63,4 +63,4 @@ pristine: clean
 	rm -f triton tridat trimcc
 
 rom-clean: 
-	rm -f MONA72.ROM MONB72.ROM BASIC72.ROM
+	rm -f *_ROM
