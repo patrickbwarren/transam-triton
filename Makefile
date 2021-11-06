@@ -41,8 +41,8 @@ trimcc : trimcc.c
 roms:
 	./trimcc mona72_rom.tri -o MONA72.ROM
 	./trimcc monb72_rom.tri -o MONB72.ROM
-	./trimcc basic72_rom.tri -o BASIC72.ROM
 	./trimcc trap_rom.tri -o TRAP.ROM
+	./trimcc basic72_rom.tri -o BASIC72.ROM
 	./trimcc fastvdu_rom.tri -o FASTVDU.ROM
 
 tapes:

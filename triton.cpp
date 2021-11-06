@@ -51,7 +51,9 @@
 #include <string>
 #include <unistd.h>
 
-#define MEM_SIZE 0x10000
+#define _64K 0x10000
+#define _1K 0x400
+#define _8K 0x2000
 
 uint16_t mem_top;
 
@@ -79,7 +81,7 @@ const char *tape_file_default = "TAPE";
 
 char *tape_file = NULL;
 char *user_rom = NULL;
-char *zap_rom = NULL;
+char *user_eprom = NULL;
 
 void IOState::vdu_strobe(State8080 *state, uint8_t *memory) {
   // Takes input from port 5 buffer (IC 51) and attempts to duplicate
@@ -327,7 +329,8 @@ void load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_
 }
 
 int main(int argc, char** argv) {
-  uint8_t main_memory[MEM_SIZE];
+  uint8_t main_memory[_64K];
+  uint8_t eprom[_1K];
   int cursor_count = 0;
   int i;
   IOState io;
@@ -354,7 +357,7 @@ int main(int argc, char** argv) {
   opterr = 0;
   while ((c = getopt (argc, argv, "hm:t:u:z:")) != -1) switch (c) {
     case 'z':
-      zap_rom = optarg;
+      user_eprom = optarg;
       break;
     case 'u':
       user_rom = optarg;
@@ -367,7 +370,16 @@ int main(int argc, char** argv) {
       break;
     case 'h':
     case '?':
-      printf("Usage: %s -m <mem_top> -t <tape_file> -u <user_rom> -z <zap_rom>\n", argv[0]);
+      printf("Usage: %s -m <mem_top> -t <tape_file> -u <user_roms> -z <user_eprom>\n", argv[0]);
+      printf("To install both user ROMS separate the filenames by a comma.\n");
+      printf("F1: interrupt 1 (RST 1) - clear screen\n");
+      printf("F2: interrupt 2 (RST 2) - save and dump registers\n");
+      printf("F3: reset (RST 0)\n");
+      printf("F4: toggle pause\n");
+      printf("F5: write 8080 status to command line\n");
+      printf("F6: erase EPROM\n");
+      printf("F7: write EPROM\n");
+      printf("F9: exit emulator\n");
     default:
       exit(0);
     }
@@ -420,13 +432,21 @@ int main(int argc, char** argv) {
 
   // Initialise memory to 0xFF
   
-  for (i=0; i<MEM_SIZE; i++) main_memory[i] = 0xff;
+  for (i=0; i<_64K; i++) main_memory[i] = 0xff;
 
-  load_rom(main_memory, "MONA72.ROM", 0x0000, 0x400);
-  if (user_rom != NULL) load_rom(main_memory, user_rom, 0x0400, 0x400);
-  load_rom(main_memory, "MONB72.ROM", 0x0c00, 0x400);
-  load_rom(main_memory, "TRAP.ROM", 0xc000, 0x2000);
-  load_rom(main_memory, "BASIC72.ROM", 0xe000, 0x2000);
+  load_rom(main_memory, "MONA72.ROM", 0x0000, _1K);
+  load_rom(main_memory, "MONB72.ROM", 0x0c00, _1K);
+  load_rom(main_memory, "TRAP.ROM", 0xc000, _8K);
+  load_rom(main_memory, "BASIC72.ROM", 0xe000, _8K);
+
+  if (user_rom != NULL) {
+    if (char *s = strchr(user_rom, ',')) {
+      s[0] = '\0'; s++;
+      load_rom(main_memory, s, 0x0800, _1K);
+    }
+    load_rom(main_memory, user_rom, 0x0400, _1K);
+  }
+
 
   //state.memory = main_memory;
   Reset8080(&state);
@@ -498,8 +518,11 @@ int main(int argc, char** argv) {
 	  case sf::Keyboard::F5: // Write status
 	    WriteStatus8080(stderr, &state);
 	    break;
-	  case sf::Keyboard::F8: // Write zapped EPROM
-	    if (zap_rom != NULL) printf("Writing EPROM to %s\n", zap_rom);
+	  case sf::Keyboard::F6: // Erase EPROM
+	    printf("Erasing EPROM\n");
+	    break;
+	  case sf::Keyboard::F7: // Write zapped EPROM
+	    if (user_eprom != NULL) printf("Writing EPROM to %s\n", user_eprom);
 	    else printf("No file given to write EPROM\n");
 	    break;
 	  case sf::Keyboard::F9: // Exit application
