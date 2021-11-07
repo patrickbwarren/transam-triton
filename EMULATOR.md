@@ -31,6 +31,9 @@ F9: exit emulator
 
 More here...
 
+The 'Y' function is vectored through RAM at `1473` so to change the
+vector change the locations at `1474`/`5`.
+
 ### Implementation notes
 
 #### Interrupts
@@ -132,7 +135,7 @@ parity = (byte & 0x01) ? false : true;
 ```  
 One can test the effect of getting this the wrong way around by swapping the `true` and `false` in this.
 
-#### ROMs
+#### System ROMs
 
 ROM dumps for the Triton L7.2 Monitor and BASIC, and TRAP (Triton
 Resident Assembly Language Package), are also included in this repository.  These can be
@@ -146,14 +149,36 @@ compiled to binaries by
 (implemented as `make roms` in the Makefile).
 These `*_ROM` files are loaded by the emulator.
 
+The memory map for Level 7.2 Triton software is as follows
+```
+0000 - 03FF = Monitor 'A'
+0400 - 0BFF = User roms
+0C00 - 1000 = Monitor 'B'
+1000 - 13FF = VDU
+1400 - 15FF = Monitor/BASIC RAM
+1600 - 1FFF = On board user RAM
+2000 - BFFF = For off-board expansion
+C000 - DFFF = TRAP
+E000 - FFFF = BASIC
+```
+
+#### User ROMs
+
+These can be loaded using the `-u` option at the command line.  If
+just one file is specified it is loaded to `0400`-`07FF`.  If two
+files are specified, for example `-u ROM1,ROM2`, then the second one
+is loaded to `0800`-`0BFF`.  An example of a user ROM is the fast VDU
+ROM described in [TRIMCC.md](TRIMCC.md). If the first byte in the
+first user ROM is the LXI SP op code (`31`), then the code is executed
+automatically.  See L7.2 documentation for more details and the fast
+VDU user ROM (specifically `fastvdu_rom.tri`) for a working example.
+
 #### Keyboard emulation
 
-The keyboard emulation strobes the data into port 3 so that bit 8 is
-set the whole time that a key is depressed, and unset when it is
-released.  This reflects the behaviour of the real hardware.
-
-The 'Y' function is vectored through RAM at `1473` so to change the
-vector change the locations at `1474`/`5`.
+This was fixed compared to Robin Stuart's emulator: the keyboard data
+byte is strobed into port 3, with bit 8 set the whole time that the
+key is depressed, and unset when the key is released.  This reflects
+the behaviour of the real hardware.
 
 #### Tape emulation
 
@@ -166,6 +191,12 @@ interface is expecting to see the correct tape header in front of any
 data file (described in [TRIMCC.md](TRIMCC.md)]).  
 
 #### Printer emulation
+
+This feature was added to Robin Stuart's emulator. The bit-banged
+output to port 6 bit 8 is captured and convert into ASCII characters,
+which are then printed to stdout.  Since all error messages are
+written to `stderr`, printer output can be captured by redirecting
+`stdout` to a file, for example `./triton > printer_output.txt`.
 
 Close examination of the monitor code (`0104`-`0154`) shows just
 what is happening with the serial printer output, which turns out to be
@@ -206,11 +237,6 @@ N = 4E = 0100 1110 <-- 1100011010
 The timer delay that governs the baud rate is controlled by `1402`/`3`
 in user RAM as described in the manual.  For the fastest print speed
 set these two bytes to `01` and `00` respectively.
-
-Printed characters are sent to `stdout`, whereas all error messages
-are written to `stderr`, so that printer output can be captured by
-redirecting `stdout` to a file, for example `./triton >
-printer_output.txt`.
 
 #### EPROM programmer emulation
 
