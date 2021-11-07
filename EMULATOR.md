@@ -12,19 +12,20 @@ Makefile, or `make codes`.
 
 ### Usage
 ```
-Triton emulator
-./triton -m <mem_top> -t <tape_file> -u <user_roms> -z <user_eprom>
+SFML-based Triton emulator
+./triton -m <mem_top> -t <tape_file> -u <user_rom(s)> -z <user_eprom>
+-h (help): print this help
 -m sets the top of memory, for example -m 0x4000, defaults to 0x2000
 -t specifies a tape binary, by default TAPE
--u installs user ROMs; to install two ROMS separate the filenames by a comma
--z specifies an EPROM file to initially load from, and save into
+-u installs user ROM(s); to install two ROMS separate the filenames by a comma
+-z specifies a file to write the EPROM to, with F7
 F1: interrupt 1 (RST 1) - clear screen
 F2: interrupt 2 (RST 2) - save and dump registers
 F3: reset (RST 0)
 F4: toggle pause
 F5: write 8080 status to command line
-F6: erase EPROM
-F7: write EPROM
+F6: UV erase the EPROM (set all bytes to 0xff)
+F7: write the EPROM to the file specified by -z
 F9: exit emulator
 ```
 

@@ -371,11 +371,12 @@ int main(int argc, char** argv) {
       break;
     case 'h':
     case '?':
-      printf("Triton emulator\n");
-      printf("%s -m <mem_top> -t <tape_file> -u <user_roms> -z <user_eprom>\n", argv[0]);
+      printf("SFML-based Triton emulator\n");
+      printf("%s -m <mem_top> -t <tape_file> -u <user_rom(s)> -z <user_eprom>\n", argv[0]);
+      printf("-h (help): print this help\n");
       printf("-m sets the top of memory, for example -m 0x4000, defaults to 0x2000\n");
       printf("-t specifies a tape binary, by default TAPE\n");
-      printf("-u installs user ROMs; to install two ROMS separate the filenames by a comma\n");
+      printf("-u installs user ROM(s); to install two ROMS separate the filenames by a comma\n");
       printf("-z specifies a file to write the EPROM to, with F7\n");
       printf("F1: interrupt 1 (RST 1) - clear screen\n");
       printf("F2: interrupt 2 (RST 2) - save and dump registers\n");
