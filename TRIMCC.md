@@ -15,13 +15,13 @@ and transmitter (`trimcc.c`) were written, to run on a standard linux
 machine.  It is these codes that are in the present repository.  They
 can be compiled by issuing the command `make codes`.
 
-The transmitter `trimcc` implements a rudimentary hybrid assembly /
+The transmitter implements a rudimentary hybrid assembly /
 machine code 'minilanguage' (detailed below) and can be used to
-compile `.tri` source codes (below) to `TAPE` binaries which can be
+compile `.tri` source codes (below) to tape binaries which can be
 loaded into the emulator described below, or to generate the ROMs
 needed to run the emulator.
 
-#### Receiver (`tridat.c`)
+### Receiver (`tridat.c`)
 ```
 Receive Triton RS-232 data from /dev/ttyS0
 ./tridat [-o file]
@@ -32,7 +32,7 @@ physically-connected Triton using the (default) serial port
 `/dev/ttyS0`.  The `-o` option additionally writes these received bytes
 to a file.
 
-#### Transmitter (`trimcc.c`)
+### Transmitter (`trimcc.c`)
 ```
 Compile and optionally transmit RS-232 data to Triton
 ./trimcc [-v] [-t] [-s] [-o tapefile] srcfile
@@ -64,8 +64,8 @@ stream of tokens separated by white space characters, commas,
 semicolons, and/or newlines.  Other files can be included by using an
 `include <file>` directive, which is nestable to a certain level. For
 example see `fastvdu_rom.tri` and `fastvdu_tape.tri`, which both
-include `fastvdu.tri`.  This allows the same core code to be reused in
-a TAPE file and for making a user ROM.
+include `fastvdu.tri`.  This allows the same core code to be used to
+make a tape binary and for making a user ROM.
 
 The token stream comprises:
 
@@ -247,7 +247,7 @@ All `.tri` codes below can be compiled to binaries suitable for the
 ```
 ./trimcc <src_file> -o <tape_file>
 ```
-To load one of these into the emulator use the `-t <tape_file` command
+To load one of these into the emulator use the `-t <tape_file>` command
 line option, and then from within the emulator load the tape file with
 the 'I' monitor command.  The 'tape headers' are listed below.  Note
 that you can concatenate the binaries into a singe tape file with `cat
@@ -278,11 +278,13 @@ hand-coded [Galaxian](https://en.wikipedia.org/wiki/Galaxian)
 clone. Keys: '1' : left; '2' : stop; '3' : right; 'SPACE' :
 fire. Enjoy!
 
-[`invaders_tape.tri`](invaders_tape.tri) (tape header `INVADERS`) -- a [Space
-Invaders](https://en.wikipedia.org/wiki/Space_Invaders) clone modified
-from a hex dump in Computing Today (March 1980).  Keys as above: '1' :
-left; '3' : right; 'SPACE' : fire; and when the game is over 'G' to
-start a new game. Currently if the complete fleet of invaders is wiped
+[`invaders_tape.tri`](invaders_tape.tri) (tape header `INVADERS`) -- a
+[Space Invaders](https://en.wikipedia.org/wiki/Space_Invaders) clone.
+Keys '1', '3' and 'SPACE' as above; and when the game is over 'G' to
+start a new game.
+
+The Invaders clone was modified from a hex dump in Computing Today
+(March 1980). Currently if the complete fleet of invaders is wiped
 out, another fleet doesn't appear - this seems to be a bug.  Apart
 from this it's surprisingly good!
 
@@ -315,18 +317,19 @@ be used directly with the emulator.
 
 In Level 7.2 monitor (at least) output of a character is vectored
 through 0x1479, so that by intercepting this one can fine-tune the
-speed.  This is the basis for a FAST VDU user ROM which can be found
-on [Gerald Sommariva's web
+speed with whice characters are written to the VDU.  This is the basis
+for a FAST VDU user ROM which can be found on [Gerald Sommariva's web
 site](https://sites.google.com/view/transam-triton/downloads).  Here
 this functionality was re-implemented in `fastvdu.tri` which can be
-used to generate both a user ROM and a TAPE binary,
+used to generate both a user ROM and a tape binary,
 ```
 ./trimcc fastvdu_tape.tri -o FASTVDU_TAPE
 ./trimcc fastvdu_rom.tri -o FASTVDU_ROM
 ```
-The user ROM can be run with the emulator using `-u FASTVDU_ROM`.  If
-loaded as a tape binary, the re-vectorisation of the VDU output is set
-up by running the code at 0x1602 (with the 'G' monitor function).
+The user ROM can be run with the emulator using `-u FASTVDU_ROM`.  For
+the tape binary (which is for testing purposes really),
+re-vectorisation of the VDU output is set up by running the code at
+0x1602 (i.e. with the 'G' monitor function).
 
 ### Copying
 

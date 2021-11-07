@@ -53,6 +53,7 @@ tapes:
 	./trimcc galaxian_tape.tri -o GALAXIAN_TAPE
 	./trimcc invaders_tape.tri -o INVADERS_TAPE
 	./trimcc fastvdu_tape.tri  -o FASTVDU_TAPE
+	cat *_TAPE > COMBI_TAPE
 
 clean : 
 	rm -f *~ *.o
