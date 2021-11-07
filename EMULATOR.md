@@ -3,7 +3,7 @@
 Robin Stuart has written a superb [Triton
 emulator](https://github.com/woo-j/triton) that uses the [SFML
 library](https://www.sfml-dev.org/).  Some of the original Triton
-documentation can also be found in Robin's repository.  A fork of this
+documentation can also be found in [Robin's repository](https://github.com/woo-j/triton).  A fork of this
 emulator is included in the present repository, to which a few small
 improvements have been made.
 
@@ -131,7 +131,7 @@ parity = (byte & 0x01) ? false : true;
 ```  
 One can test the effect of getting this the wrong way around by swapping the `true` and `false` in this.
 
-### ROMs
+#### ROMs
 
 ROM dumps for the Triton L7.2 Monitor and BASIC, and TRAP (Triton
 Resident Assembly Language Package), are also included in this repository.  These can be
@@ -145,7 +145,7 @@ compiled to binaries by
 (implemented as `make roms` in the Makefile).
 These `*_ROM` files are loaded by the emulator.
 
-### Keyboard emulation
+#### Keyboard emulation
 
 The keyboard emulation strobes the data into port 3 so that bit 8 is
 set the whole time that a key is depressed, and unset when it is
@@ -154,11 +154,17 @@ released.  This reflects the behaviour of the real hardware.
 The 'Y' function is vectored through RAM at 0x1473 so to change the
 vector change the locations at 0x1474/5.
 
-### Tape emulation
+#### Tape emulation
 
-To be described...
+This remains as in Robin Stuart's emulator, except that the
+possibility to select the tape file is given as a command line option.
+Input bytes are read from the tape file as though from a cassette
+recorder, and likewise output bytes are appended to the tape file.
+This means that with the monitor 'I' option, the emulated tape
+interface is expecting to see the correct tape header in front of any
+data file (described in [TRIMCC.md](TRIMCC.md)]).  
 
-### Printer emulation
+#### Printer emulation
 
 Close examination of the monitor code (0x0104 - 0x0154) shows just
 what is happening with the serial printer output, which turns out to be
@@ -200,7 +206,12 @@ The timer delay that governs the baud rate is controlled by 0x1402/3
 in user RAM as described in the manual.  For the fastest print speed
 set these two bytes to 0x01 and 0x00 respectively.
 
-### EPROM programmer emulation
+Printed characters are sent to `stdout`, whereas all error messages
+are written to `stderr`, so that printer output can be captured by
+redirecting `stdout` to a file, for example `./triton >
+printer_output.txt`.
+
+#### EPROM programmer emulation
 
 Not yet implemented...
 
