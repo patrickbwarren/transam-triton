@@ -280,10 +280,10 @@ fire. Enjoy!
 
 [`invaders_tape.tri`](invaders_tape.tri) (tape header `INVADERS`) -- a
 [Space Invaders](https://en.wikipedia.org/wiki/Space_Invaders) clone.
-Keys '1', '3' and 'SPACE' as above; and when the game is over 'G' to
+Keys '1', '3' and 'SPACE' as above; 'G' to
 start a new game.
 
-The Invaders clone was modified from a hex dump in Computing Today
+The Space Invaders clone was modified from a hex dump in Computing Today
 (March 1980). Currently if the complete fleet of invaders is wiped
 out, another fleet doesn't appear - this seems to be a bug.  Apart
 from this it's surprisingly good!
