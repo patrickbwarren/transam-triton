@@ -141,6 +141,7 @@ int main(int argc, char *argv[]) {
     case 'h':
       printf("Compile and optionally transmit RS-232 data to Triton through a serial device\n");
       printf("%s [-h] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file\n", argv[0]);
+      printf("-h (help): print this help\n");
       printf("-v (verbose): print the byte stream and variables\n");
       printf("-s (spaced): add a column of spaces after the 7th byte\n");
       printf("-p (pipe): write the byte stream in binary to stdout (obviates -o)\n");

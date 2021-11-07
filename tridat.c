@@ -59,7 +59,8 @@ int main(int argc, char *argv[]) {
     case 'o': filename = strdup(optarg); break;
     case 'h':
       printf("Receive Triton RS-232 data from a serial device\n");
-      printf("%s [-o binary_file] serial_device\n", argv[0]);
+      printf("%s [-h] [-o binary_file] serial_device\n", argv[0]);
+      printf("-h (help): print this help\n");
       printf("-o <binary_file>: capture the byte stream in a binary file\n");
       printf("the serial device should be specified, for example /dev/ttyS0\n");
       exit(0);
