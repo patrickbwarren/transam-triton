@@ -37,7 +37,6 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 #define MAXFP 5       /* Max level of file inclusion */
 
 int nparse = 0;       /* count number of times have parsed file */
-int transmit = 0;     /* Signals intention to transmit */
 int verbose = 0;      /* Verbosity in reporting results */
 int zcount;           /* Keeps track of number of bytes printed out */
 int extra_space = 0;  /* Whether to print a space after the 8th byte */
@@ -46,12 +45,14 @@ char cc;              /* Keeps track of the current character */
 int origin, end_prog; /* Position variables */
 int byte_count;       /* Byte counter */
 
+char *binary_file = NULL; /* If set, write byte stream to this file */
+char *serial_device = NULL; /* If set, write byte stream to this device */
+
 FILE *fsp = NULL;     /* File pointer for save binary data */
 
 int fd;                     /* port id number */
 struct termios oldtio;      /* original port settings */
 struct termios newtio;      /* Triton required port settings */
-char *port = "/dev/ttyS0";  /* name of port */
 char *tri_ext = ".tri";     /* file name extension (source files) */
 
 /* 8080 mnemonic codes follow: see 8080 bugbook */
@@ -106,7 +107,7 @@ int split(char *, char *, char);
 int myscmp(char *, char *);
 int tokin(char *, FILE *, int);
 int whitespace(char);
-void startio();
+void startio(char *);
 void finishio();
 int ctoi(char c) { return (int)c - '0'; }
 
@@ -127,27 +128,30 @@ void *emalloc(size_t size) {
 int main(int argc, char *argv[]) {
   char c;
   char *s;
-  char *src_file, *tape_file = NULL;
+  char *src_file = NULL;
+  int pipe_to_stdout = 0;
   /* Sort out command line options */
-  while ((c = getopt(argc, argv, "vhtso:")) != -1) {
+  while ((c = getopt(argc, argv, "hvspo:t:")) != -1) {
     switch (c) {
     case 'v': verbose = 1; break;
-    case 't': transmit = 1; break;
     case 's': extra_space = 1; break;
-    case 'o': tape_file = strdup(optarg); break;
+    case 'p': pipe_to_stdout = 1; break;
+    case 'o': binary_file = strdup(optarg); break;
+    case 't': serial_device = strdup(optarg); break;
     case 'h':
-      printf("Compile and optionally transmit RS-232 data to Triton\n");
-      printf("%s [-v] [-t] [-s] [-o tapefile] srcfile\n", argv[0]);
+      printf("Compile and optionally transmit RS-232 data to Triton through a serial device\n");
+      printf("%s [-h] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file\n", argv[0]);
       printf("-v (verbose): print the byte stream and variables\n");
-      printf("-t (transmit): attempt to transmit to %s\n", port);
       printf("-s (spaced): add a column of spaces after the 7th byte\n");
-      printf("-o <file>: write the byte stream in binary to a file\n");
-      printf("-o pipe: write the byte stream in binary to stdout\n");
+      printf("-p (pipe): write the byte stream in binary to stdout (obviates -o)\n");
+      printf("-o <binary_file>: write the byte stream in binary to a file\n");
+      printf("-t (transmit): write the byte stream to a serial device, for example /dev/ttyS0\n");
+      printf("the source file should be specified, for example a .tri file\n");
       exit(0);
     }
   }
   if (optind == argc) { /* missing non-option argument (source file) */
-    fprintf(stderr, "missing source file\n");
+    fprintf(stderr, "missing source file, for example a .tri file\n");
     exit(1);
   } else src_file = strdup(argv[optind]);
   if (strchr(src_file, '.') == NULL) { /* append file extension */
@@ -162,20 +166,20 @@ int main(int argc, char *argv[]) {
     printf("Parsing tokens from %s\n", src_file);
   }
   parse(src_file); /* First pass through */
-  if (verbose && tape_file) printf("Writing to %s\n", tape_file);
+  if (verbose && binary_file) printf("Writing to %s\n", binary_file);
   if (!nvlistok()) { printnvlist(); error("undefined variables"); }
-  if (tape_file) {
-    if (strcmp(tape_file, "pipe") == 0) fsp = stdout;
-    else if ((fsp = fopen(tape_file, "wb")) == NULL) {
+  if (pipe_to_stdout) fsp = stdout;
+  else if (binary_file) {
+    if ((fsp = fopen(binary_file, "wb")) == NULL) {
       error("Couldn't open file for saving");
     }
   }
-  if (transmit) {
+  if (serial_device) {
     printf("Transmitting down the wires...\n");
-    startio();
+    startio(serial_device);
   }
   parse(src_file); /* Second pass through */
-  if (transmit) {
+  if (serial_device) {
     printf("\nFinished transmitting down the wires\n");
     finishio();
   }
@@ -382,7 +386,7 @@ void byte_out(int v) {
   char buf[1], c;
   if (v<0 || v>0xff) { warn("invalid byte crept in somehow"); v = 0; }
   c = buf[0] = (char)v;
-  if (transmit) { write(fd, buf, 1); usleep(50000); }
+  if (serial_device) { write(fd, buf, 1); usleep(50000); }
   if (fsp) fwrite(&c, sizeof(char), 1, fsp);
   if (verbose && (nparse > 0)) printf(" %02X", v);
   byte_count++; zcount++;
@@ -510,7 +514,7 @@ int whitespace(char c) {
 
 /* Initialise io port settings */
 
-void startio() {
+void startio(char *port) {
 /* Open port for writing, and not as controlling tty */
   if ((fd = open(port, O_WRONLY | O_NOCTTY )) < 0) {
     fprintf(stderr, "Couldn't open %s for writing", port);

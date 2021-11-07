@@ -59,13 +59,13 @@ CPI 1B; JZ !BDELAY # scroll screen #
 MVI B, 01 # stash for shortest possible delay #
 ANA A; JZ !NODELAY # here equivalent to CPI 00 #
 CPI 04; JZ !NODELAY # end of text (doesn't do anything) #
-CPI 08; JZ !BACKSPACE # backspace #
+CPI 08; JZ !BACKSPCE # backspace #
 LDA !COLUMN; INR A # at this point must have advanced the cursor - increment counter #
 CPI 40; JZ !ZEROCOL # reset if wrap around (64 columns) and return with delay #
 STA !COLUMN # else save incremented counter #
 JMP !BDELAY # and return with shortest delay #
 
-BACKSPACE: # deal with a backspace character #
+BACKSPCE: # deal with a backspace character #
 LDA !COLUMN; DCR A; STA !COLUMN # decrement counter #
 JP !BDELAY # shortest delay if still positive #
 MVI A, 3F; STA !COLUMN # otherwise reset counter to RH column #

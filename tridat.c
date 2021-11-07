@@ -28,14 +28,14 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <signal.h>
 
-int fd;                     /* port id number for fileio*/
-FILE *fp = NULL;            /* write data to a file as well */
-struct termios oldtio;      /* original port settings */
-struct termios newtio;      /* Triton required port settings */
-char *port = "/dev/ttyS0";  /* name of port to read data from */
-char *tri_ext = ".tri";     /* file name extension to store data */
+int fd;                      /* port id number for fileio*/
+FILE *fp = NULL;             /* write data to a file as well */
+struct termios oldtio;       /* original port settings */
+struct termios newtio;       /* Triton required port settings */
+char *serial_device = NULL;  /* name of serial device to read data from */
+char *tri_ext = ".tri";      /* file name extension to store data */
 
-void startio();
+void startio(char *);
 void finishio();
 void sighook(int);
 
@@ -58,12 +58,17 @@ int main(int argc, char *argv[]) {
     switch (c) {
     case 'o': filename = strdup(optarg); break;
     case 'h':
-      printf("Receive Triton RS-232 data from %s\n", port);
-      printf("%s [-o file]\n", argv[0]);
-      printf("-o <file>: write the byte stream in binary to a file\n");
+      printf("Receive Triton RS-232 data from a serial device\n");
+      printf("%s [-o binary_file] serial_device\n", argv[0]);
+      printf("-o <binary_file>: capture the byte stream in a binary file\n");
+      printf("the serial device should be specified, for example /dev/ttyS0\n");
       exit(0);
     }
   }
+  if (optind == argc) { /* missing non-option argument (serial device) */
+    fprintf(stderr, "missing serial device, for example /dev/ttyS0\n");
+    exit(1);
+  } else serial_device = strdup(argv[optind]);
   if (strlen(filename) > 0) { /* set up output to a file */
     if (strchr(filename, '.') == NULL) {
       s = strdup(filename); free(filename);
@@ -77,7 +82,7 @@ int main(int argc, char *argv[]) {
     printf("Writing data to %s\n",filename);
   }
   printf("Press ctrl-C to exit\n\n");
-  startio();
+  startio(serial_device);
   for (;;) {
     while (read(fd, buf, 1) != 1);
     printf(" %02X", ((int)buf[0]&255));
@@ -89,7 +94,7 @@ int main(int argc, char *argv[]) {
 }
 
 /* Initialise io port settings */
-void startio() {
+void startio(char *port) {
 /* Open port for reading, and not as controlling tty */
   if ((fd = open(port, O_RDONLY | O_NOCTTY )) < 0) {
     fprintf(stderr, "error: couldn't open %s for writing\n", port); exit(1);

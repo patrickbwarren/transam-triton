@@ -23,9 +23,10 @@ needed to run the emulator.
 
 ### Receiver (`tridat.c`)
 ```
-Receive Triton RS-232 data from /dev/ttyS0
-./tridat [-o file]
--o <file>: write the byte stream in binary to a file
+Receive Triton RS-232 data from a serial device
+./tridat [-o binary_file] serial_device
+-o <binary_file>: capture the byte stream in a binary file
+the serial device should be specified, for example /dev/ttyS0
 ```
 For `tridat` the default is to receive and print bytes from a
 physically-connected Triton using the (default) serial port
@@ -34,26 +35,26 @@ to a file.
 
 ### Transmitter (`trimcc.c`)
 ```
-Compile and optionally transmit RS-232 data to Triton
-./trimcc [-v] [-t] [-s] [-o tapefile] srcfile
+Compile and optionally transmit RS-232 data to Triton through a serial device
+./trimcc [-h] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file
 -v (verbose): print the byte stream and variables
--t (transmit): attempt to transmit to /dev/ttyS0
 -s (spaced): add a column of spaces after the 7th byte
--o <file>: write the byte stream in binary to a file
--o pipe: write the byte stream in binary to stdout
+-p (pipe): write the byte stream in binary to stdout (obviates -o)
+-o <binary_file>: write the byte stream in binary to a file
+-t (transmit): write the byte stream to a serial device, for example /dev/ttyS0
+the source file should be specified, for example a .tri file
 ```
 For `trimcc`, as well as the `-o <file>` option to write the compiled
 binary output to a specified file, the `-v` option lists the compiled
 code plus the defined variables (and the `-s` option adds an extra
 column of space), and the `-t` option attempts to transmit the
-compiled bytes to a physically-connected Triton via the (default)
-serial port `/dev/ttyS0`.  Using `-o pipe` sends the binary to stdout
-so for example one can do `./trimcc <srcfile> -o pipe | hexdump -C`.
-This gets messed up if you also use the `-v` option, for obvious
-reasons!
+compiled bytes to a physically-connected Triton via a specified serial
+device, such as `/dev/ttyS0`.  Using `-p` sends the binary to stdout
+so for example one can do `./trimcc <srcfile> -p | hexdump -C`.  This
+gets messed up if you also use the `-v` option, for obvious reasons!
 Note that you may have to add yourself the `dialout` group to use the
-default serial port (`/dev/ttyS0`).  This is not necessary if just
-compiling `.tri` codes with `trimcc -o`.
+serial ports.  This is not necessary if just compiling `.tri` codes
+with `trimcc -o`.
 
 ### TriMCC minilanguage
 
