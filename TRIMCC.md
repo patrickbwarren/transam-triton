@@ -317,7 +317,7 @@ be used directly with the emulator.
 
 In Level 7.2 monitor (at least) output of a character is vectored
 through 0x1479, so that by intercepting this one can fine-tune the
-speed with whice characters are written to the VDU.  This is the basis
+speed with which characters are written to the VDU.  This is the basis
 for a FAST VDU user ROM which can be found on [Gerald Sommariva's web
 site](https://sites.google.com/view/transam-triton/downloads).  Here
 this functionality was re-implemented in `fastvdu.tri` which can be
@@ -327,7 +327,7 @@ used to generate both a user ROM and a tape binary,
 ./trimcc fastvdu_rom.tri -o FASTVDU_ROM
 ```
 The user ROM can be run with the emulator using `-u FASTVDU_ROM`.  For
-the tape binary (which is for testing purposes really),
+the tape binary (which is really only for testing purposes),
 re-vectorisation of the VDU output is set up by running the code at
 0x1602 (i.e. with the 'G' monitor function).
 
@@ -352,3 +352,11 @@ along with these programs.  If not, see
 Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 <patrickbwarren@gmail.com>
 
+The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a
+hex dump in Computing Today (March 1980; page 32).  Copyright (c) is
+claimed in the magazine (page 3) but the copyright holder is not
+identified.  No license terms were given and the code is hereby
+presumed to be reproducible and modifiable under the equivalent of a
+modern open source license.  The changes made to this code are
+copyright &copy; 2021 Patrick B Warren, and released into the public
+domain.

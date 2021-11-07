@@ -50,16 +50,3 @@ along with these programs.  If not, see
 
 Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 <patrickbwarren@gmail.com>
-
-The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
-<rstuart114@gmail.com>
-
-The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a
-hex dump in Computing Today (March 1980; page 32).  Copyright (c) is
-claimed in the magazine (page 3) but the copyright holder is not
-identified.  No license terms were given and the code is hereby
-presumed to be reproducible and modifiable under the equivalent of a
-modern open source license.  The changes made to this code are
-copyright &copy; 2021 Patrick B Warren, and released into the public
-domain.
-
