@@ -142,7 +142,7 @@ compiled to binaries by
 ./trimcc basic72_rom.tri -o BASIC72_ROM
 ```
 (implemented as `make roms` in the Makefile).
-These `_ROM` files are loaded by the emulator.
+These `*_ROM` files are loaded by the emulator.
 
 ### Keyboard emulation
 
@@ -155,11 +155,13 @@ vector change the locations at 0x1474/5.
 
 ### Tape emulation
 
+To be described...
+
 ### Printer emulation
 
-I went through the monitor code (0x0104 - 0x0154) to understand just
-what's happening with the serial printer output.  It turns out to be
-not quite as stated as in the documentation - there is a start bit
+Close examination of the monitor code (0x0104 - 0x0154) shows just
+what is happening with the serial printer output, which turns out to be
+not quite as stated as in the documentation.  There is a start bit
 (port 6 bit 8 high), followed by seven (7) data bits containing the
 7-bit ASCII character code, a fake parity bit (port 6 bit 8 high
 again), then two stop bits (port 6 bit 8 low).  For carriage return
@@ -167,7 +169,7 @@ the output is left low for an additional delay equivalent to 30 bits.
 The two stop bits are handled in software by doubling the delay since
 there is no need to write out two successive 0x00 bytes to port 6
 (this has the potential to fool an emulation which is tracking port
-access!).  Also port 6 is initialised to 0x00 during startup (monitor
+writes!).  Also port 6 is initialised to 0x00 during startup (monitor
 code at 0x007d).
 
 An example output is captured below in the emulator, where the right
@@ -193,12 +195,13 @@ O = 4F = 0100 1111 <-- 1000011010
 N = 4E = 0100 1110 <-- 1100011010
 ? = 3F = 0011 1111 <-- 1000000110
 ```
-The timer delay that governs the baud rate is controlled by 0x1402-3
+The timer delay that governs the baud rate is controlled by 0x1402/3
 in user RAM as described in the manual.  For the fastest print speed
 set these two bytes to 0x01 and 0x00 respectively.
 
 ### EPROM programmer emulation
 
+Not yet implemented...
 
 ### Copying
 
