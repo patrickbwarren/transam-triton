@@ -42,7 +42,7 @@ Lockhart describe the situation in some detail.
 The RST instructions are simply one-byte op-codes which execute a
 subroutine call to the appropriate hard-coded place in memory, that's
 to say they push the program counter on stack and jump to the required
-location (0x0008 for RST 1, 0x0010 for RST 2, etc).  They have nothing
+location (`0008` for RST 1, `0010` for RST 2, etc).  They have nothing
 to do with the interrupt system on the 8080, although they are
 designed to work in tandem with it.  In particular, executing an RST
 instruction in software does not change the interrupt enabled flag,
@@ -57,7 +57,7 @@ sense since one would not necessarily want to enable interrupts whilst
 already servicing one (also likely for the same reason interrupts are
 disabled in Triton on startup or at a hardware reset -- see below).
 The interrupt enabled flag can be set or unset in software by an EI
-(0xFB) or DI (0xF3) instruction.
+(`FB`) or DI (`F3`) instruction.
 
 The RST instructions are designed with this interrupt system in mind,
 and in a hardware interrupt the fetched op-code is usually an RST
@@ -151,8 +151,8 @@ The keyboard emulation strobes the data into port 3 so that bit 8 is
 set the whole time that a key is depressed, and unset when it is
 released.  This reflects the behaviour of the real hardware.
 
-The 'Y' function is vectored through RAM at 0x1473 so to change the
-vector change the locations at 0x1474/5.
+The 'Y' function is vectored through RAM at `1473` so to change the
+vector change the locations at `1474`/`5`.
 
 #### Tape emulation
 
@@ -166,7 +166,7 @@ data file (described in [TRIMCC.md](TRIMCC.md)]).
 
 #### Printer emulation
 
-Close examination of the monitor code (0x0104 - 0x0154) shows just
+Close examination of the monitor code (`0104`-`0154`) shows just
 what is happening with the serial printer output, which turns out to be
 not quite as stated as in the documentation.  There is a start bit
 (port 6 bit 8 high), followed by seven (7) data bits containing the
@@ -174,10 +174,10 @@ not quite as stated as in the documentation.  There is a start bit
 again), then two stop bits (port 6 bit 8 low).  For carriage return
 the output is left low for an additional delay equivalent to 30 bits.
 The two stop bits are handled in software by doubling the delay since
-there is no need to write out two successive 0x00 bytes to port 6
+there is no need to write out two successive `00` bytes to port 6
 (this has the potential to fool an emulation which is tracking port
-writes!).  Also port 6 is initialised to 0x00 during startup (monitor
-code at 0x007d).
+writes!).  Also port 6 is initialised to `00` during startup (monitor
+code at `007D`).
 
 An example output is captured below in the emulator, where the right
 hand column is a trace of the actual output to port 6 bit 8 and the
@@ -202,9 +202,9 @@ O = 4F = 0100 1111 <-- 1000011010
 N = 4E = 0100 1110 <-- 1100011010
 ? = 3F = 0011 1111 <-- 1000000110
 ```
-The timer delay that governs the baud rate is controlled by 0x1402/3
+The timer delay that governs the baud rate is controlled by `1402`/`3`
 in user RAM as described in the manual.  For the fastest print speed
-set these two bytes to 0x01 and 0x00 respectively.
+set these two bytes to `01` and `00` respectively.
 
 Printed characters are sent to `stdout`, whereas all error messages
 are written to `stderr`, so that printer output can be captured by
