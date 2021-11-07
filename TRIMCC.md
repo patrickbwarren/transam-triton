@@ -21,21 +21,18 @@ compile `.tri` source codes (below) to `TAPE` binaries which can be
 loaded into the emulator described below, or to generate the ROMs
 needed to run the emulator.
 
-### Receiver (`tridat.c`)
-
+#### Receiver (`tridat.c`)
 ```
 Receive Triton RS-232 data from /dev/ttyS0
 ./tridat [-o file]
 -o <file>: write the byte stream in binary to a file
 ```
-
 For `tridat` the default is to receive and print bytes from a
 physically-connected Triton using the (default) serial port
 `/dev/ttyS0`.  The `-o` option additionally writes these received bytes
 to a file.
 
-### Transmitter (`trimcc.c`)
-
+#### Transmitter (`trimcc.c`)
 ```
 Compile and optionally transmit RS-232 data to Triton
 ./trimcc [-v] [-t] [-s] [-o tapefile] srcfile
@@ -45,7 +42,6 @@ Compile and optionally transmit RS-232 data to Triton
 -o <file>: write the byte stream in binary to a file
 -o pipe: write the byte stream in binary to stdout
 ```
-
 For `trimcc`, as well as the `-o <file>` option to write the compiled
 binary output to a specified file, the `-v` option lists the compiled
 code plus the defined variables (and the `-s` option adds an extra
@@ -55,7 +51,6 @@ serial port `/dev/ttyS0`.  Using `-o pipe` sends the binary to stdout
 so for example one can do `./trimcc <srcfile> -o pipe | hexdump -C`.
 This gets messed up if you also use the `-v` option, for obvious
 reasons!
-
 Note that you may have to add yourself the `dialout` group to use the
 default serial port (`/dev/ttyS0`).  This is not necessary if just
 compiling `.tri` codes with `trimcc -o`.
