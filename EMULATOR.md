@@ -151,15 +151,15 @@ These `*_ROM` files are loaded by the emulator.
 
 The memory map for Level 7.2 Triton software is as follows
 ```
-0000 - 03FF = Monitor 'A'
-0400 - 0BFF = User roms
-0C00 - 1000 = Monitor 'B'
-1000 - 13FF = VDU
-1400 - 15FF = Monitor/BASIC RAM
-1600 - 1FFF = On board user RAM
-2000 - BFFF = For off-board expansion
-C000 - DFFF = TRAP
 E000 - FFFF = BASIC
+C000 - DFFF = TRAP
+2000 - BFFF = For off-board expansion
+1600 - 1FFF = On board user RAM
+1400 - 15FF = Monitor/BASIC RAM
+1000 - 13FF = VDU
+0C00 - 0FFF = Monitor 'B'
+0400 - 0BFF = User ROMs
+0000 - 03FF = Monitor 'A'
 ```
 
 #### User ROMs
