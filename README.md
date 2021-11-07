@@ -20,7 +20,7 @@ library](https://www.sfml-dev.org/).  Some of the original Triton
 documentation can also be found in Robin's repository.  A fork of this
 emulator is included in the present repository, to which a few small
 improvements have been made to reflect better the actual hardware.
-Details of the emulator are given in [EMULATOR.md][(EMULATOR.md).
+Details of the emulator are provided in [EMULATOR.md](EMULATOR.md).
 
 On my Triton, the tape cassette interface was hacked (ca 1995) to
 drive an [RS-232](https://en.wikipedia.org/wiki/RS-232) interfaceQ.
