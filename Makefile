@@ -46,13 +46,13 @@ roms:
 	./trimcc fastvdu_rom.tri -o FASTVDU_ROM
 
 tapes:
-	./trimcc hex2dec.tri -o HEX2DEC_TAPE
-	./trimcc kbdtest.tri -o KBDTEST_TAPE
-	./trimcc tapeout.tri -o TAPEOUT_TAPE
-	./trimcc rawsave.tri -o RAWSAVE_TAPE
-	./trimcc fastvdu.tri -o FASTVDU_TAPE
-	./trimcc galaxian.tri -o GALAXIAN_TAPE
-	./trimcc invaders.tri -o INVADERS_TAPE
+	./trimcc hex2dec_tape.tri  -o HEX2DEC_TAPE
+	./trimcc kbdtest_tape.tri  -o KBDTEST_TAPE
+	./trimcc tapeout_tape.tri  -o TAPEOUT_TAPE
+	./trimcc rawsave_tape.tri  -o RAWSAVE_TAPE
+	./trimcc galaxian_tape.tri -o GALAXIAN_TAPE
+	./trimcc invaders_tape.tri -o INVADERS_TAPE
+	./trimcc fastvdu_tape.tri  -o FASTVDU_TAPE
 
 clean : 
 	rm -f *~ *.o

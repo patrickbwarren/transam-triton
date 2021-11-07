@@ -31,6 +31,6 @@ LXI H, !MAIN
 SHLD !OUTVEC
 JMP !REENTRY
 
-include fastvdu_core.tri
+include fastvdu.tri
 
 FF>!END

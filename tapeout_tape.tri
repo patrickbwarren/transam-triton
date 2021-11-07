@@ -25,5 +25,5 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 # Entry points for Triton L7.2 monitor #
 ECHOCH=003B  URTOUT=003E
 
-# get character and output to RS232, repeat indefinitely #
+# get character and output to RS-232, repeat indefinitely #
 LOOP: CALL !ECHOCH, CALL !URTOUT, JMP !LOOP

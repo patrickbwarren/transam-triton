@@ -54,14 +54,16 @@ int main(int argc, char *argv[]) {
   char c;
   char buf[1];
   signal(SIGINT, sighook); /* catch ctrl-c */
-  while ((c = getopt(argc, argv, "ho:")) != -1)
+  while ((c = getopt(argc, argv, "ho:")) != -1) {
     switch (c) {
     case 'o': filename = strdup(optarg); break;
     case 'h':
-      printf("%s [-o file] : receive Triton RS232 data from %s\n",
-	     argv[0], port);
+      printf("Receive Triton RS-232 data from %s\n", port);
+      printf("%s [-o file]\n", argv[0]);
+      printf("-o <file>: write the byte stream in binary to a file\n");
       exit(0);
     }
+  }
   if (strlen(filename) > 0) { /* set up output to a file */
     if (strchr(filename, '.') == NULL) {
       s = strdup(filename); free(filename);

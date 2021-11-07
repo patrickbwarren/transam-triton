@@ -17,16 +17,72 @@ You should have received a copy of the GNU General Public License
 along with this file.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
-### Wrapper for fastvdu_core for testing in user memory ###
+### Core speed up VDU functionality ###
 
-# Standard tape header #
-64*0D "FASTVDU" 20 04
+###
+Control codes taken from TRITON manual
+Control Function	Keyboard Key	Decimal Code	Hex Code
+NUL (no-op for printer)	CTRL-@	 	 0		00
+EOT (End of Text)	CTRL-D		 4		04
+Backspace		CTRL-H		 8		08
+Step cursor right	CTRL-I		 9		09
+Line feed   		CTRL-J		10		0A
+Step cursor up	    	CTRL-K 		11		0B
+Clear screen		CTRL-L		12		0C
+Carriage return	(CR)	CTRL-M		13		0D
+Roll screen 		CTRL-[		27		1B
+Reset cursor		CTRL-\		28		1C
+CR (no clear)		CTRL-]		29		1D
+###
 
-ORG=1600 !END
+PRINTCH=0104 # monitor re-entry point for printing characters #
 
-# Intercept video output routine at hook #
-LXI H, !MAIN
-SHLD !OUTVEC
-RET
+DISSW=1401 # 55 = printer on, AA = VDU only #
+COLUMN=143F # spare location used as a column counter here #
+OUTVEC=147A # output vector _plus one_ (we assume the C3 is there) #
 
-include fastvdu_core.tri
+MAIN: # slot-in replacement for monitor routine writing to VDU #
+LDA !DISSW; CPI 55; JZ !PRINTCH # if printing jump back into monitor #
+POP PSW # apparently the output character was stashed on the stack #
+PUSH B # stash BC registers #
+MOV C,A # keep a copy of the output character #
+ANI 7F; OUT 05 # output (strobe) character to port 05 #
+ORI 80; OUT 05
+ANI 7F; OUT 05
+MVI B, 84 # long delay timer #
+ANI EF; CPI 0C; JZ !ZEROCOL # clear screen or reset cursor #
+MVI B, 0F # short delay timer #
+CPI 0D; JZ !ZEROCOL # carriage return with or without line clear #
+MOV A,C # recover the character #
+CPI 0A; JZ !BDELAY # line feed #
+CPI 1B; JZ !BDELAY # scroll screen #
+MVI B, 01 # stash for shortest possible delay #
+ANA A; JZ !NODELAY # here equivalent to CPI 00 #
+CPI 04; JZ !NODELAY # end of text (doesn't do anything) #
+CPI 08; JZ !BACKSPACE # backspace #
+LDA !COLUMN; INR A # at this point must have advanced the cursor - increment counter #
+CPI 40; JZ !ZEROCOL # reset if wrap around (64 columns) and return with delay #
+STA !COLUMN # else save incremented counter #
+JMP !BDELAY # and return with shortest delay #
+
+BACKSPACE: # deal with a backspace character #
+LDA !COLUMN; DCR A; STA !COLUMN # decrement counter #
+JP !BDELAY # shortest delay if still positive #
+MVI A, 3F; STA !COLUMN # otherwise reset counter to RH column #
+MVI B, 09; JMP !BDELAY # and return after a short delay #
+
+ZEROCOL: # zero the column counter and fall through to next routine #
+MVI A, 00; STA !COLUMN
+
+BDELAY: # delay controlled by value in B #
+OUTER: PUSH D # save DE pair #
+MVI D, 48 # inner delay loop # 
+INNER: 3*NOP # part of the delay? #
+DCR D; JNZ !INNER # loop back (inner loop) #
+POP D # restore DE pair #
+DCR B; JNZ !OUTER # loop back (outer loop) or fall through #
+
+NODELAY: # restore character to A, restore BC pair, and return #
+MOV A,C
+POP B
+RET 

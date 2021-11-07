@@ -118,16 +118,6 @@ void error(char *s) {
   fprintf(stderr, "error: %s\n", s); exit(1);
 }
 
-void fprint_help(FILE *fp, char *name) {
-  fprintf(fp, "Usage: %s [-v] [-t] [-s] [-o tapefile] srcfile\n", name);
-  fprintf(fp, "-v (verbose): print the byte stream and variables\n");
-  fprintf(fp, "-t (transmit): attemp to transmit to %s\n", port);
-  fprintf(fp, "-s (spaced): add a column of spaces after the 7th byte\n");
-  fprintf(fp, "-o <file>: write the byte stream in binary to a file\n");
-  fprintf(fp, "-o pipe: write the byte stream in binary to stdout\n");
-  exit(0);
-}
-
 void *emalloc(size_t size) {
   void *p;
   if ((p = malloc(size)) == NULL) error("out of memory in emalloc");
@@ -145,12 +135,20 @@ int main(int argc, char *argv[]) {
     case 't': transmit = 1; break;
     case 's': extra_space = 1; break;
     case 'o': tape_file = strdup(optarg); break;
-    case 'h': fprint_help(stdout, argv[0]);
+    case 'h':
+      printf("Compile and optionally transmit RS-232 data to Triton\n");
+      printf("%s [-v] [-t] [-s] [-o tapefile] srcfile\n", argv[0]);
+      printf("-v (verbose): print the byte stream and variables\n");
+      printf("-t (transmit): attempt to transmit to %s\n", port);
+      printf("-s (spaced): add a column of spaces after the 7th byte\n");
+      printf("-o <file>: write the byte stream in binary to a file\n");
+      printf("-o pipe: write the byte stream in binary to stdout\n");
+      exit(0);
     }
   }
   if (optind == argc) { /* missing non-option argument (source file) */
     fprintf(stderr, "missing source file\n");
-    fprint_help(stderr, argv[0]);
+    exit(1);
   } else src_file = strdup(argv[optind]);
   if (strchr(src_file, '.') == NULL) { /* append file extension */
     s = strdup(src_file); free(src_file);
