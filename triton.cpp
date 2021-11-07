@@ -78,10 +78,11 @@ public:
 
 const int mem_top_default = 0x2000;
 const char *tape_file_default = "TAPE";
+const char *eprom_file_default = "EPROM";
 
 char *tape_file = NULL;
 char *user_rom = NULL;
-char *user_eprom = NULL;
+char *eprom_file = NULL;
 
 void IOState::vdu_strobe(State8080 *state, uint8_t *memory) {
   // Takes input from port 5 buffer (IC 51) and attempts to duplicate
@@ -237,7 +238,7 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
     if (io->tape_relay) {
       if (io->tape_status == ' ') {
 	tape.open(tape_file, ios::out | ios::app | ios::binary);
-	if (tape.is_open())  io->tape_status = 'w';
+	if (tape.is_open()) io->tape_status = 'w';
 	else fprintf(stderr, "Unable to open tape file %s for writing\n", tape_file);
       }
       if (io->tape_status == 'w') {
@@ -356,17 +357,17 @@ int main(int argc, char** argv) {
 
   opterr = 0;
   while ((c = getopt (argc, argv, "hm:t:u:z:")) != -1) switch (c) {
-    case 'z':
-      user_eprom = optarg;
-      break;
-    case 'u':
-      user_rom = optarg;
-      break;
     case 'm':
       mem_top_opt = optarg;
       break;
     case 't':
       tape_file = optarg;
+      break;
+    case 'u':
+      user_rom = optarg;
+      break;
+    case 'z':
+      eprom_file = optarg;
       break;
     case 'h':
     case '?':
@@ -375,20 +376,21 @@ int main(int argc, char** argv) {
       printf("-m sets the top of memory, for example -m 0x4000, defaults to 0x2000\n");
       printf("-t specifies a tape binary, by default TAPE\n");
       printf("-u installs user ROMs; to install two ROMS separate the filenames by a comma\n");
-      printf("-z specifies an EPROM file to initially load from, and save into\n");
+      printf("-z specifies a file to write the EPROM to, with F7\n");
       printf("F1: interrupt 1 (RST 1) - clear screen\n");
       printf("F2: interrupt 2 (RST 2) - save and dump registers\n");
       printf("F3: reset (RST 0)\n");
       printf("F4: toggle pause\n");
       printf("F5: write 8080 status to command line\n");
-      printf("F6: erase EPROM\n");
-      printf("F7: write EPROM\n");
+      printf("F6: UV erase the EPROM (set all bytes to 0xff)\n");
+      printf("F7: write the EPROM to the file specified by -z\n");
       printf("F9: exit emulator\n");
     default:
       exit(0);
     }
 
   if (tape_file == NULL) tape_file = strdup(tape_file_default);
+  if (eprom_file == NULL) eprom_file = strdup(eprom_file_default);
 
   // One microcycle is 1.25uS = effective clock rate of 800kHz
 
@@ -437,6 +439,7 @@ int main(int argc, char** argv) {
   // Initialise memory to 0xFF
   
   for (i=0; i<_64K; i++) main_memory[i] = 0xff;
+  for (i=0; i<_1K; i++) eprom[i] = 0xff;
 
   load_rom(main_memory, "MONA72_ROM",  0x0000, _1K);
   load_rom(main_memory, "MONB72_ROM",  0x0c00, _1K);
@@ -522,12 +525,24 @@ int main(int argc, char** argv) {
 	  case sf::Keyboard::F5: // Write status
 	    WriteStatus8080(stderr, &state);
 	    break;
-	  case sf::Keyboard::F6: // Erase EPROM
-	    printf("Erasing EPROM\n");
+	  case sf::Keyboard::F6: // UV erase EPROM
+	    for (i=0; i<_1K; i++) eprom[i] = 0xff;
+	    fprintf(stderr, "Erased EPROM\n");
 	    break;
-	  case sf::Keyboard::F7: // Write zapped EPROM
-	    if (user_eprom != NULL) printf("Writing EPROM to %s\n", user_eprom);
-	    else printf("No file given to write EPROM\n");
+	  case sf::Keyboard::F7: // Write EPROM
+	    if (eprom_file != NULL) {
+	      fstream fs;
+	      fs.open(eprom_file, ios::out | ios::binary);
+	      if (fs.is_open()) {
+		fs.write((char *)eprom, _1K);
+		fs.close();
+		fprintf(stderr, "Written %i bytes to %s\n", (int)_1K, eprom_file);
+	      }	else fprintf(stderr, "Unable to open EPROM file %s for writing\n", eprom_file);
+	    } else fprintf(stderr, "No file given to write EPROM\n");
+	    break;
+	  case sf::Keyboard::F8: // Debug EPROM
+	    for (i=0; i<_1K; i++) eprom[i] = main_memory[0x1600 + i];
+	    fprintf(stderr, "Copied %i bytes from main memory starting at 0x1600 into EPROM\n", (int)_1K);
 	    break;
 	  case sf::Keyboard::F9: // Exit application
 	    window.close();

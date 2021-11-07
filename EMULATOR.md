@@ -75,14 +75,15 @@ code.  One can check this in the emulator by using function F5 to
 write the 8080 status (the interrupt enabled/disbled flag status is
 E/D).  One can clearly see the interrupt enabled flag is left unset
 after one of these hardware interrupts, but becomes re-enabled for
-example after a key press.  Rather then being a bug it appears that
+example after a key press.  Rather than being a bug it appears that
 this was a design choice.  The section of the Triton manual describing
 the CPU ("The Heart of It") states "Interrupt 0 should not be used
 even though it is available on the PCB. It simply duplicates the
 manual reset operation but would create major problems if used as the
 Monitor program contains an EI instruction early on in this routine. A
 very rapid build up of interrupt nests would occur which would fill up
-the stack in a fraction of a second."
+the stack in a fraction of a second."  Presumably the same could be
+true if EI was executed too soon after an interrupt was serviced.
 
 There is one peculiar thing though.  In the 8080A bugbook, there is
 the statement that the microprocessor can still detect whether or not
