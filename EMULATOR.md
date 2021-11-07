@@ -7,9 +7,8 @@ documentation can also be found in Robin's repository.  A fork of this
 emulator is included in the present repository, to which a few small
 improvements have been made.
 
-### Compilation
-
-Is provided by a target `make triton` in the Makefile, or `make codes`.
+The emulator can be compiled using the `make triton` target in the
+Makefile, or `make codes`.
 
 ### Usage
 ```
@@ -28,6 +27,8 @@ F6: erase EPROM
 F7: write EPROM
 F9: exit emulator
 ```
+
+More here...
 
 ### Implementation notes
 
@@ -98,23 +99,25 @@ serviced (clear screen in this case).
 
 This logic is implemented in the emulator.
 
-#### parity
+#### Parity
 
-Note that the parity bit is set if there is an even number of bits set
-in the result, so it is an odd parity bit by the definition in
+In the 8080 the parity bit is set if there is an even number of bits set
+in the result.  So, it is an odd parity bit by the definition in
 [Wikipedia](https://en.wikipedia.org/wiki/Parity_bit).  For Triton one
 should have, for example
 ```
-0x00 --> parity T
-0x01 --> parity F
-0x02 --> parity F
-0x03 --> parity T
-0x04 --> parity F
-0x05 --> parity T
+result = 0x00 --> parity = T
+result = 0x01 --> parity = F
+result = 0x02 --> parity = F
+result = 0x03 --> parity = T
+result = 0x04 --> parity = F
+result = 0x05 --> parity = T
 ```
+
 Some 8080 emulators get this the wrong way around.  In a Triton Level
-7.2 emulation this leads to an extremely obscure bug since it only
-shows up when trying to enter BASIC with the 'J' instruction -- the
+7.2 emulation this leads to an extremely obscure bug since the problem
+only shows up when trying to enter BASIC with the 'J' instruction:
+if the parity calculator is implemented the wrong way around, the
 emulation hangs.
 
 The 8-bit parity calculator in the current emulator is based on a
