@@ -45,7 +45,7 @@ roms:
 	./trimcc basic72_rom.tri -o BASIC72_ROM
 	./trimcc fastvdu_rom.tri -o FASTVDU_ROM
 
-tapes:
+tape:
 	./trimcc hex2dec_tape.tri  -o HEX2DEC_TAPE
 	./trimcc kbdtest_tape.tri  -o KBDTEST_TAPE
 	./trimcc tapeout_tape.tri  -o TAPEOUT_TAPE
@@ -53,7 +53,7 @@ tapes:
 	./trimcc galaxian_tape.tri -o GALAXIAN_TAPE
 	./trimcc invaders_tape.tri -o INVADERS_TAPE
 	./trimcc fastvdu_tape.tri  -o FASTVDU_TAPE
-	cat *_TAPE > COMBI_TAPE
+	cat *_TAPE > TAPE
 
 clean : 
 	rm -f *~ *.o

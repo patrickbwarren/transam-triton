@@ -353,7 +353,7 @@ Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 <patrickbwarren@gmail.com>
 
 The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a
-hex dump in Computing Today (March 1980; page 32).  Copyright (c) is
+hex dump in Computing Today (March 1980; page 32).  Copyright &copy; is
 claimed in the magazine (page 3) but the copyright holder is not
 identified.  No license terms were given and the code is hereby
 presumed to be reproducible and modifiable under the equivalent of a
