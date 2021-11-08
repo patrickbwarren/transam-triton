@@ -197,7 +197,7 @@ data file as described in [TRIMCC.md](TRIMCC.md).
 
 This feature was added to Robin Stuart's emulator. The bit-banged
 output to port 6 bit 8 is captured and convert into ASCII characters,
-which are then printed to stdout.  Since all other messages are
+which are then printed to `stdout`.  Since all other messages are
 written to `stderr`, printer output can be captured by redirecting
 `stdout` to a file, for example `./triton > printer_output.txt`.
 

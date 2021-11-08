@@ -46,9 +46,9 @@ Compile and optionally transmit RS-232 data to Triton through a serial device
 the source file should be specified, for example a .tri file
 ```
 With the `-t` option this transmits bytes to a physically-connected
-Triton through a serial device such `/dev/ttyS0`, however with the
+Triton through a serial device such `/dev/ttyS0`.  Alternatively with the
 `-o` option the code can also be used to generate binaries to run with
-the [emulator](EMULATOR.md).  Using `-p` sends the binary to stdout so
+the [emulator](EMULATOR.md).  Using `-p` sends the binary to `stdout` so
 for example one can do `./trimcc <srcfile> -p | hexdump -C`.  In
 addition the `-v` option lists the compiled code plus the defined
 variables, and the `-s` option adds an extra column of space to the
