@@ -45,7 +45,7 @@ Compile and optionally transmit RS-232 data to Triton through a serial device
 -t (transmit): write the byte stream to a serial device, for example /dev/ttyS0
 the source file should be specified, for example a .tri file
 ```
-With the -t` option this transmits bytes to a physically-connected
+With the `-t` option this transmits bytes to a physically-connected
 Triton through a serial device such `/dev/ttyS0`, however with the
 `-o` option the code can also be used to generate binaries to run with
 the [emulator](EMULATOR.md).  Using `-p` sends the binary to stdout so
