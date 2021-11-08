@@ -14,10 +14,10 @@ a Facebook group ('ETI Triton 8080 Vintage Computer') has been started.
 I have a small web page detailing some of the history
 [here](https://sites.google.com/site/patrickbwarren/electronics/transam-triton).
 
-Robin Stuart has written a superb [Triton
-emulator](https://github.com/woo-j/triton) that uses the [SFML
-library](https://www.sfml-dev.org/).  Some of the original Triton
-documentation can also be found in Robin's repository.  A fork of this
+Robin Stuart has posted some of the original Triton
+documentation and code for a superb Triton emulator that uses
+the [SFML library](https://www.sfml-dev.org/) on a [GitHub
+site](https://github.com/woo-j/triton).  A fork of this
 emulator is included in the present repository, to which a few small
 improvements have been made to reflect better the actual hardware.
 Details of the emulator are provided in [EMULATOR.md](EMULATOR.md).

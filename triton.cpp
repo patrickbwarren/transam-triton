@@ -316,17 +316,17 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
   state->port_op = 0x00;
 }
 
-void load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_t rom_size) {
+int load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_t rom_size) {
   ifstream rom;
   rom.open(rom_name, ios::in | ios::binary);
   if (rom.is_open()) {
-    rom.read ((char *) &memory[rom_start], rom_size);
-    rom.close();
+    rom.read((char *) &memory[rom_start], rom_size);
+    fprintf(stderr, "%04X - %04X : %s\n", rom_start, rom_start+rom_size-1, rom_name);
+    rom.close(); return 0;
   } else {
     fprintf(stderr, "Unable to load %s\n", rom_name);
-    exit(1);
+    return 1;
   }
-  //printf("%04X - %04X : %s\n", rom_start, rom_start+rom_size-1, rom_name);
 }
 
 int main(int argc, char** argv) {

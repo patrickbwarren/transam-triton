@@ -1,14 +1,16 @@
-## Triton emulator
+## SFML-based Triton emulator
 
-Robin Stuart has written a superb [Triton
-emulator](https://github.com/woo-j/triton) that uses the [SFML
-library](https://www.sfml-dev.org/).  Some of the original Triton
-documentation can also be found in [Robin's repository](https://github.com/woo-j/triton).  A fork of this
-emulator is included in the present repository, to which a few small
-improvements have been made.
+This describes the fork of Robin Stuart's Triton emulator which is
+available in a [GitHub repository](https://github.com/woo-j/triton).
+A few small improvements have been made to reflect better the actual
+hardware, and add functionality.  The emulator is targetted towards
+the Level 7.2 firmware (Monitor and BASIC), and the Triton Resident
+Assembly Language Package (TRAP).  Level 7.2 documentation can be
+found on Robin's [GitHub repository](https://github.com/woo-j/triton)
+and also in the 'ETI Triton 8080 Vintage Computer' Facebook group.
 
 The emulator can be compiled using the `make triton` target in the
-Makefile, or `make codes`.
+Makefile, or `make codes`.  The [SFML library](https://www.sfml-dev.org/) is required.
 
 ### Usage
 ```
@@ -74,7 +76,7 @@ the 8080 and jamming the corresponding RST op-code onto the databus.
 The upshot of all this is that after a hardware interrupt 1 (clear
 screen) or interrupt 2 (print registers + flags and escape to the
 function prompt), further interrupts are disabled.  They stay disabled
-until an EI instruction is encountered at some point in the monitor
+until an EI instruction is encountered at some point in the Monitor
 code.  One can check this in the emulator by using function F5 to
 write the 8080 status (the interrupt enabled/disbled flag status is
 E/D).  One can clearly see the interrupt enabled flag is left unset
@@ -87,20 +89,18 @@ manual reset operation but would create major problems if used as the
 Monitor program contains an EI instruction early on in this routine. A
 very rapid build up of interrupt nests would occur which would fill up
 the stack in a fraction of a second."  Presumably the same could be
-true if EI was executed too soon after an interrupt was serviced.
+true if EI was executed too soon after any interrupt was serviced.
 
 There is one peculiar thing though.  In the 8080A bugbook, there is
 the statement that the microprocessor can still detect whether or not
 an interrupt occurs even if the interrupt flag is disabled.  Further:
 "If an interrupt did occur whilst the interrupt flag was disabled,
 then an interrupt would occur as soon as the flag is enabled. Only one
-interrupt event is remembered."  
-
-Tests with actual hardware appear to indicate this is the case, for
-example one can restart the machine, press interrupt 1 (nothing
-happens because the interrrupt enabled flag is unset), then press a
-key on the keyboard (for example 'W') and the pending interrupt is
-serviced (clear screen in this case).
+interrupt event is remembered."  Tests with actual hardware appear to
+indicate this is the case, for example one can restart the machine,
+press interrupt 1 (nothing happens because the interrrupt enabled flag
+is unset), then press a key on the keyboard (for example 'W') and the
+pending interrupt is serviced (clear screen in this case).
 
 This logic is implemented in the emulator.
 
@@ -119,11 +119,13 @@ result = 0x04 --> parity = F
 result = 0x05 --> parity = T
 ```
 
-Some 8080 emulators get this the wrong way around.  In a Triton Level
-7.2 emulation this leads to an extremely obscure bug since the problem
-only shows up when trying to enter BASIC with the 'J' instruction:
-if the parity calculator is implemented the wrong way around, the
-emulation hangs.
+Some 8080 emulators get this the wrong way around (it is however
+correct in Robin's emulator).  In a Triton Level 7.2 emulation this
+leads to an extremely obscure bug since the problem only shows up when
+trying to enter BASIC with the 'J' instruction: if the parity
+calculator is implemented the wrong way around, the emulation hangs at
+this point, but otherwise everything else appears to function
+normally.
 
 The 8-bit parity calculator in the current emulator is based on a
 [Stack Overflow implementation](https://stackoverflow.com/questions/21617970/how-to-check-if-value-has-even-parity-of-bits-or-odd/21618038)
@@ -137,29 +139,29 @@ One can test the effect of getting this the wrong way around by swapping the `tr
 
 #### System ROMs
 
-ROM dumps for the Triton L7.2 Monitor and BASIC, and TRAP (Triton
-Resident Assembly Language Package), are also included in this repository.  These can be
-compiled to binaries by
+The ROM dumps for the Triton L7.2 Monitor and BASIC, and TRAP, can be
+compiled to binaries using `trimcc` as described in [TRIMCC.md](TRIMCC.md),
 ```
-./trimcc mona72_rom.tri -o  MONA72_ROM
-./trimcc monb72_rom.tri -o  MONB72_ROM
-./trimcc trap_rom.tri -o    TRAP_ROM
+./trimcc mona72_rom.tri -o MONA72_ROM
+./trimcc monb72_rom.tri -o MONB72_ROM
 ./trimcc basic72_rom.tri -o BASIC72_ROM
+./trimcc trap_rom.tri -o TRAP_ROM
 ```
-(implemented as `make roms` in the Makefile).
-These `*_ROM` files are loaded by the emulator.
+(implemented as `make roms` in the Makefile).  If present, all these
+files are loaded by the emulator.  For the L7.2 emulation to work
+at least the two Monitor ROMs should be present.
 
 The memory map for Level 7.2 Triton software is as follows
 ```
-E000 - FFFF = BASIC
-C000 - DFFF = TRAP
+E000 - FFFF = BASIC72_ROM (BASIC)
+C000 - DFFF = TRAP_ROM (TRAP)
 2000 - BFFF = For off-board expansion
 1600 - 1FFF = On board user RAM
 1400 - 15FF = Monitor/BASIC RAM
 1000 - 13FF = VDU
-0C00 - 0FFF = Monitor 'B'
+0C00 - 0FFF = MONB72_ROM (Monitor 'B')
 0400 - 0BFF = User ROMs
-0000 - 03FF = Monitor 'A'
+0000 - 03FF = MONA72_ROM (Monitor 'A')
 ```
 
 #### User ROMs
@@ -169,9 +171,10 @@ just one file is specified it is loaded to `0400`-`07FF`.  If two
 files are specified, for example `-u ROM1,ROM2`, then the second one
 is loaded to `0800`-`0BFF`.  An example of a user ROM is the fast VDU
 ROM described in [TRIMCC.md](TRIMCC.md). If the first byte in the
-first user ROM is the LXI SP op code (`31`), then the code is executed
-automatically.  See L7.2 documentation for more details and the fast
-VDU user ROM (specifically `fastvdu_rom.tri`) for a working example.
+first user ROM is LXI SP (op code `31`), then the code is executed
+automatically.  See the L7.2 documentation for more details and the
+fast VDU user ROM (specifically [`fastvdu_rom.tri`](fastvdu_rom.tri))
+for a working example.
 
 #### Keyboard emulation
 
@@ -186,19 +189,19 @@ This remains as in Robin Stuart's emulator, except that the
 possibility to select the tape file is given as a command line option.
 Input bytes are read from the tape file as though from a cassette
 recorder, and likewise output bytes are appended to the tape file.
-This means that with the monitor 'I' option, the emulated tape
+This means that with the Monitor 'I' option, the emulated tape
 interface is expecting to see the correct tape header in front of any
-data file (described in [TRIMCC.md](TRIMCC.md)]).  
+data file as described in [TRIMCC.md](TRIMCC.md).
 
 #### Printer emulation
 
 This feature was added to Robin Stuart's emulator. The bit-banged
 output to port 6 bit 8 is captured and convert into ASCII characters,
-which are then printed to stdout.  Since all error messages are
+which are then printed to stdout.  Since all other messages are
 written to `stderr`, printer output can be captured by redirecting
 `stdout` to a file, for example `./triton > printer_output.txt`.
 
-Close examination of the monitor code (`0104`-`0154`) shows just
+Close examination of the Monitor code (`0104`-`0154`) shows just
 what is happening with the serial printer output, which turns out to be
 not quite as stated as in the documentation.  There is a start bit
 (port 6 bit 8 high), followed by seven (7) data bits containing the
@@ -208,7 +211,7 @@ the output is left low for an additional delay equivalent to 30 bits.
 The two stop bits are handled in software by doubling the delay since
 there is no need to write out two successive `00` bytes to port 6
 (this has the potential to fool an emulation which is tracking port
-writes!).  Also port 6 is initialised to `00` during startup (monitor
+writes!).  Also port 6 is initialised to `00` during startup (Monitor
 code at `007D`).
 
 An example output is captured below in the emulator, where the right

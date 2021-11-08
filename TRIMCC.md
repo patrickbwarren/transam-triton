@@ -4,16 +4,17 @@
 
 The Triton tape cassette interface is driven by a
 [UART](https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter)
-chip (the [AY-5-1013](https://datasheetspdf.com/datasheet/AY-5-1013A.html)),
+chip (the
+[AY-5-1013](https://datasheetspdf.com/datasheet/AY-5-1013A.html)),
 which serialises each data byte as 8 bits, followed by a parity bit
 and 2 STOP bits, transmitted at a rate of 300 baud.  This interface
 was not very reliable so at a later date (circa 1995) it was hacked to
 drive an [RS-232](https://en.wikipedia.org/wiki/RS-232) interface, by
 intercepting the 5V output of the UART before the tape cassette signal
-modulation stage. To manage this, a serial data receiver (`tridat.c`)
-and transmitter (`trimcc.c`) were written, to run on a standard linux
-machine.  It is these codes that are in the present repository.  They
-can be compiled by issuing the command `make codes`.
+modulation stage. As an interface to this, a serial data receiver
+(`tridat.c`) and transmitter (`trimcc.c`) were written.  It is these
+codes that are in the present repository.  They can be compiled by
+issuing the command `make codes`.
 
 The transmitter implements a rudimentary hybrid assembly /
 machine code 'minilanguage' (detailed below) and can be used to
@@ -28,10 +29,10 @@ Receive Triton RS-232 data from a serial device
 -o <binary_file>: capture the byte stream in a binary file
 the serial device should be specified, for example /dev/ttyS0
 ```
-For `tridat` the default is to receive and print bytes from a
-physically-connected Triton using the (default) serial port
-`/dev/ttyS0`.  The `-o` option additionally writes these received bytes
-to a file.
+This receives bytes from a physically-connected Triton using a serial
+device such `/dev/ttyS0`.  The `-o` option additionally writes these
+received bytes to a file. Note that you may have to add yourself the
+`dialout` group to use the serial ports.
 
 ### Transmitter (`trimcc.c`)
 ```
@@ -44,17 +45,16 @@ Compile and optionally transmit RS-232 data to Triton through a serial device
 -t (transmit): write the byte stream to a serial device, for example /dev/ttyS0
 the source file should be specified, for example a .tri file
 ```
-For `trimcc`, as well as the `-o <file>` option to write the compiled
-binary output to a specified file, the `-v` option lists the compiled
-code plus the defined variables (and the `-s` option adds an extra
-column of space), and the `-t` option attempts to transmit the
-compiled bytes to a physically-connected Triton via a specified serial
-device, such as `/dev/ttyS0`.  Using `-p` sends the binary to stdout
-so for example one can do `./trimcc <srcfile> -p | hexdump -C`.  This
-gets messed up if you also use the `-v` option, for obvious reasons!
-Note that you may have to add yourself the `dialout` group to use the
-serial ports.  This is not necessary if just compiling `.tri` codes
-with `trimcc -o`.
+With the -t` option this transmits bytes to a physically-connected
+Triton through a serial device such `/dev/ttyS0`, however with the
+`-o` option the code can also be used to generate binaries to run with
+the [emulator](EMULATOR.md).  Using `-p` sends the binary to stdout so
+for example one can do `./trimcc <srcfile> -p | hexdump -C`.  In
+addition the `-v` option lists the compiled code plus the defined
+variables, and the `-s` option adds an extra column of space to the
+listing.  Note that you may have to add yourself the `dialout` group
+to use the serial ports.  This is not necessary if just compiling
+`.tri` codes with `-o`.
 
 ### TriMCC minilanguage
 
@@ -96,7 +96,7 @@ and can span multiple lines.
 
 Variables are represented by 16-bit words and can be defined at any
 time with the syntax `VAR=<val>` where `<val>` is hexadecimal.  These
-can be used to define monitor entry points for example.  Decimal
+can be used to define Monitor entry points for example.  Decimal
 values in the range 0 to 65535 can also be assigned using the `%`
 notation above (note that these are stored as 16-bit words even if the
 value is less then 256).  Additionally a label of the form `LABEL:`
@@ -159,7 +159,7 @@ look like
 STRING: "THIS IS A STRING" 04
 ```
 This can be printed to the VDU by `LXI D !STRING; CALL 002B` where
-`002B` is the L7.2 monitor entry point to print a string preceded by
+`002B` is the L7.2 Monitor entry point to print a string preceded by
 CR/LF.
 
 The TriMCC compiler was written in C over twenty years ago and is
@@ -174,7 +174,7 @@ is provided in [`hex2dec.tri`](hex2dec.tri):
 # Standard tape header #
 64*0D "HEX2DEC" 20 04 ORG=1600 !END
  
-# Entry points for Triton L7.2 monitor #
+# Entry points for Triton L7.2 Monitor #
 GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
 
 # Constants #
@@ -248,14 +248,14 @@ All `.tri` codes below can be compiled to binaries suitable for the
 ```
 To load one of these into the emulator use the `-t <tape_file>` command
 line option, and then from within the emulator load the tape file with
-the 'I' monitor command.  The 'tape headers' are listed below.  Note
+the 'I' Monitor command.  The 'tape headers' are listed below.  Note
 that you can concatenate the binaries into a singe tape file with `cat
 *_TAPE > COMBI_TAPE` for instance, then load this combi-tape into the
 emulator and pick out which code you want to load by using the I
 command with the appropriate tape header.
 
 To run these codes in Triton, use the 'G'
-monitor command, with the starting address `1602`.
+Monitor command, with the starting address `1602`.
 
 [`hex2dec_tape.tri`](hex2dec_tape.tri) (tape header `HEX2DEC`) -- convert a
 16-bit word to decimal, illustrating some of the features of the
@@ -304,17 +304,17 @@ ROM dumps for the Triton L7.2 Monitor and BASIC, and TRAP (Triton
 Resident Assembly Language Package), are also included.  These can be
 compiled to binaries by
 ```
-./trimcc mona72_rom.tri -o  MONA72_ROM
-./trimcc monb72_rom.tri -o  MONB72_ROM
-./trimcc trap_rom.tri -o    TRAP_ROM
+./trimcc mona72_rom.tri -o MONA72_ROM
+./trimcc monb72_rom.tri -o MONB72_ROM
 ./trimcc basic72_rom.tri -o BASIC72_ROM
+./trimcc trap_rom.tri -o TRAP_ROM
 ```
 (implemented as `make roms` in the Makefile).  These `_ROM` files can
 be used directly with the emulator.
 
 ### Fast VDU 
 
-In Level 7.2 monitor (at least) output of a character is vectored
+In Level 7.2 Monitor (at least) output of a character is vectored
 through `1479`, so that by intercepting this one can fine-tune the
 speed with which characters are written to the VDU.  This is the basis
 for a FAST VDU user ROM which can be found on [Gerald Sommariva's web
@@ -328,7 +328,7 @@ used to generate both a user ROM and a tape binary,
 The user ROM can be run with the emulator using `-u FASTVDU_ROM`.  For
 the tape binary (which is really only for testing purposes),
 re-vectorisation of the VDU output is set up by running the code at
-`1602` (i.e. with the 'G' monitor function).
+`1602` (i.e. with the 'G' Monitor function).
 
 ### Copying
 
