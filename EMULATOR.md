@@ -263,7 +263,7 @@ along with these programs.  If not, see
 
 ### Copyright
 
-Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
+Unless otherwise stated, copyright &copy; 2021 Patrick B Warren
 <patrickbwarren@gmail.com>
 
 The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
