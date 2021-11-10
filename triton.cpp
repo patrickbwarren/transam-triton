@@ -57,6 +57,16 @@
 
 uint16_t mem_top;
 
+typedef enum {INPUT, OUTPUT} direction_t;
+
+typedef struct StateEPROM {
+  uint8_t a, b, c, ctl;
+  uint8_t *rom = NULL;
+  bool chip_select = false;
+  bool write_enable = false;
+  direction_t portA_dirn = OUTPUT;
+} StateEPROM;
+
 using namespace std;
 
 class IOState {
@@ -78,7 +88,6 @@ public:
 
 const int mem_top_default = 0x2000;
 const char *tape_file_default = "TAPE";
-const char *eprom_file_default = "EPROM";
 
 char *tape_file = NULL;
 char *user_rom = NULL;
@@ -226,7 +235,7 @@ void IOState::key_press(sf::Event::EventType event, int key, bool shifted, bool 
   }
 }
 
-void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape) {
+void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape, StateEPROM *eprom) {
   switch(state->port) {
   case 0: // Keyboard buffer (IC 49)
     state->a = io->key_buffer;
@@ -306,12 +315,50 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io, fstream &tape)
       io->tape_relay = false;
     }
     break;
-  default: // all other ports, such as EPROM programmer
-    if (state->port_op == 0xd3) {
-      printf("port %02X output %02x\n", state->port, state->a);
-    } else {
-      printf("port %02X input\n", state->port);
+  // The following ports belong to an Intel 8255 which is part of the EPROM programmer
+  // The implementation should be faithful to the operation of EPROM programmer, but
+  // is not a generic 8255 emulation.
+  case 0xfc: // 8255 port A (IN or OUT selected by control word - see below)
+    if (state->port_op == 0xd3) { // output
+      if (eprom->portA_dirn == OUTPUT) eprom->a = state->a;
+    } else { // input
+      if (eprom->portA_dirn == INPUT // if port A direction is IN
+	  && eprom->rom != NULL // and there is a ROM loaded
+	  && eprom->chip_select) { // and EPROM CS is enabled, then read from ROM
+	uint8_t upper = eprom->c & 0x03;
+	uint16_t address = ((upper << 8) | (eprom->b)) & 0x03ff;
+	eprom->a = eprom->rom[address];
+      } else eprom->a = 0xff; // failed attempt to read
+      state->a = eprom->a;
     }
+    break;
+  case 0xfd: // 8255 port B (always OUT)
+    if (state->port_op == 0xd3) eprom->b = state->a;
+    else state->a = 0xff; // failed attempt to read
+    break;
+  case 0xfe: // 8255 port C (lower 4 bits always OUT; upper 4 bits always IN)
+    if (state->port_op == 0xd3) { // output
+      eprom->c = (eprom->c & 0xf0) | (state->a & 0x0f); // latch only lower 4 bits
+      eprom->chip_select = ((eprom->c & 0x0c) == 0x04); // implement the hardware logic that
+      eprom->write_enable = ((eprom->c & 0x0c) == 0x08); // connects C bits 2, 3 to 2708 CS/WE
+      if (eprom->portA_dirn == OUTPUT // write to EPROM if port A direction is OUT
+	  && eprom->rom != NULL // and there is a EPROM loaded
+	  && eprom->write_enable) { // and EPROM is write-enabled
+	uint8_t upper = eprom->c & 0x03;
+	uint16_t address = ((upper << 8) | (eprom->b)) & 0x03ff;
+	eprom->rom[address] &= eprom->a; // can only unset bits hence '&='
+	eprom->c &= 0xef; // clear the high bit to show successful write sequence
+      }
+    } else { // input
+      state->a = (eprom->c & 0xf0) & 0x0f; // just read the upper 4 bits  
+    }
+    break;
+  case 0xff: // 8255 control word; bit 4 (& 0x10) sets the direction of port A
+    if (state->port_op == 0xd3) {
+      eprom->ctl = state->a;
+      eprom->portA_dirn = (eprom->ctl & 0x10) == 0x00 ? OUTPUT : INPUT;
+    }
+    break;
   }
   state->port_op = 0x00;
 }
@@ -322,16 +369,15 @@ int load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_t
   if (rom.is_open()) {
     rom.read((char *) &memory[rom_start], rom_size);
     fprintf(stderr, "%04X - %04X : %s\n", rom_start, rom_start+rom_size-1, rom_name);
-    rom.close(); return 0;
+    rom.close(); return 1;
   } else {
-    fprintf(stderr, "Unable to load %s\n", rom_name);
-    return 1;
+    fprintf(stderr, "%s not available\n", rom_name);
+    return 0;
   }
 }
 
 int main(int argc, char** argv) {
   uint8_t main_memory[_64K];
-  uint8_t eprom[_1K];
   int cursor_count = 0;
   int i;
   IOState io;
@@ -377,27 +423,28 @@ int main(int argc, char** argv) {
       printf("-m sets the top of memory, for example -m 0x4000, defaults to 0x2000\n");
       printf("-t specifies a tape binary, by default TAPE\n");
       printf("-u installs user ROM(s); to install two ROMS separate the filenames by a comma\n");
-      printf("-z specifies a file to write the EPROM to, with F7\n");
+      printf("-z specifies a file to write the EPROM to, with F8\n");
       printf("F1: interrupt 1 (RST 1) - clear screen\n");
       printf("F2: interrupt 2 (RST 2) - save and dump registers\n");
       printf("F3: reset (RST 0)\n");
       printf("F4: toggle pause\n");
       printf("F5: write 8080 status to command line\n");
-      printf("F6: UV erase the EPROM (set all bytes to 0xff)\n");
-      printf("F7: write the EPROM to the file specified by -z\n");
+      printf("F6: write the EPROM to the file specified by -z\n");
       printf("F9: exit emulator\n");
+      printf("F10: UV erase the EPROM (set all bytes to 0xff)\n");
     default:
       exit(0);
     }
 
   if (tape_file == NULL) tape_file = strdup(tape_file_default);
-  if (eprom_file == NULL) eprom_file = strdup(eprom_file_default);
 
   // One microcycle is 1.25uS = effective clock rate of 800kHz
 
   ops_per_frame = 800000 / framerate;
 
   State8080 state;
+  StateEPROM eprom;
+
   fstream tape;
 
   mem_top = (mem_top_opt == NULL) ? mem_top_default : strtoul(mem_top_opt, &pend, 0);
@@ -440,7 +487,6 @@ int main(int argc, char** argv) {
   // Initialise memory to 0xFF
   
   for (i=0; i<_64K; i++) main_memory[i] = 0xff;
-  for (i=0; i<_1K; i++) eprom[i] = 0xff;
 
   load_rom(main_memory, "MONA72_ROM",  0x0000, _1K);
   load_rom(main_memory, "MONB72_ROM",  0x0c00, _1K);
@@ -454,9 +500,13 @@ int main(int argc, char** argv) {
     }
     load_rom(main_memory, user_rom, 0x0400, _1K); // load the first user ROM
   }
+  
+  if (eprom_file != NULL) { // allocate space for ROM and load, or make freshly erased
+    eprom.rom = (uint8_t *)malloc(sizeof(uint8_t)*_1K);
+    int success = load_rom(eprom.rom, eprom_file, 0x0000, _1K);
+    if (!success) for (i=0; i<_1K; i++) eprom.rom[i] = 0xff;
+  }
 
-
-  //state.memory = main_memory;
   Reset8080(&state);
 
   // Initialise window
@@ -524,29 +574,25 @@ int main(int argc, char** argv) {
 	    pause = !pause;
 	    break;
 	  case sf::Keyboard::F5: // Write status
-	    WriteStatus8080(stderr, &state);
+	    WriteStatus8080(stderr, &state); fprintf(stderr, "\n");
 	    break;
-	  case sf::Keyboard::F6: // UV erase EPROM
-	    for (i=0; i<_1K; i++) eprom[i] = 0xff;
-	    fprintf(stderr, "Erased EPROM\n");
-	    break;
-	  case sf::Keyboard::F7: // Write EPROM
+	  case sf::Keyboard::F6: // Write EPROM
 	    if (eprom_file != NULL) {
 	      fstream fs;
 	      fs.open(eprom_file, ios::out | ios::binary);
 	      if (fs.is_open()) {
-		fs.write((char *)eprom, _1K);
+		fs.write((char *)eprom.rom, _1K);
 		fs.close();
 		fprintf(stderr, "Written %i bytes to %s\n", (int)_1K, eprom_file);
 	      }	else fprintf(stderr, "Unable to open EPROM file %s for writing\n", eprom_file);
 	    } else fprintf(stderr, "No file given to write EPROM\n");
 	    break;
-	  case sf::Keyboard::F8: // Debug EPROM
-	    for (i=0; i<_1K; i++) eprom[i] = main_memory[0x1600 + i];
-	    fprintf(stderr, "Copied %i bytes from main memory starting at 0x1600 into EPROM\n", (int)_1K);
-	    break;
 	  case sf::Keyboard::F9: // Exit application
 	    window.close();
+	    break;
+	  case sf::Keyboard::F10: // UV erase EPROM
+	    for (i=0; i<_1K; i++) eprom.rom[i] = 0xff;
+	    fprintf(stderr, "Erased EPROM\n");
 	    break;
 	  default:
 	    io.key_press(event.type, event.key.code, shifted, ctrl);
@@ -563,7 +609,7 @@ int main(int argc, char** argv) {
       // Send as many clock pulses to the CPU as would happen between screen frames
       for (ops = 0; ops < ops_per_frame; ops += SingleStep8080(&state, main_memory)) {
 	if (state.halted) break;
-	if (state.port_op) MachineInOut(&state, main_memory, &io, tape);
+	if (state.port_op) MachineInOut(&state, main_memory, &io, tape, &eprom);
       }
       cursor_count++;
       // Draw screen from VDU memory - font texture acts as ROMs (IC 69 and 70)

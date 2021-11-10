@@ -85,7 +85,7 @@ void WriteStatus8080(FILE *fp, State8080 *state) {
   fprintf(fp, "%c", state->cc.ac ? 'A' : 'a');
   fprintf(fp, " %c", state->int_enable ? 'E' : 'D');
   if (state->interrupt) fprintf(fp, " pending %02X", state->interrupt);
-  if (state->halted) fprintf(fp, " (halted)\n"); else fprintf(fp, "\n");
+  if (state->halted) fprintf(fp, " (halted)"); // note carriage return might be needed
 }
 
 void Reset8080(State8080 *state) {
