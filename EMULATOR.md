@@ -22,22 +22,21 @@ The following command line options are available:
  - `-t` specifies a tape binary, for example `-t TAPE`
  - `-u` installs one or two user ROM(s);
  - `-z` specifies a file to write the EPROM to, with function key F8
+ 
 To install two user ROMS using the `-u` option, separate the filenames
 by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are
 always installed at `0x400` first followed by `0x800`.  To override
 this one could make a blank ROM filled with `0xff` bytes using the
-EPROM programmer.  Alternatively one can use the following pipe on
-linux which generates 1024 zero bytes from `/dev/zero` and then uses
-`sed` to change these to `0xff` bytes:
+EPROM programmer.  Alternatively one can use the following unix (linux) command
+which generates 1024 zero bytes from `/dev/zero` and pipes them through
+`sed` to change them to `0xff` bytes:
 ```
 dd if=/dev/zero bs=1024 count=1 | sed 's/\x00/\xff/g' > binfile
 ```
 (obviously one can change `0xff` in this to another value if required).
 
 When the emulator is running the following function keys can be used
-to control the emulation (all other keyboard input is sent to the
-emulation):
-
+to control the emulation:
  - F1: interrupt 1 (RST 1) - clear screen
  - F2: interrupt 2 (RST 2) - save and dump registers
  - F3: reset (RST 0)
@@ -47,6 +46,8 @@ emulation):
  - F7: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)
  - F8: EPROM programmer: write the EPROM to the file specified by `-z`
  - F9: exit emulator
+
+All other keyboard input is sent to the emulation.
 
 ### Implementation notes
 
@@ -266,16 +267,17 @@ This feature was also added to Robin Stuart's emulator and has been
 tested to work with the 'Z' function command in the Level 7.2 Monitor.
 The target binary file should be specified at the command line with
 `-z` option.  If the file exists it is loaded, otherwise a blank EPROM
-is created with all bytes set to 0xff.  Then, function F7 performs the
-equivalent to a UV erase by setting all the bytes to 0xff (not
-necessary for a blank EPROM) and function F8 causes the content of the
-EPROM to be written to the file specified by `-z` at the command line.
+is created with all bytes set to `0xff`.  To facilitate the use of the
+programmer, function F7 performs the equivalent to a UV erase by
+setting all the bytes to `0xff` (not necessary for a blank EPROM) and
+function F8 causes the content of the EPROM to be written to the file
+specified by `-z` at the command line.
 
 When writing to the EPROM the number of write cycles per memory
 location is monitored and a warning is printed if one attempts to save
 the EPROM with fewer than 100 write cycles for each byte.  These write
 cycle counts are initialised to zero at the start, and reinitialised
-by the emulated UV erase step.  This functions only as a check since
+by the emulated UV erase step.  This just acts as a check since
 in the emulation only one write cycle is needed per memory location to
 store the data.  Also, the 1 ms programming pulse duration is not
 emulated, rather the necessary signal that the write cycle is finished
@@ -283,10 +285,11 @@ is available immediately after the data has been written.
 
 The details of the EPROM programmer emulation are a little complicated
 although only the bare minimum functionality of the Intel 8255
-programmable peripheral interface chip is emulated to meet the needs
-of the EPROM programmer.  In addition the Monitor code that implements
-the Z function is rather compact and takes some shortcuts.  For
-completeness these details are given here.
+programmable peripheral interface (PPI) chip is emulated to meet the
+needs of the EPROM programmer.  For completeness these details are
+given here.
+
+#### Hardware
 
 The EPROM programmer hardware consists of the above mentioned Intel
 8255 programmable peripheral interface chip, directly interfaced to
@@ -296,10 +299,13 @@ implements a 20 V programming pulse of 1 ms duration, per write cycle
 delay).  As such the ports available to the 8255 are operated in one
 of only two modes, and only these modes need to be emulated.
 
-More here
+More here...
 
-The entry point for EPROM programmer code from L7.2 monitor is at
-address `0x0f1c` and is as follows:
+#### Firmware
+
+The Monitor code that implements the Z function is rather compact and
+takes some shortcuts.  The entry point from L7.2 monitor is at address
+`0x0f1c` and is as follows:
 
 ```
 0F1C  CD 08 02  CALL    0208    ; prompt for start address, return in HL 
