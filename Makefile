@@ -22,7 +22,7 @@ LIBS = -lsfml-graphics -lsfml-window -lsfml-audio -lsfml-system
 
 default: all
 
-all: codes roms tapes
+all: codes roms tape
 
 codes: triton trimcc tridat
 

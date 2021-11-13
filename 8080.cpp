@@ -34,7 +34,7 @@
  */
 
 /* Intel 8080 emulator for the Transam Triton
- * All operands implemented except IN, OUT and HLT -- now added (PBW)
+ * All operands implemented except IN, OUT and HLT [these now added (PBW)]
  * Also handles memory mapping
  * Uses the conventions described at Emulator101 (http://www.emulator101.com)
  * This code is supposed to be easy to understand rather than efficient!
@@ -47,9 +47,9 @@
 
 extern uint16_t mem_top; // should be defined in triton.cpp
 
-// Macros: make sure we only write into user addressable RAM between
-// VDU which starts at 0x1000 and mem_top.  Similarly an attempt to
-// read from VDU memory (0x1000 to 0x13ff) should result in 0xff.
+// Make sure we only write into user addressable RAM between VDU which
+// starts at 0x1000 and mem_top.  Similarly an attempt to read from
+// VDU memory (0x1000 to 0x13ff) should result in 0xff.
 
 // Note the apparently excessive use of brackets in MEM_READ is
 // because we sometimes want to bitwise negate the result ~MEM_READ in
@@ -70,6 +70,8 @@ bool Parity(uint8_t byte) {
   return (byte & 0x01) ? false : true;
 }
 
+// Final '\n' is omitted to allow for inline printing
+
 void WriteStatus8080(FILE *fp, State8080 *state) {
   fprintf(fp, "A=%02X ", state->a);
   fprintf(fp, "BC=%02X%02X ", state->b, state->c);
@@ -85,7 +87,7 @@ void WriteStatus8080(FILE *fp, State8080 *state) {
   fprintf(fp, "%c", state->cc.ac ? 'A' : 'a');
   fprintf(fp, " %c", state->int_enable ? 'E' : 'D');
   if (state->interrupt) fprintf(fp, " pending %02X", state->interrupt);
-  if (state->halted) fprintf(fp, " (halted)"); // note carriage return might be needed
+  if (state->halted) fprintf(fp, " (halted)");
 }
 
 void Reset8080(State8080 *state) {
@@ -101,15 +103,16 @@ void Reset8080(State8080 *state) {
 int SingleStep8080(State8080 *state, uint8_t *memory) { // return the number of machine cycles
   uint8_t *opcode = &memory[state->pc];
   uint8_t current_opcode;
+  bool handling_interrupt = false;
   int answer;
   int offset;
   //printStatus(state);
   if (state->halted) return 0;
   if (state->interrupt && state->int_enable) { // service the interrupt
+    handling_interrupt = true;
     current_opcode = state->interrupt;
     state->interrupt = 0x00;
     state->int_enable = false; // disable interrupts
-    state->pc--; // necessary to cancel the increment in RST handler below
   } else { // normal operation
     current_opcode = opcode[0];
   }
@@ -1439,7 +1442,7 @@ int SingleStep8080(State8080 *state, uint8_t *memory) { // return the number of 
   case 0xef:
   case 0xf7:
   case 0xff:
-    state->pc++;
+    if (!handling_interrupt) state->pc++;
     MEM_WRITE(state->sp - 2, state->pc & 0xff);
     MEM_WRITE(state->sp - 1, state->pc >> 8);
     state->sp -= 2;
