@@ -196,6 +196,8 @@ automatically.  See the L7.2 documentation for more details and the
 fast VDU user ROM (specifically [`fastvdu_rom.tri`](fastvdu_rom.tri))
 for a working example.
 
+_Fast VDU user ROM_ more here ...
+
 #### Keyboard emulation
 
 This was fixed compared to Robin Stuart's emulator: the keyboard data
@@ -282,12 +284,10 @@ write cycle counts are initialised to zero at the start, and
 reinitialised by the emulated UV erase step).
 
 The details of the EPROM programmer emulation are a little complicated
-although only the bare minimum functionality of the Intel 8255
+    although only the bare minimum functionality of the Intel 8255
 programmable peripheral interface (PPI) chip is emulated to meet the
 needs of the EPROM programmer.  For completeness these details are
 given here.
-
-#### Hardware
 
 The EPROM programmer hardware consists of the above mentioned Intel
 8255 programmable peripheral interface chip, directly interfaced to
@@ -300,9 +300,7 @@ emulated.
 
 More here...
 
-#### Firmware
-
-The Monitor code that implements the Z function is rather compact and
+The Monitor code that implements the Z function is tightly written and
 takes some shortcuts.
 
 The entry point from L7.2 monitor is at address `0x0f1c` and the code
@@ -363,6 +361,7 @@ the lower half of port C are also set appropriate to a read or write cycle.
 0F71  C9        RET             ; return
 ```
 
+More here...
 
 ### Copying
 
