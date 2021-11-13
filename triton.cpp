@@ -633,10 +633,6 @@ int main(int argc, char** argv) {
 	  case sf::Keyboard::F9: // Exit emulator
 	    window.close();
 	    break;
-	  case sf::Keyboard::F10:
-	    for (int i=0; i<_1K; i++) eprom.rom[i] = 0x00;
-	    fprintf(stderr, "EPROM set all bits to zero\n");
-	    break;
 	  default:
 	    io.key_press(event.type, event.key.code, shifted, ctrl);
 	    break;
