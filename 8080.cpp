@@ -1757,6 +1757,6 @@ int SingleStep8080(State8080 *state, uint8_t *memory) { // return the number of 
     state->cc.p = Parity(answer & 0xff);
     state->pc += 2;
     return 7;
-    //case 0xff: RST 7 
+    //case 0xff: RST 7
   }
 }
