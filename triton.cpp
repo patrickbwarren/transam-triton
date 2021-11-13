@@ -472,15 +472,15 @@ int main(int argc, char** argv) {
       printf("-m sets the top of memory, for example -m 0x4000, defaults to 0x2000\n");
       printf("-t specifies a tape binary, eg -t TAPE\n");
       printf("-u installs user ROM(s); to install two ROMS separate the filenames by a comma\n");
-      printf("-z specifies a file to write the EPROM to, with F7\n");
+      printf("-z specifies a file to write the EPROM to, with F8\n");
       printf("F1: interrupt 1 (RST 1) - clear screen\n");
       printf("F2: interrupt 2 (RST 2) - save and dump registers\n");
       printf("F3: reset (RST 0)\n");
       printf("F4: halt system (jam HLT instruction using interrupt)\n");
       printf("F5: toggle emulator pause\n");
       printf("F6: write 8080 status to command line\n");
-      printf("F7: EPROM programmer: write the EPROM to the file specified by -z\n");
-      printf("F8: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)\n");
+      printf("F7: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)\n");
+      printf("F8: EPROM programmer: write the EPROM to the file specified by -z\n");
       printf("F9: exit emulator\n");
     default:
       exit(0);
@@ -612,7 +612,11 @@ int main(int argc, char** argv) {
 	  case sf::Keyboard::F6: // Write status
 	    WriteStatus8080(stderr, &state); fprintf(stderr, "\n");
 	    break;
-	  case sf::Keyboard::F7: // Save EPROM to file
+	  case sf::Keyboard::F7: // UV erase EPROM
+	    UV_erase(&eprom);
+	    fprintf(stderr, "EPROM programmer: UV erased EPROM\n");
+	    break;
+	  case sf::Keyboard::F8: // Save EPROM to file
 	    if (eprom.file != NULL) {
 	      fstream fs;
 	      fs.open(eprom.file, ios::out | ios::binary);
@@ -625,10 +629,6 @@ int main(int argc, char** argv) {
 		}
 	      }	else fprintf(stderr, "EPROM programmer: file %s could not be opened for writing\n", eprom.file);
 	    } else fprintf(stderr, "EPROM programmer: no file specified (-z missing)\n");
-	    break;
-	  case sf::Keyboard::F8: // UV erase EPROM
-	    UV_erase(&eprom);
-	    fprintf(stderr, "EPROM programmer: UV erased EPROM\n");
 	    break;
 	  case sf::Keyboard::F9: // Exit emulator
 	    window.close();

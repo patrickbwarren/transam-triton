@@ -14,27 +14,41 @@ Makefile, or `make codes`.  The [SFML library](https://www.sfml-dev.org/) is req
 
 ### Usage
 ```
-SFML-based Triton emulator
-./triton -m <mem_top> -t <tape_file> -u <user_rom(s)> -z <user_eprom>
--h (help): print this help
--m sets the top of memory, for example -m 0x4000, defaults to 0x2000
--t specifies a tape binary, by default TAPE
--u installs user ROM(s); to install two ROMS separate the filenames by a comma
--z specifies a file to write the EPROM to, with F7
-F1: interrupt 1 (RST 1) - clear screen
-F2: interrupt 2 (RST 2) - save and dump registers
-F3: reset (RST 0)
-F4: toggle pause
-F5: write 8080 status to command line
-F6: UV erase the EPROM (set all bytes to 0xff)
-F7: write the EPROM to the file specified by -z
-F9: exit emulator
+./triton -m <mem_top> -t <tape_file> -u <user_rom(s)> -z <user_eprom> -h -?
+```
+The following command line options are available:
+ - `-h` or `-?` prints a summary of command line options and function keys
+ - `-m` sets the top of memory, for example `-m 0x4000`; the default is `0x2000`
+ - `-t` specifies a tape binary, for example `-t TAPE`
+ - `-u` installs one or two user ROM(s);
+ - `-z` specifies a file to write the EPROM to, with function key F8
 ```
 
-More here...
+To install two user ROMS using the `-u` option, separate the filenames
+by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are
+always installed at `0x400` first followed by `0x800`.  To override
+this one could make a blank ROM filled with `0xff` bytes using the
+EPROM programmer.  Alternatively one can use the following pipe on
+linux which generates 1024 zero bytes from `/dev/zero` and then uses
+`sed` to change these to `0xff` bytes:
+```
+dd if=/dev/zero bs=1024 count=1 | sed 's/\x00/\xff/g' > binfile
+```
+(obviously one can change `0xff` in this to another value if required).
 
-The 'Y' function is vectored through RAM at `1473` so to change the
-vector change the locations at `1474`/`5`.
+When the emulator is running the following function keys can be used
+to control the emulation (all other keyboard input is sent to the
+emulation):
+
+ - F1: interrupt 1 (RST 1) - clear screen
+ - F2: interrupt 2 (RST 2) - save and dump registers
+ - F3: reset (RST 0)
+ - F4: halt system (jam HLT instruction using interrupt)
+ - F5: toggle emulator pause
+ - F6: write 8080 status to command line
+ - F7: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)
+ - F8: EPROM programmer: write the EPROM to the file specified by `-z`
+ - F9: exit emulator
 
 ### Implementation notes
 
@@ -103,6 +117,13 @@ is unset), then press a key on the keyboard (for example 'W') and the
 pending interrupt is serviced (clear screen in this case).
 
 This logic is implemented in the emulator.
+
+In addition, a HLT instruction can be jammed onto the interrupt line
+using function F4 (which also enables interrupts).  This has the
+result that the 8080 enters the halted state from which one can only
+recover with a hardware reset (function F3).  The contents of RAM is
+preserved though.  The same thing happens if the emulator encounters a
+file error during processing of tape input or output.
 
 #### Parity
 
@@ -243,7 +264,103 @@ set these two bytes to `01` and `00` respectively.
 
 #### EPROM programmer emulation
 
-Not yet implemented...
+This feature was also added to Robin Stuart's emulator and has been
+tested to work with the 'Z' function command in the Level 7.2 Monitor.
+The target binary file should be specified at the command line with
+`-z` option.  If the file exists it is loaded, otherwise a blank EPROM
+is created with all bytes set to 0xff.  Then, function F7 performs the
+equivalent to a UV erase by setting all the bytes to 0xff (not
+necessary for a blank EPROM) and function F8 causes the content of the
+EPROM to be written to the file specified by `-z` at the command line.
+
+When writing to the EPROM the number of write cycles per memory
+location is monitored and a warning is printed if one attempts to save
+the EPROM with fewer than 100 write cycles for each byte.  These write
+cycle counts are initialised to zero at the start, and reinitialised
+by the emulated UV erase step.  This functions only as a check since
+in the emulation only one write cycle is needed per memory location to
+store the data.  Also, the 1 ms programming pulse duration is not
+emulated, rather the necessary signal that the write cycle is finished
+is available immediately after the data has been written.
+
+The details of the EPROM programmer emulation are a little complicated
+although only the bare minimum functionality of the Intel 8255
+programmable peripheral interface chip is emulated to meet the needs
+of the EPROM programmer.  In addition the Monitor code that implements
+the Z function is rather compact and takes some shortcuts.  For
+completeness these details are given here.
+
+The EPROM programmer hardware consists of the above mentioned Intel
+8255 programmable peripheral interface chip, directly interfaced to
+the 2708 EPROM.  Some auxiliary logic and discrete electronics
+implements a 20 V programming pulse of 1 ms duration, per write cycle
+(as mentioned, it was deemed unecessarily fussy to emulate this
+delay).  As such the ports available to the 8255 are operated in one
+of only two modes, and only these modes need to be emulated.
+
+More here
+
+The entry point for EPROM programmer code from L7.2 monitor is at
+address `0x0f1c` and is as follows:
+
+```
+0F1C  CD 08 02  CALL    0208    ; prompt for start address, return in HL 
+0F1F  0E 64     MVI     C,64    ; number of write cycles is 0x64 = 100 decimal
+0F21  11 00 04  LXI     D,0400  ; load DE with 0x0400 = 1024 bytes (EPROM capacity)
+0F24  E5        PUSH    H       ; push HL (start address) onto stack
+0F25  D5        PUSH    D       ; push DE = 0x400 onto stack
+0F26  11 00 00  LXI     D,0000  ; load DE with start address of EPROM = 0x0000
+0F29  CD 5F 0F  CALL    0F5F    ; read byte from EPROM into A
+0F2C  47        MOV     B,A     ; copy A into B
+0F2D  B6        ORA     M       ; or A with memory at HL
+0F2E  B8        CMP     B       ; test for zero bits; ie does A | M == A ?
+0F2F  C2 72 0F  JNZ     0F72    ; print 'PROGRAM ERROR' and abort to function prompt
+0F32  3E 88     MVI     A,88    ; set up for write cycle - control word to 0x88
+0F34  06 08     MVI     B,08    ; bits 2 and 3 of port C will be 1 and 0 respectively 
+0F36  CD 63 0F  CALL    0F63    ; write byte in A to EPROM
+0F39  DB FE     IN      FE      ; fetch upper 4 bits from 8255 port C
+0F3B  A7        ANA     A       ; set sign flag = bit 7 of A (write pulse)
+0F3C  FA 39 0F  JM      0F39    ; loop back if sign flag set (write pulse not finished)
+0F3F  79        MOV     A,C     ; copy # remaining write cycles in C into A
+0F40  FE 01     CPI     01      ; compare to 1
+0F42  C2 4C 0F  JNZ     0F4C    ; if # remaining write cycles > 1, skip the read test
+0F45  CD 5F 0F  CALL    0F5F    ; otherwise on final cycle, read byte from EPROM into A
+0F48  BE        CMP     M       ; does it match what's in memory?
+0F49  C2 7B 0E  JNZ     0E7B    ; print 'READ ERROR' and abort to function prompt
+0F4C  23        INX     H       ; increment HL (memory address)
+0F4D  13        INX     D       ; increment DE (EPROM address)
+0F4E  E3        XTHL            ; exchange stack with HL; HL now contains 0x400
+0F4F  CD BF 00  CALL    00BF    ; compare HL with DE, ie does DE = 0x400?
+0F52  E3        XTHL            ; exchange stack with HL recovering memory address
+0F53  C2 29 0F  JNZ     0F29    ; if DE s not yet 0x400, loop back for next byte
+0F56  D1        POP     D       ; pop DE off stack (the value here is 0x400)
+0F57  E1        POP     H       ; pop HL off stack, the start address again
+0F58  0D        DCR     C       ; decrement write cycle count
+0F59  C2 24 0F  JNZ     0F24    ; if it is not zero, loop back for another cycle
+0F5C  C3 3D 03  JMP     033D    ; print 'END' and return to function prompt
+```
+
+To accompany this is a short subroutine with two entry points: at
+`0x0f5f` sets the 8255 control word to `0x98` (port A direction is
+IN), and at `0x0f63` is called from `0x0f36` with the control word set
+to `0x99` (port A direction is OUT).  In both cases bits 2 and 3 of
+the lower half of port C are set appropriate to a read or write cycle.
+
+```
+0F5F  3E 98     MVI     A,98    ; 8255 control word will be set to 0x98
+0F61  06 04     MVI     B,04    ; bits 2 and 3 of port C will be 0 and 1 respectively
+0F63  D3 FF     OUT     FF      ; output control word to 8255 (second entry point)
+0F65  7B        MOV     A,E     ; copy low byte of EPROM address in DE
+0F66  D3 FD     OUT     FD      ; output to 8255 port B
+0F68  7E        MOV     A,M     ; get data from main memory location in HL
+0F69  D3 FC     OUT     FC      ; output to 8255 port A (no effect unless control word is 0x88)
+0F6B  7A        MOV     A,D     ; copy high byte of EPROM address in DE, ie bits 0 and 1 of this byte
+0F6C  B0        ORA     B       ; set bits 2 and 3
+0F6D  D3 FE     OUT     FE      ; output to 8255 port C (affects lower 4 bits only)
+0F6F  DB FC     IN      FC      ; input from 8255 port A (data acquired only if control word is 0x98)
+0F71  C9        RET             ; return
+```
+
 
 ### Copying
 
