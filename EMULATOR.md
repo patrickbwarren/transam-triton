@@ -196,7 +196,7 @@ automatically.  See the L7.2 documentation for more details and the
 fast VDU user ROM (specifically [`fastvdu_rom.tri`](fastvdu_rom.tri))
 for a working example.
 
-_Fast VDU user ROM_ more here ...
+Fast VDU user ROM more here ...
 
 #### Keyboard emulation
 
@@ -362,6 +362,8 @@ the lower half of port C are also set appropriate to a read or write cycle.
 ```
 
 More here...
+
+Test for zero bytes implements `A | M == A` - explanation.
 
 ### Copying
 
