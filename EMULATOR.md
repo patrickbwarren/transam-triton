@@ -22,8 +22,6 @@ The following command line options are available:
  - `-t` specifies a tape binary, for example `-t TAPE`
  - `-u` installs one or two user ROM(s);
  - `-z` specifies a file to write the EPROM to, with function key F8
-```
-
 To install two user ROMS using the `-u` option, separate the filenames
 by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are
 always installed at `0x400` first followed by `0x800`.  To override
