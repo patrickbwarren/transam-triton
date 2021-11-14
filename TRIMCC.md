@@ -95,7 +95,7 @@ code from starts at `0x4b`.  To disassemble this therefore one can use:
 ```
 ./disasm8080.py -u -b -f 3 -s 0x4b -a 0x1602 HEX2DEC_TAPE
 ```
-The result is:
+The result is (cf `hex2dec.tri` below):
 ```
 1602            ORG     1602
 1602  11 4E 16  LXI     D,164E
