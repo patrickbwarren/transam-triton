@@ -270,9 +270,9 @@ This feature was also added to Robin Stuart's emulator and has been
 tested to work with the 'Z' function command in the Level 7.2 Monitor.
 The target binary file should be specified at the command line with
 `-z` option.  If the file exists it is loaded, otherwise a blank EPROM
-is created with all bytes set to `FF`.  To facilitate the use of the
+is created with all bits set to 1.  To facilitate the use of the
 programmer, function F7 performs the equivalent to a UV erase by
-setting all the bytes to `FF` (not necessary for a blank EPROM), and
+setting all bits to 1 (not necessary for a blank EPROM), and
 function F8 causes the content of the EPROM to be written to the file
 specified by `-z` at the command line.
 
@@ -285,8 +285,8 @@ write cycle counts are initialised to zero at the start, and
 reinitialised by the emulated UV erase step).
 
 The details of the EPROM programmer emulation are a little complicated
-    although only the bare minimum functionality of the Intel 8255
-programmable peripheral interface (PPI) chip is emulated to meet the
+although only the bare minimum functionality of the Intel 8255
+programmable peripheral interface (PPI) chip has been emulated to meet the
 needs of the EPROM programmer.  For completeness these details are
 given here.
 
@@ -300,8 +300,7 @@ only these modes need to be emulated.
 
 More here...
 
-The Monitor code that implements the Z function is tightly written and
-takes some shortcuts.
+The Monitor code that implements the 'Z' function is tightly written.
 
 The entry point from L7.2 monitor is at address `0F1C` and the code
 is as follows:
@@ -342,10 +341,10 @@ is as follows:
 0F5C  C3 3D 03  JMP     033D    ; print 'END' and return to function prompt
 ```
 To accompany this is a short subroutine with two entry points. The entry point at
-`0F5F` sets the 8255 control word to `98` so that the 8255 port A direction is
+`0F5F` sets the 8255 control word to `0x98` so that the 8255 port A direction is
 IN; and the entry point at `0F63` (called from `0F36`) should have the control word set
-to `99` so that the 8255 port A direction is OUT.  In both cases bits 2 and 3 of
-the lower half of port C are also set appropriate to a read or write cycle.
+to `0x99` so that the 8255 port A direction is OUT.  In both cases bits 2 and 3 of
+the lower half of port C are set appropriate to a read or write cycle.
 ```
 0F5F  3E 98     MVI     A,98    ; 8255 control word will be set to 0x98
 0F61  06 04     MVI     B,04    ; bits 2 and 3 of port C will be 0 and 1 respectively
