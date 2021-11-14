@@ -23,27 +23,30 @@ loaded into the emulator described below, or to generate the ROMs
 needed to run the emulator.
 
 ### Receiver (`tridat.c`)
-Receive Triton RS-232 data from a serial device.  Usage is:
+
+Receive RS-232 data from a physically-connected Triton using a serial
+device such `/dev/ttyS0`. Usage is:
 ```
 ./tridat [-o binary_file] serial_device
 ```
-where the single option is 
-- `-o <binary_file>`: (optionally) capture the byte stream in a binary file
-This receives bytes from a physically-connected Triton using a serial
-device such `/dev/ttyS0`. Note that you may have to add yourself the
-`dialout` group to use the serial ports.
+The single option is `-o <binary_file>` which captures
+the byte stream in a binary file.  Note that you may have to add
+yourself the `dialout` group to use the serial ports.
 
 ### Transmitter (`trimcc.c`)
+
+Compile and optionally transmit RS-232 data to Triton through a serial device.  Usage is
 ```
-Compile and optionally transmit RS-232 data to Triton through a serial device
 ./trimcc [-h] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file
--v (verbose): print the byte stream and variables
--s (spaced): add a column of spaces after the 7th byte
--p (pipe): write the byte stream in binary to stdout (obviates -o)
--o <binary_file>: write the byte stream in binary to a file
--t (transmit): write the byte stream to a serial device, for example /dev/ttyS0
-the source file should be specified, for example a .tri file
 ```
+where
+- `-v` (verbose): print the byte stream and variables
+- `-s` (spaced): add a column of spaces after the 7th byte
+- `-p` (pipe): write the byte stream in binary to stdout (obviates -o)
+- `-o` <binary_file>: write the byte stream in binary to a file
+- `-t` (transmit): write the byte stream to a serial device, for example /dev/ttyS0
+The source file should be specified, for example a .tri file
+
 With the `-t` option this transmits bytes to a physically-connected
 Triton through a serial device such `/dev/ttyS0`.  Alternatively with the
 `-o` option the code can also be used to generate binaries to run with
