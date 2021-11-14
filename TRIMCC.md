@@ -29,7 +29,7 @@ device such `/dev/ttyS0`. Usage is:
 ```
 ./tridat [-o binary_file] serial_device
 ```
-The single option is `-o <binary_file>` which captures
+The single command line option is `-o <binary_file>` which captures
 the byte stream in a binary file.  Note that you may have to add
 yourself the `dialout` group to use the serial ports.
 
@@ -39,20 +39,21 @@ Compile and optionally transmit RS-232 data to Triton through a serial device.  
 ```
 ./trimcc [-h] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file
 ```
-where
+where the command line options are
 - `-v` (verbose): print the byte stream and variables
 - `-s` (spaced): add a column of spaces after the 7th byte
 - `-p` (pipe): write the byte stream in binary to stdout (obviates -o)
-- `-o` <binary_file>: write the byte stream in binary to a file
+- `-o <binary_file>`: write the byte stream in binary to a file
 - `-t` (transmit): write the byte stream to a serial device, for example `/dev/ttyS0`
 
 The source file should be specified, for example a `.tri` file.
 
 With the `-t` option this transmits bytes to a physically-connected
-Triton through a serial device such `/dev/ttyS0`.  Alternatively with the
-`-o` option the code can also be used to generate binaries to run with
-the [emulator](EMULATOR.md).  Using `-p` sends the binary to `stdout` so
-for example one can do `./trimcc <srcfile> -p | hexdump -C`.  In
+Triton through a serial device such `/dev/ttyS0`.  Alternatively with
+the `-o` option the code can also be used to generate binaries to run
+with the [emulator](EMULATOR.md).  Using `-p` sends the binary to
+`stdout` so for example one can do `./trimcc <srcfile> -p | hexdump
+-C` (see also below for an example using the disassembler).  In
 addition the `-v` option lists the compiled code plus the defined
 variables, and the `-s` option adds an extra column of space to the
 listing.  Note that you may have to add yourself the `dialout` group
@@ -143,6 +144,14 @@ The result is (c.f. `hex2dec.tri` below):
 This is practically identical what one gets by loading `HEX2DEC_TAPE`
 into the Triton emulator using the 'I' function and disassembling it
 using TRAP.
+
+It's possible to compile code with `trimcc` and pipe it into the
+disassembler, for example with the core code in `fastvdu.tri`:
+```
+./trimcc fastvdu.tri -p | ./disasm8080.py -u -b -f 3 -
+```
+This is particularly simple because there is no tape header to avoid.  User
+ROMs can likewise be disassembled.
 
 ### TriMCC minilanguage
 
@@ -327,14 +336,6 @@ and variable list
   SMESSG = 164E = %5710     SVALUE = 166E = %5742       PDEC = 1617 = %5655   
      SUB = 1636 = %5686       LOOP = 1639 = %5689   
 ```
-
-It's possible to compile code with `trimcc` and pipe it into the
-disassembler, for example with the core code in `fastvdu.tri`:
-```
-./trimcc fastvdu.tri -p | ./disasm8080.py -u -b -f 3 -
-```
-This is particularly simple because there is no tape header to avoid.  User
-ROMs can likewise be disassembled.
 
 ### Other TriMCC codes
 
