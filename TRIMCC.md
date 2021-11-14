@@ -69,18 +69,17 @@ where `<binary>` is a binary file, or `-` to pipe from stdin.  Command line opti
 - `-n`: don't list instruction bytes (make output suitable for assembler)
 - `-u`: use uppercase for mnemonics
 - `-a`: specify starting address, for example `-a 0x1602` for a Triton user code
-- `-s`: skip initial bytes, for example to skip the tape header in a tape binary
+- `-s`: skip initial bytes, for example to discard the tape header in a tape binary
 - `-b`: interpret data bytes as binary, not as printable ASCII characters
 - `-f`: use number format: 1=$1234 2=1234h 3=1234 4=177777 
 
 The combination of formatting options which most closely
 matches the TRAP disassembler for example is `-u -b -f 3`
 
-If disassembling a tape binary for example, to figure out how many
-bytes to skip the tape header at the start one can investigate the
-binary code using `hexdump` (a standard unix/linux utility).  For
-example, with `hexdump -C HEX2DEC_TAPE`one gets (the `-C` option
-prints the information out in a useful format):
+To figure out how many bytes to skip in order to discard the tape header at
+the start of a tape binary, one can investigate the binary using
+`hexdump` (a standard unix/linux utility).  For example, with `hexdump
+-C HEX2DEC_TAPE`one gets:
 ```
 00000000  0d 0d 0d 0d 0d 0d 0d 0d  0d 0d 0d 0d 0d 0d 0d 0d  |................|
 *
@@ -88,6 +87,8 @@ prints the information out in a useful format):
 00000050  02 11 6e 16 cd 2b 00 cd  17 16 cd 33 00 c3 02 16  |..n..+.....3....|
 etc
 ```
+(the `-C` option prints the information out in the most useful format).
+
 From this one can see the tape header ends with the byte sequence `20
 04 78 16` where the last two bytes are the end address of the code in
 little-endian format as required by the tape header.  Hence the actual
