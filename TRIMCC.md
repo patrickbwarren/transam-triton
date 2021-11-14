@@ -95,7 +95,7 @@ code from starts at `0x4b`.  To disassemble this therefore one can use:
 ```
 ./disasm8080.py -u -b -f 3 -s 0x4b -a 0x1602 HEX2DEC_TAPE
 ```
-The result is (cf `hex2dec.tri` below):
+The result is (c.f. `hex2dec.tri` below):
 ```
 1602            ORG     1602
 1602  11 4E 16  LXI     D,164E
@@ -298,7 +298,8 @@ provided 16-bit word, and incrementing the ASCII code `30` for the digit
 '0' to obtain the corresponding decimal digit (this relies on
 the ASCII codes for the digits 0-9 being contiguous).
 
-Compiling this with `./trimcc hex2dec.tri -v -s` results in the byte stream
+Compiling this with `./trimcc hex2dec.tri -v -s` results in the byte
+stream (c.f. disassembled version above)
 ```
 0000  0D 0D 0D 0D 0D 0D 0D 0D  0D 0D 0D 0D 0D 0D 0D 0D
 0010  0D 0D 0D 0D 0D 0D 0D 0D  0D 0D 0D 0D 0D 0D 0D 0D
@@ -323,6 +324,14 @@ and variable list
   SMESSG = 164E = %5710     SVALUE = 166E = %5742       PDEC = 1617 = %5655   
      SUB = 1636 = %5686       LOOP = 1639 = %5689   
 ```
+
+It's possible to compile code with `trimcc` and pipe it into the
+disassembler, for example with the core code in `fastvdu.tri`:
+```
+./trimcc fastvdu.tri -p | ./disasm8080.py -u -b -f 3 -
+```
+This is particularly simple because there is no tape header to avoid.  User
+ROMs can likewise be disassembled.
 
 ### Other TriMCC codes
 
