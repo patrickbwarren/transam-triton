@@ -27,11 +27,16 @@ On my Triton, the tape cassette interface was hacked (ca 1995) to
 drive an [RS-232](https://en.wikipedia.org/wiki/RS-232) interfaceQ.
 To manage this, a serial data receiver (`tridat.c`) and transmitter
 (`trimcc.c`) were written. The transmitter implements a hybrid
-assembly / machine code TriMCC 'minilanguage' ,used by the `.tri` codes in
-the present repository.
+assembly / machine code TriMCC 'minilanguage', used by the `.tri`
+codes in the present repository, and converts it into binary which can
+be sent to a physically connected TRITON through a serial interface,
+or saved to a binary file to be used with the emulator.  To partner
+this, `disasm8080.py` is included.  This is lightly modified from an
+8080 disassembler written by Jeff Tranter, available on his [GitHub
+site](https://github.com/jefftranter/8080).
 
 - [EMULATOR.md](EMULATOR.md) - more details of the emulator fork.
-- [TRIMCC.md](TRIMCC.md) - more details of the TriMCC code.
+- [TRIMCC.md](TRIMCC.md) - more details of the TriMCC codes and disassembler.
 
 ### Copying
 
@@ -56,6 +61,11 @@ Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 
 The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
 <rstuart114@gmail.com>
+
+The 8080 disassembler `disasm8080.py` is released under an Apache
+License, Version 2.0 and is copyright &copy; 2013-2015 by Jeff Tranter
+<tranter@pobox.com>, with minor modifications copyright (c) 2021
+Patrick B Warren <patrickbwarren@gmail.com>.
 
 The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a
 hex dump in Computing Today (March 1980; page 32).  Copyright &copy; is

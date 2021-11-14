@@ -56,6 +56,93 @@ listing.  Note that you may have to add yourself the `dialout` group
 to use the serial ports.  This is not necessary if just compiling
 `.tri` codes with `-o`.
 
+### Disassembler (`disasm8080.py`)
+
+This is provided for convenience and is a lightly modified version of
+an 8080 disassembler written by Jeff Tranter, available on his [GitHub
+site](https://github.com/jefftranter/8080).  The usage is
+```
+./disasm8080.py [-h] [-n] [-u] [-a ADDRESS] [-s SKIP] [-b] [-f {1,2,3,4}] <binary>
+```
+where `<binary>` is a binary file, or `-` to pipe from stdin.  Command line options are
+- `-h`: print help and exit
+- `-n`: don't list instruction bytes (make output suitable for assembler)
+- `-u`: use uppercase for mnemonics
+- `-a`: specify starting address, for example `-a 0x1602` for a Triton user code
+- `-s`: skip initial bytes, for example to skip the tape header in a tape binary
+- `-b`: interpret data bytes as binary, not as printable ASCII characters
+- `-f`: use number format: 1=$1234 2=1234h 3=1234 4=177777 
+
+The combination of formatting options which most closely
+matches the TRAP disassembler for example is `-u -b -f 3`
+
+If disassembling a tape binary for example, to figure out how many
+bytes to skip the tape header at the start one can investigate the
+binary code using `hexdump` (a standard unix/linux utility).  For
+example, with `hexdump -C HEX2DEC_TAPE`one gets (the `-C` option
+prints the information out in a useful format):
+```
+00000000  0d 0d 0d 0d 0d 0d 0d 0d  0d 0d 0d 0d 0d 0d 0d 0d  |................|
+*
+00000040  48 45 58 32 44 45 43 20  04 78 16 11 4e 16 cd 0b  |HEX2DEC .x..N...|
+00000050  02 11 6e 16 cd 2b 00 cd  17 16 cd 33 00 c3 02 16  |..n..+.....3....|
+etc
+```
+From this one can see the tape header ends with the byte sequence `20
+04 78 16` where the last two bytes are the end address of the code in
+little-endian format as required by the tape header.  Hence the actual
+code from starts at `0x4b`.  To disassemble this one would incorporate
+the knowledge that the compiled code starts from `0x1602` and run
+```
+./disasm8080.py -u -b -f 3 -s 0x4b -a 0x1602 HEX2DEC_TAPE
+```
+with the result
+```
+1602            ORG     1602
+1602  11 4E 16  LXI     D,164E
+1605  CD 0B 02  CALL    020B
+1608  11 6E 16  LXI     D,166E
+160B  CD 2B 00  CALL    002B
+160E  CD 17 16  CALL    1617
+1611  CD 33 00  CALL    0033
+1614  C3 02 16  JMP     1602
+1617  11 10 27  LXI     D,2710
+161A  CD 36 16  CALL    1636
+161D  11 E8 03  LXI     D,03E8
+1620  CD 36 16  CALL    1636
+1623  11 64 00  LXI     D,0064
+1626  CD 36 16  CALL    1636
+1629  11 0A 00  LXI     D,000A
+162C  CD 36 16  CALL    1636
+162F  11 01 00  LXI     D,0001
+1632  CD 36 16  CALL    1636
+1635  C9        RET
+1636  06 30     MVI     B,30
+1638  05        DCR     B
+1639  04        INR     B
+163A  7D        MOV     A,L
+163B  93        SUB     E
+163C  6F        MOV     L,A
+163D  7C        MOV     A,H
+163E  9A        SBB     D
+163F  67        MOV     H,A
+1640  D2 39 16  JNC     1639
+1643  7D        MOV     A,L
+1644  83        ADD     E
+1645  6F        MOV     L,A
+1646  7C        MOV     A,H
+1647  8A        ADC     D
+1648  67        MOV     H,A
+1649  78        MOV     A,B
+164A  CD 13 00  CALL    0013
+164D  C9        RET
+```
+(there is more after this but it corresponds to string data and is omitted).
+
+This is practically identical what one gets by loading `HEX2DEC_TAPE`
+into the Triton emulator using the 'I' function and disassembling it
+using TRAP.
+
 ### TriMCC minilanguage
 
 This is designed to be able to handle raw machine code, 8080 op-code
@@ -350,6 +437,11 @@ along with these programs.  If not, see
 
 Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 <patrickbwarren@gmail.com>
+
+The 8080 disassembler `disasm8080.py` is released under an Apache
+License, Version 2.0 and is copyright &copy; 2013-2015 by Jeff Tranter
+<tranter@pobox.com>, with minor modifications copyright (c) 2021
+Patrick B Warren <patrickbwarren@gmail.com>.
 
 The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a
 hex dump in Computing Today (March 1980; page 32).  Copyright &copy; is
