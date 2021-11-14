@@ -440,7 +440,7 @@ Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 
 The 8080 disassembler `disasm8080.py` is released under an Apache
 License, Version 2.0 and is copyright &copy; 2013-2015 by Jeff Tranter
-<tranter@pobox.com>, with minor modifications copyright (c) 2021
+<tranter@pobox.com>, with minor modifications copyright &copy; 2021
 Patrick B Warren <patrickbwarren@gmail.com>.
 
 The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a

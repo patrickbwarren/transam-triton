@@ -31,8 +31,8 @@ assembly / machine code TriMCC 'minilanguage', used by the `.tri`
 codes in the present repository, and converts it into binary which can
 be sent to a physically connected TRITON through a serial interface,
 or saved to a binary file to be used with the emulator.  To partner
-this, `disasm8080.py` is included.  This is lightly modified from an
-8080 disassembler written by Jeff Tranter, available on his [GitHub
+this, `disasm8080.py` is included.  This is a lightly modified version of 
+an 8080 disassembler written by Jeff Tranter, available on his [GitHub
 site](https://github.com/jefftranter/8080).
 
 - [EMULATOR.md](EMULATOR.md) - more details of the emulator fork.
@@ -64,7 +64,7 @@ The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
 
 The 8080 disassembler `disasm8080.py` is released under an Apache
 License, Version 2.0 and is copyright &copy; 2013-2015 by Jeff Tranter
-<tranter@pobox.com>, with minor modifications copyright (c) 2021
+<tranter@pobox.com>, with minor modifications copyright &copy; 2021
 Patrick B Warren <patrickbwarren@gmail.com>.
 
 The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a
