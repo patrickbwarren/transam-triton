@@ -88,16 +88,14 @@ the start of a tape binary, one can investigate the binary using
 etc
 ```
 (the `-C` option prints the information out in the most useful format).
-
 From this one can see the tape header ends with the byte sequence `20
 04 78 16` where the last two bytes are the end address of the code in
 little-endian format as required by the tape header.  Hence the actual
-code from starts at `0x4b`.  To disassemble this one would incorporate
-the knowledge that the compiled code starts from `0x1602` and run
+code from starts at `0x4b`.  To disassemble this therefore one can use:
 ```
 ./disasm8080.py -u -b -f 3 -s 0x4b -a 0x1602 HEX2DEC_TAPE
 ```
-with the result
+The result is:
 ```
 1602            ORG     1602
 1602  11 4E 16  LXI     D,164E
@@ -138,8 +136,7 @@ with the result
 164A  CD 13 00  CALL    0013
 164D  C9        RET
 ```
-(there is more after this but it corresponds to string data and is omitted).
-
+(the remainder is truncated since it corresponds to string data).
 This is practically identical what one gets by loading `HEX2DEC_TAPE`
 into the Triton emulator using the 'I' function and disassembling it
 using TRAP.
