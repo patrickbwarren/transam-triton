@@ -2,12 +2,13 @@
 
 This describes the fork of Robin Stuart's Triton emulator which is
 available in a [GitHub repository](https://github.com/woo-j/triton).
-A few small improvements have been made to reflect better the actual
-hardware, and add functionality.  The emulator is targetted towards
-the Level 7.2 firmware (Monitor and BASIC), and the Triton Resident
-Assembly Language Package (TRAP).  Level 7.2 documentation can be
-found on Robin's [GitHub repository](https://github.com/woo-j/triton)
-and also in the 'ETI Triton 8080 Vintage Computer' Facebook group.
+Some features have been added and few small improvements have been
+made to reflect better the actual hardware.  The emulator is targetted
+towards the Level 7.2 firmware (Monitor and BASIC), and the Triton
+Resident Assembly Language Package (TRAP).  Level 7.2 documentation
+can be found on Robin's [GitHub
+repository](https://github.com/woo-j/triton) and also in the 'ETI
+Triton 8080 Vintage Computer' Facebook group.
 
 The emulator can be compiled using the `make triton` target in the
 Makefile, or `make codes`.  The [SFML library](https://www.sfml-dev.org/) is required.
@@ -21,15 +22,15 @@ The following command line options are available:
  - `-m` sets the top of memory, for example `-m 0x4000`; the default is `0x2000`
  - `-t` specifies a tape binary, for example `-t TAPE`
  - `-u` installs one or two user ROM(s);
- - `-z` specifies a file to write the EPROM to, with function key F8
+ - `-z` EPROM programmer: specifies the file to write the EPROM to with function key F8
  
 To install two user ROMS using the `-u` option, separate the filenames
 by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are
-always installed at `0x400` first followed by `0x800`.  To override
-this one could make a blank ROM filled with `0xff` bytes using the
+always installed at `0400` first followed by `0800`.  To override
+this one could make a blank ROM filled with `FF` bytes using the
 EPROM programmer.  Alternatively one can use the following unix (linux) command
 which generates 1024 zero bytes from `/dev/zero` and pipes them through
-`sed` to change them to `0xff` bytes:
+`sed` to change them to `FF` bytes:
 ```
 dd if=/dev/zero bs=1024 count=1 | sed 's/\x00/\xff/g' > binfile
 ```
@@ -90,7 +91,7 @@ The upshot of all this is that after a hardware interrupt 1 (clear
 screen) or interrupt 2 (print registers + flags and escape to the
 function prompt), further interrupts are disabled.  They stay disabled
 until an EI instruction is encountered at some point in the Monitor
-code.  One can check this in the emulator by using function F5 to
+code.  One can check this in the emulator by using function F6 to
 write the 8080 status (the interrupt enabled/disbled flag status is
 E/D).  One can clearly see the interrupt enabled flag is left unset
 after one of these hardware interrupts, but becomes re-enabled for
@@ -269,9 +270,9 @@ This feature was also added to Robin Stuart's emulator and has been
 tested to work with the 'Z' function command in the Level 7.2 Monitor.
 The target binary file should be specified at the command line with
 `-z` option.  If the file exists it is loaded, otherwise a blank EPROM
-is created with all bytes set to `0xff`.  To facilitate the use of the
+is created with all bytes set to `FF`.  To facilitate the use of the
 programmer, function F7 performs the equivalent to a UV erase by
-setting all the bytes to `0xff` (not necessary for a blank EPROM), and
+setting all the bytes to `FF` (not necessary for a blank EPROM), and
 function F8 causes the content of the EPROM to be written to the file
 specified by `-z` at the command line.
 
@@ -293,17 +294,16 @@ The EPROM programmer hardware consists of the above mentioned Intel
 8255 programmable peripheral interface chip, directly interfaced to
 the 2708 EPROM.  Some auxiliary logic and discrete electronics
 implements a 20 V programming pulse of 1 ms duration, per write cycle
-(it was deemed unnecessarily fussy to include the 1 ms delay in the
-emulation).  In the programmer the ports available to the 8255 are
-operated in one of only two modes, and only these modes need to be
-emulated.
+(this delay was not included in the emulation).  In the programmer the
+ports available to the 8255 are operated in one of only two modes, and
+only these modes need to be emulated.
 
 More here...
 
 The Monitor code that implements the Z function is tightly written and
 takes some shortcuts.
 
-The entry point from L7.2 monitor is at address `0x0f1c` and the code
+The entry point from L7.2 monitor is at address `0F1C` and the code
 is as follows:
 ```
 0F1C  CD 08 02  CALL    0208    ; prompt for start address, return in HL 
@@ -341,10 +341,10 @@ is as follows:
 0F59  C2 24 0F  JNZ     0F24    ; if not zero, loop back for another cycle
 0F5C  C3 3D 03  JMP     033D    ; print 'END' and return to function prompt
 ```
-To accompany this is a short subroutine with two entry points. The first at
-`0x0f5f` sets the 8255 control word to `0x98` so that the 8255 port A direction is
-IN; and the one at `0x0f63` is called from `0x0f36` with the control word set
-to `0x99` so that the 8255 port A direction is OUT.  In both cases bits 2 and 3 of
+To accompany this is a short subroutine with two entry points. The entry point at
+`0F5F` sets the 8255 control word to `98` so that the 8255 port A direction is
+IN; and the entry point at `0F63` (called from `0F36`) should have the control word set
+to `99` so that the 8255 port A direction is OUT.  In both cases bits 2 and 3 of
 the lower half of port C are also set appropriate to a read or write cycle.
 ```
 0F5F  3E 98     MVI     A,98    ; 8255 control word will be set to 0x98
