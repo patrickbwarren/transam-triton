@@ -23,15 +23,14 @@ loaded into the emulator described below, or to generate the ROMs
 needed to run the emulator.
 
 ### Receiver (`tridat.c`)
+Receive Triton RS-232 data from a serial device.  Usage is:
 ```
-Receive Triton RS-232 data from a serial device
 ./tridat [-o binary_file] serial_device
--o <binary_file>: capture the byte stream in a binary file
-the serial device should be specified, for example /dev/ttyS0
 ```
+where the single option is 
+- `-o <binary_file>`: (optionally) capture the byte stream in a binary file
 This receives bytes from a physically-connected Triton using a serial
-device such `/dev/ttyS0`.  The `-o` option additionally writes these
-received bytes to a file. Note that you may have to add yourself the
+device such `/dev/ttyS0`. Note that you may have to add yourself the
 `dialout` group to use the serial ports.
 
 ### Transmitter (`trimcc.c`)
