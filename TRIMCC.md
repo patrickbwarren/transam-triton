@@ -44,8 +44,9 @@ where
 - `-s` (spaced): add a column of spaces after the 7th byte
 - `-p` (pipe): write the byte stream in binary to stdout (obviates -o)
 - `-o` <binary_file>: write the byte stream in binary to a file
-- `-t` (transmit): write the byte stream to a serial device, for example /dev/ttyS0
-The source file should be specified, for example a .tri file
+- `-t` (transmit): write the byte stream to a serial device, for example `/dev/ttyS0`
+
+The source file should be specified, for example a `.tri` file.
 
 With the `-t` option this transmits bytes to a physically-connected
 Triton through a serial device such `/dev/ttyS0`.  Alternatively with the
