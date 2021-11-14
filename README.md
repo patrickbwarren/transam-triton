@@ -14,21 +14,24 @@ a Facebook group ('ETI Triton 8080 Vintage Computer') has been started.
 I have a small web page detailing some of the history
 [here](https://sites.google.com/site/patrickbwarren/electronics/transam-triton).
 
-Robin Stuart has posted some of the original Triton
-documentation and code for a superb Triton emulator that uses
-the [SFML library](https://www.sfml-dev.org/) on a [GitHub
-site](https://github.com/woo-j/triton).  A fork of this
-emulator is included in the present repository, to which a few small
-improvements have been made to reflect better the actual hardware.
-Details of the emulator are provided in [EMULATOR.md](EMULATOR.md).
+Robin Stuart has posted some of the original Triton documentation and
+code for a superb Triton emulator that uses the [SFML
+library](https://www.sfml-dev.org/) on a [GitHub
+site](https://github.com/woo-j/triton).  A fork of this emulator is
+included in the present repository, to which a few small improvements
+have been made to reflect better the actual hardware and some features
+have been added such as printing and an emulation of the EPROM
+programmer.
 
 On my Triton, the tape cassette interface was hacked (ca 1995) to
 drive an [RS-232](https://en.wikipedia.org/wiki/RS-232) interfaceQ.
 To manage this, a serial data receiver (`tridat.c`) and transmitter
 (`trimcc.c`) were written. The transmitter implements a hybrid
-assembly / machine code 'minilanguage' ,used by the `.tri` codes in
-the present repository.  More details are given in
-[TRIMCC.md](TRIMCC.md).
+assembly / machine code TriMCC 'minilanguage' ,used by the `.tri` codes in
+the present repository.
+
+- [EMULATOR.md](EMULATOR.md) - more details of the emulator fork.
+- [TRIMCC.md](TRIMCC.md) - more details of the TriMCC code.
 
 ### Copying
 
