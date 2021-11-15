@@ -460,5 +460,5 @@ claimed in the magazine (page 3) but the copyright holder is not
 identified.  No license terms were given and the code is hereby
 presumed to be reproducible and modifiable under the equivalent of a
 modern open source license.  The changes made to this code are
-copyright &copy; 2021 Patrick B Warren, and released into the public
+copyright &copy; 2021 Patrick B Warren and are released into the public
 domain.
