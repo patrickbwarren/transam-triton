@@ -9,10 +9,16 @@ north London.  Some basic information can be found in the online
 [Centre for Computing History](http://www.computinghistory.org.uk/).
 Recently a [YouTube
 video](https://www.youtube.com/watch?v=0cSRgJ68_tM) has appeared,
-another [web site](https://sites.google.com/view/transam-triton/) has sprung up, and
-a Facebook group ('ETI Triton 8080 Vintage Computer') has been started.
-I have a small web page detailing some of the history
+another [web site](https://sites.google.com/view/transam-triton/) has
+sprung up, and a Facebook group ('ETI Triton 8080 Vintage Computer')
+has been started.  I have a small web page detailing some of the
+history
 [here](https://sites.google.com/site/patrickbwarren/electronics/transam-triton).
+Much documentation can be found on the Facebook group, and the
+original Triton articles in [Electronics Today
+International](https://en.wikipedia.org/wiki/Electronics_Today_International)
+(ETI) can be found
+[here](https://worldradiohistory.com/ETI_Magazine.htm)
 
 Robin Stuart has posted some of the original Triton documentation and
 code for a superb Triton emulator that uses the [SFML

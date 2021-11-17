@@ -2,7 +2,7 @@
 
 This describes the fork of Robin Stuart's Triton emulator which is
 available in a [GitHub repository](https://github.com/woo-j/triton).
-Some features have been added and few small improvements have been
+Some features have been added and some small changes have been
 made to reflect better the actual hardware.  The emulator is targetted
 towards the Level 7.2 firmware (Monitor and BASIC), and the Triton
 Resident Assembly Language Package (TRAP).  Level 7.2 documentation
@@ -18,11 +18,12 @@ Makefile, or `make codes`.  The [SFML library](https://www.sfml-dev.org/) is req
 ./triton -m <mem_top> -t <tape_file> -u <user_rom(s)> -z <user_eprom> -h -?
 ```
 The following command line options are available:
+
  - `-h` or `-?` prints a summary of command line options and function keys
  - `-m` sets the top of memory, for example `-m 0x4000`; the default is `0x2000`
  - `-t` specifies a tape binary, for example `-t TAPE`
  - `-u` installs one or two user ROM(s);
- - `-z` EPROM programmer: specifies the file to write the EPROM to with function key F8
+ - `-z` [EPROM programmer] specifies the file to write the EPROM to with function key F8
  
 To install two user ROMS using the `-u` option, separate the filenames
 by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are
@@ -38,14 +39,14 @@ dd if=/dev/zero bs=1024 count=1 | sed 's/\x00/\xff/g' > binfile
 
 When the emulator is running the following function keys can be used
 to control the emulation:
+
  - F1: interrupt 1 (RST 1) - clear screen
  - F2: interrupt 2 (RST 2) - save and dump registers
  - F3: reset (RST 0)
- - F4: halt system (jam HLT instruction using interrupt)
- - F5: toggle emulator pause
- - F6: write 8080 status to command line
- - F7: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)
- - F8: EPROM programmer: write the EPROM to the file specified by `-z`
+ - F4: toggle emulator pause
+ - F5: write 8080 status to command line
+ - F6: [EPROM programmer] UV erase the EPROM (set all bytes to 0xff)
+ - F7: [EPROM programmer] write the EPROM to the file specified by `-z`
  - F9: exit emulator
 
 All other keyboard input is sent to the emulation.
@@ -117,13 +118,6 @@ is unset), then press a key on the keyboard (for example 'W') and the
 pending interrupt is serviced (clear screen in this case).
 
 This logic is implemented in the emulator.
-
-In addition, a HLT instruction can be jammed onto the interrupt line
-using function F4 (which also enables interrupts).  This has the
-result that the 8080 enters the halted state from which one can only
-recover with a hardware reset (function F3).  The contents of RAM is
-preserved though.  The same thing happens if the emulator encounters a
-file error during processing of tape input or output.
 
 #### Parity
 
@@ -197,8 +191,6 @@ automatically.  See the L7.2 documentation for more details and the
 fast VDU user ROM (specifically [`fastvdu_rom.tri`](fastvdu_rom.tri))
 for a working example.
 
-Fast VDU user ROM more here ...
-
 #### Keyboard emulation
 
 This was fixed compared to Robin Stuart's emulator: the keyboard data
@@ -214,7 +206,9 @@ Input bytes are read from the tape file as though from a cassette
 recorder, and likewise output bytes are appended to the tape file.
 This means that with the Monitor 'I' option, the emulated tape
 interface is expecting to see the correct tape header in front of any
-data file as described in [TRIMCC.md](TRIMCC.md).
+data file as described in [TRIMCC.md](TRIMCC.md).  If no tape is
+loaded (`-t` option missing) then bytes written to the tape are lost
+and bytes read from the tape return `FF`.
 
 #### Printer emulation
 
@@ -269,12 +263,11 @@ set these two bytes to `01` and `00` respectively.
 This feature was also added to Robin Stuart's emulator and has been
 tested to work with the 'Z' function command in the Level 7.2 Monitor.
 The target binary file should be specified at the command line with
-`-z` option.  If the file exists it is loaded, otherwise a blank EPROM
-is created with all bits set to 1.  To facilitate the use of the
-programmer, function F7 performs the equivalent to a UV erase by
-setting all bits to 1 (not necessary for a blank EPROM), and
-function F8 causes the content of the EPROM to be written to the file
-specified by `-z` at the command line.
+`-z` option.  The file is loaded if it exists, otherwise a blank EPROM
+is created with all bits set to 1.  Also, function F6 performs the
+equivalent to a UV erase by setting all bits to 1 (not necessary for a
+blank EPROM), and function F8 causes the content of the EPROM to be
+written to the file specified by `-z` at the command line.
 
 When writing to the EPROM the number of write cycles per memory
 location is monitored to act as a check on the firmware.  When saving
@@ -282,23 +275,77 @@ the EPROM to a file a warning is printed the write cycle count for any
 memory location is less than 100, though in the emulation only one
 write cycle is needed per memory location to store the data.  These
 write cycle counts are initialised to zero at the start, and
-reinitialised by the emulated UV erase step).
+reinitialised by the emulated UV erase step.
 
 The details of the EPROM programmer emulation are a little complicated
-although only the bare minimum functionality of the Intel 8255
-programmable peripheral interface (PPI) chip has been emulated to meet the
-needs of the EPROM programmer.  For completeness these details are
-given here.
+although only the bare minimum functionality of the [Intel
+8255](https://en.wikipedia.org/wiki/Intel_8255) programmable
+peripheral interface (PPI) chip has been emulated.  For completeness
+these details are given here.  The original description is in
+[Electronics Today
+International](https://en.wikipedia.org/wiki/Electronics_Today_International)
+(ETI) Jan 1980 p42-45, and the relevant issue can be found
+[here](https://worldradiohistory.com/ETI_Magazine.htm); the article
+has also been uploaded as a PDF to the Facebook group.
 
-The EPROM programmer hardware consists of the above mentioned Intel
-8255 programmable peripheral interface chip, directly interfaced to
-the 2708 EPROM.  Some auxiliary logic and discrete electronics
+The EPROM programmer hardware consists of the above mentioned [Intel
+8255](https://en.wikipedia.org/wiki/Intel_8255) chip, directly
+interfaced to a [2708 EPROM](https://en.wikipedia.org/wiki/EPROM)
+which provides 1k of memory configured as 1024 addresses (10-bits) of an
+8-bit wide data bus.  Some auxiliary logic and discrete electronics
 implements a 20 V programming pulse of 1 ms duration, per write cycle
 (this delay was not included in the emulation).  In the programmer the
-ports available to the 8255 are operated in one of only two modes, and
-only these modes need to be emulated.
+three ports (A, B, C) available to the 8255 are operated in a simple
+I/O mode (mode 0), and the directionality is governed by a control
+word.  The ports are mapped to Triton I/O ports as follows:
+```
+Triton port FC = 8255 port A (configured bidirectionally)
+Triton port FD = 8255 port B (configured as an output port)
+Triton port FE = 8255 port C (upper 4 bits configured for input; lower 4 bits for output)
+Triton port FF = 8255 control word (output only)
+```
+To correspond to the use-pattern of the firmware only two control
+words have been implemented in the emulator:
+```
+  control word   port A   port B   port C
+10001000 (0x88)   OUT      OUT    IN / OUT
+10011000 (0x98)   IN       OUT    IN / OUT
+```
+Thus, bit 4 of the control word controls the direction of port A (Triton port `FC`).
+The ports are used as follows:
+```
+port A (Triton FC) - 2708 data (input / output)
+port B (Triton FD) - lowest 8 bits of 2708 address (output)
+port C (Triton FE) - bits 0, 1 (output) = high bits of 2708 address
+                     bits 2, 3 (output) = 2708 chip control (see below)
+                     bit 7 (input) = 2708 programming cycle status
+```
+Reading and writing data to the 2708 is controlled by bits 2
+and 3 of port C (Triton port `FE`):
+```
+bit 3 bit 2 (port C = Triton port FE)         logic test
+  0    1     2708 chip select enabled         port C & 0x0C = 0x04
+  1    0     2708 initiate programming pulse  port C & 0x0C = 0x08
+```
+where the logic test is as implemented in the emulator.  In summary:
 
-More here...
+- To _read_ data from the EPROM, set the control word to `0x98`, load
+  the least significant 8 bits of the required address onto port B, OR
+  the most significant two bits of the address with `0x04` (chip
+  select enabled) and output these 4 bits to port C, and then read the
+  data from port A.
+
+- To _write_ data to the EPROM, set the control word to `0x88`, load
+  the least significant 8 bits of the required address onto port B, OR
+  the most significant two bits of the address with `0x08`, and output
+  these 4 bits to port C to initiate programming pulse.
+
+- To _test_ whether the programming pulse is complete one should read
+  the top 4 bits of port C; if the high bit (bit 7) is zero the
+  programming pulse is finished
+
+In the emulator the 1 ms is not emulated so that after initiating the
+programming pulse the bit 7 of port C is always set to 0.
 
 The Monitor code that implements the 'Z' function is tightly written.
 
@@ -320,8 +367,8 @@ is as follows:
 0F34  06 08     MVI     B,08    ; bits 2 and 3 of port C will be 1 and 0 respectively 
 0F36  CD 63 0F  CALL    0F63    ; call to write byte in A to EPROM
 0F39  DB FE     IN      FE      ; fetch upper 4 bits from 8255 port C
-0F3B  A7        ANA     A       ; set sign flag = bit 7 of A (write pulse)
-0F3C  FA 39 0F  JM      0F39    ; loop back if sign flag set (write pulse not finished)
+0F3B  A7        ANA     A       ; set sign flag = bit 7 of A (program pulse)
+0F3C  FA 39 0F  JM      0F39    ; loop back if sign flag set (program pulse not finished)
 0F3F  79        MOV     A,C     ; copy number of remaining write cycles in C into A
 0F40  FE 01     CPI     01      ; are we at the final write cycle?
 0F42  C2 4C 0F  JNZ     0F4C    ; if not, skip the read test

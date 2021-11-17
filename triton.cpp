@@ -104,11 +104,6 @@ const int mem_top_default = 0x2000;
 char *tape_file = NULL;
 char *user_rom = NULL;
 
-void system_halt(State8080 *state) { // jam HLT instruction and force interrupt service
-  state->interrupt = 0x76; state->int_enable = true;
-  fprintf(stderr, "System halted (HLT) - press F3 (RESET) to restart, or F9 to exit\n");
-}
-
 // Takes input from port 5 buffer (IC 51) and attempts to duplicate
 // Thomson-CSF VDU controller (IC 61) interface with video RAM
 
@@ -250,7 +245,6 @@ void IOState::key_press(sf::Event::EventType event, int key, bool shifted, bool 
 
 void MachineInOut(State8080 *state, uint8_t *memory, IOState *io,
 		  fstream &tape, StateEPROM *eprom) {
-  bool io_error = false;
   switch(state->port) {
   case 0: // Keyboard buffer (IC 49)
     state->a = io->key_buffer;
@@ -265,13 +259,10 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io,
 	  tape.open(tape_file, ios::out | ios::app | ios::binary);
 	  if (tape.is_open()) io->tape_status = 'w';
 	  else { // failed to open file for writing
-	    io_error = true; io->tape_relay = false;
+	    io->tape_relay = false;
 	    fprintf(stderr, "Tape interface: unable to open %s for writing\n", tape_file);
 	  }
-	} else { // tape_file was NULL
-	  io_error = true; io->tape_relay = false;
-	  fprintf(stderr, "Tape interface: no tape file specified (-t missing)\n");
-	}
+	} // tape_file was NULL - dump bytes
       }
       if (io->tape_status == 'w') {
 	char c;
@@ -290,13 +281,10 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io,
 	  tape.open(tape_file, ios::in | ios::binary);
 	  if (tape.is_open()) io->tape_status = 'r';
 	  else {
-	    io_error = true; io->tape_relay = false;
+	    io->tape_relay = false;
 	    fprintf(stderr, "Unable to open tape file %s for reading\n", tape_file);
 	  }
-	} else {
-	  io_error = true; io->tape_relay = false;
-	  fprintf(stderr, "Tape interface: no tape file specified (-t missing)\n");
-	}
+	} // Tape file was NULL - return 0xff as below
       }
       if ((io->tape_status == 'r') && (tape.eof() == false)) {
 	char c;
@@ -396,7 +384,6 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io,
   //   printf(" | "); WriteStatus8080(stdout, state); printf("\n");
   // }
   state->port_op = 0x00;
-  if (io_error) system_halt(state);
 }
 
 void load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_t rom_size) {
@@ -472,15 +459,14 @@ int main(int argc, char** argv) {
       printf("-m sets the top of memory, for example -m 0x4000, defaults to 0x2000\n");
       printf("-t specifies a tape binary, eg -t TAPE\n");
       printf("-u installs user ROM(s); to install two ROMS separate the filenames by a comma\n");
-      printf("-z specifies a file to write the EPROM to, with F8\n");
+      printf("-z specifies a file to write the EPROM to, with F7\n");
       printf("F1: interrupt 1 (RST 1) - clear screen\n");
       printf("F2: interrupt 2 (RST 2) - save and dump registers\n");
       printf("F3: reset (RST 0)\n");
-      printf("F4: halt system (jam HLT instruction using interrupt)\n");
-      printf("F5: toggle emulator pause\n");
-      printf("F6: write 8080 status to command line\n");
-      printf("F7: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)\n");
-      printf("F8: EPROM programmer: write the EPROM to the file specified by -z\n");
+      printf("F4: toggle emulator pause\n");
+      printf("F5: write 8080 status to command line\n");
+      printf("F6: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)\n");
+      printf("F7: EPROM programmer: write the EPROM to the file specified by -z\n");
       printf("F9: exit emulator\n");
     default:
       exit(0);
@@ -601,22 +587,19 @@ int main(int argc, char** argv) {
 	  case sf::Keyboard::F3: // Perform a hardware reset
 	    Reset8080(&state);
 	    break;
-	  case sf::Keyboard::F4: // Halt system by jamming HLT as an interrupt
-	    system_halt(&state);
-	    break;
-	  case sf::Keyboard::F5: // Toggle emulator pause
+	  case sf::Keyboard::F4: // Toggle emulator pause
 	    pause = !pause;
 	    if (pause) fprintf(stderr, "Emulation paused - press F5 to resume, or F9 to exit\n");
 	    else fprintf(stderr, "Emulation resumed\n");
 	    break;
-	  case sf::Keyboard::F6: // Write status
+	  case sf::Keyboard::F5: // Write status
 	    WriteStatus8080(stderr, &state); fprintf(stderr, "\n");
 	    break;
-	  case sf::Keyboard::F7: // UV erase EPROM
+	  case sf::Keyboard::F6: // UV erase EPROM
 	    UV_erase(&eprom);
 	    fprintf(stderr, "EPROM programmer: UV erased EPROM\n");
 	    break;
-	  case sf::Keyboard::F8: // Save EPROM to file
+	  case sf::Keyboard::F7: // Save EPROM to file
 	    if (eprom.file != NULL) {
 	      fstream fs;
 	      fs.open(eprom.file, ios::out | ios::binary);
