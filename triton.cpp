@@ -468,7 +468,7 @@ int main(int argc, char** argv) {
       printf("F5: write 8080 status to command line\n");
       printf("F6: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)\n");
       printf("F7: EPROM programmer: write the EPROM to the file specified by -z\n");
-      printf("F8: EPROM programmer: simulate READ ERROR failure mode\n");
+      printf("F8: EPROM programmer: toggle simulation of READ ERROR failure mode\n");
       printf("F9: exit emulator\n");
     default:
       exit(0);

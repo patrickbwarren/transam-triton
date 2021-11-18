@@ -1,6 +1,6 @@
 ###
 This file is part of my Transam Triton code repository.
-
+This is a user ROM providing VDU speedup, for the Triton Level 7.2 Monitor.
 The original copyright on the fast VDU code is unknown but it may
 belong to Gerald Sommariva, from whose website the `FASTVDU.ED82` user
 ROM was downloaded which forms the basis of the current code.
