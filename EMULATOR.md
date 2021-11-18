@@ -463,7 +463,7 @@ Unless otherwise stated, copyright &copy; 2021 Patrick B Warren
 <patrickbwarren@gmail.com>
 
 The Triton Level 7.2 Monitor from which the above EPROM programmer
-code was extracted is copyright (c) Transam Components Limited and/or
+code was extracted is copyright &copy; Transam Components Limited and/or
 T.C.L. software (1979) or thereabouts.
 
 The original SFML-based emulator is copyright &copy; 2020 Robin Stuart

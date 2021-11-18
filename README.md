@@ -65,7 +65,7 @@ along with these programs.  If not, see
 Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 <patrickbwarren@gmail.com>
 
-The Triton Level 7.2 Monitor, BASIC, and TRAP are all copyright (c)
+The Triton Level 7.2 Monitor, BASIC, and TRAP are all copyright &copy;
 Transam Components Limited and/or T.C.L. software (1979) or thereabouts.
 
 The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
