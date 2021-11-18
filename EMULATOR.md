@@ -441,8 +441,8 @@ If called at `0F5F` the subroutine _reads_ data from the EPROM: it sets
 the 8255 control word to `0x98` so that the 8255 port A direction is
 IN, and sets bits 2 and 3 of the byte to be written to port C to '1'
 and '0' respectively to enable the chip select for the EPROM.  Then the
-step at `0F69` which writes the data in the accumulator out to port A
-is superfluous (in the emulator, the data is discarded), but reading
+instructions at `0F68` and `0F69` which pull data from memory and write to port A
+are superfluous (in the emulator, the data is discarded), but reading
 data from port A at `0F6F` recovers the byte stored in the desired EPROM
 memory location into the accumulator.
 
