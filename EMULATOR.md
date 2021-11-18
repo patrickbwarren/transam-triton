@@ -265,17 +265,16 @@ This feature was also added to Robin Stuart's emulator and has been
 tested to work with the 'Z' function command in the Level 7.2 Monitor.
 The target binary file should be specified at the command line with
 `-z` option.  The file is loaded if it exists, otherwise a blank EPROM
-is created with all bits set to 1.  
-
-Note that in programming a 2708, bits can only be set to '0', not set
-to '1'.  This is implemented faithfully in the emulator.
-Being an emulation the situation where bits which should be programmed
-to be '0' but remain '1' does not normally arise, however this failure
-mode (which results in a `READ ERROR`) can be simulated using function
-F8 (see below).  Contrariwise, since it is possible to load an
-_existing_ EPROM with arbitary bit pattern, the failure mode where bits
-which should be programmed to be '1' but are actually '0' can more
-easily arise (this results in a `PROGRAM ERROR`).
+is created with all bits set to 1.  Note that in programming a 2708,
+bits can only be set to '0', not set to '1'.  This is implemented
+faithfully in the emulator.  Being an emulation the situation where
+bits which should be programmed to be '0' but remain '1' does not
+normally arise, however this failure mode (which results in a `READ
+ERROR`) can be simulated using function F8 (see below).  Contrariwise,
+since it is possible to load an _existing_ EPROM with arbitary bit
+pattern, the failure mode where bits which should be programmed to be
+'1' but are actually '0' can more easily arise (this results in a
+`PROGRAM ERROR`).
 
 The following function keys are available to simulate the physical hardware:
 
@@ -307,14 +306,14 @@ EPROM](https://en.wikipedia.org/wiki/EPROM) which provides 1k of
 memory configured as 1024 addresses (10-bits) of an 8-bit wide data
 bus.  Some auxiliary logic and discrete electronics implements a 20 V
 programming pulse of 1 ms duration, per write cycle (this delay was
-not included in the emulation).  
-
-The details of the EPROM programmer emulation are a little complicated
-although only the bare minimum functionality of the [Intel
+not included in the emulation).  The details of the EPROM programmer
+emulation are a little complicated although only the bare minimum
+functionality of the [Intel
 8255](https://en.wikipedia.org/wiki/Intel_8255) has been emulated.
 For completeness these details are given here.  The original
-description of the hardware and how it functions features in [Electronics
-Today International](https://en.wikipedia.org/wiki/Electronics_Today_International)
+description of the hardware and how it functions features in
+[Electronics Today
+International](https://en.wikipedia.org/wiki/Electronics_Today_International)
 (ETI) Jan 1980 p42-45, and the relevant issue can be found
 [here](https://worldradiohistory.com/ETI_Magazine.htm) (the article
 has also been uploaded as a PDF to the Facebook group).
