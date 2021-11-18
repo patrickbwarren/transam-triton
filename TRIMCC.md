@@ -470,6 +470,9 @@ along with these programs.  If not, see
 Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 <patrickbwarren@gmail.com>
 
+The Triton Level 7.2 Monitor, BASIC, and TRAP are all copyright (c)
+Transam Components Limited and/or T.C.L. software (1979) or thereabouts.
+
 The 8080 disassembler `disasm8080.py` is released under an Apache
 License, Version 2.0 and is copyright &copy; 2013-2015 by Jeff Tranter
 <tranter@pobox.com>, with modifications copyright &copy; 2021

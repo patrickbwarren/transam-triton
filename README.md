@@ -41,7 +41,7 @@ this, `disasm8080.py` is included.  This is a lightly modified version of
 an 8080 disassembler written by Jeff Tranter, available on his [GitHub
 site](https://github.com/jefftranter/8080).
 
-- [EMULATOR.md](EMULATOR.md) - more details of the emulator fork.
+- [EMULATOR.md](EMULATOR.md) - more details of the emulator fork, and the Triton Level 7.2 code.
 - [TRIMCC.md](TRIMCC.md) - more details of the TriMCC codes and disassembler.
 
 ### Copying
@@ -64,6 +64,9 @@ along with these programs.  If not, see
 
 Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 <patrickbwarren@gmail.com>
+
+The Triton Level 7.2 Monitor, BASIC, and TRAP are all copyright (c)
+Transam Components Limited and/or T.C.L. software (1979) or thereabouts.
 
 The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
 <rstuart114@gmail.com>

@@ -66,6 +66,7 @@ typedef struct StateEPROM {
   int write_count[_1K];
   bool chip_select = false;
   bool write_enable = false;
+  bool failed = false;
   direction_t portA_dirn = OUTPUT;
 } StateEPROM;
 
@@ -332,7 +333,7 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io,
     }
     break;
   case 0xfc: // 8255 port A (IN or OUT selected by control word - see below)
-    if (state->port_op == 0xd3 && eprom->portA_dirn == OUTPUT) eprom->a = state->a; // output, if port A direction is OUT
+    if (state->port_op == 0xd3 && eprom->portA_dirn == OUTPUT) eprom->a = state->a; // output
     else { // input if port A direction is IN, EPROM CS is enabled, and there is a ROM loaded
       if (eprom->portA_dirn == INPUT && eprom->chip_select && eprom->rom != NULL) {
 	uint8_t upper = eprom->c & 0x03; // the least two bits of C are the top two bits of the address
@@ -354,7 +355,7 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io,
       if (eprom->portA_dirn == OUTPUT && eprom->write_enable && eprom->rom != NULL) {
 	uint8_t upper = eprom->c & 0x03; // the least two bits of C are the top two bits of the address
 	uint16_t address = ((upper << 8) | (eprom->b)) & 0x03ff; // form the full address from these and B
-	eprom->rom[address] &= eprom->a; // can only _unset_ bits, 1 --> 0, hence '&='
+	if (!eprom->failed) eprom->rom[address] &= eprom->a; // can only _unset_ bits, 1 --> 0, hence '&='
 	eprom->write_count[address]++; // increment the write count for that memory location
 	eprom->c &= 0xef; // clear the high bit in C to show successful write sequence
       }
@@ -467,6 +468,7 @@ int main(int argc, char** argv) {
       printf("F5: write 8080 status to command line\n");
       printf("F6: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)\n");
       printf("F7: EPROM programmer: write the EPROM to the file specified by -z\n");
+      printf("F8: EPROM programmer: simulate READ ERROR failure mode\n");
       printf("F9: exit emulator\n");
     default:
       exit(0);
@@ -612,6 +614,11 @@ int main(int argc, char** argv) {
 		}
 	      }	else fprintf(stderr, "EPROM programmer: file %s could not be opened for writing\n", eprom.file);
 	    } else fprintf(stderr, "EPROM programmer: no file specified (-z missing)\n");
+	    break;
+	  case sf::Keyboard::F8: // Toggle simulate READ ERROR failure
+	    if (eprom.failed) fprintf(stderr, "EPROM programmer: failure mode turned OFF\n");
+	    else fprintf(stderr, "EPROM programmer: failure mode turned ON, no data will be written\n");
+	    eprom.failed = !eprom.failed;
 	    break;
 	  case sf::Keyboard::F9: // Exit emulator
 	    window.close();

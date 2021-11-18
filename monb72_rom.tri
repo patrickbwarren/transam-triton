@@ -1,3 +1,9 @@
+###
+This file is part of my Transam Triton code repository.
+This is ROM 'B' of the Triton Level 7.2 Monitor.
+Copyright (c) Transam Components Limited and/or T.C.L. software (1979).
+###
+
 #        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
 #0C00#  78 77 A7 F0 E1 FB 06 7F A0 4F B8 3E 08 C8 79 FE
 #0C10#  5F C0 78 C9 11 10 14 E5 C5 CD 9B 03 C1 E1 C9 00

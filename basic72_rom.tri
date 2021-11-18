@@ -1,3 +1,9 @@
+###
+This file is part of my Transam Triton code repository.
+This comprises the eight 1k ROMs of the Triton Level 7.2 BASIC.
+Copyright (c) Transam Components Limited and/or T.C.L. software (1979).
+###
+
 #E000#  9A E8 4B 2A 14 15 3E 19 EB 2A 16 15 CD 70 E0 C8
 #E010#  7E B9 23 C2 18 E0 7E B8 23 5E 23 56 23 C2 07 E0
 #E020#  3C C9 A3 4F 78 A2 E9 AB 4F 78 AA E9 CD 01 F1 3D
