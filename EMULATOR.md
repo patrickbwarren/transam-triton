@@ -508,7 +508,7 @@ Thus this affords a cheap (and space-saving) way to test for whether the
 high bit in the accumulator is set or reset, signalling the completion
 of the programming step.  Note the tight coupling between the firmware
 and hardware implementation at this point: the hardware design could
-have used any of the top 4 bits of C for this signal, but by using bit
+have used any of the top 4 bits of C for this signal, but using bit
 7 simplifies the test and saves space in the code.
 
 A `READ ERROR` occurs if the final byte read does not match that in
