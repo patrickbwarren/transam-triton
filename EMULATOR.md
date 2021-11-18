@@ -47,7 +47,7 @@ to control the emulation:
  - F5: write 8080 status to command line;
  - F6: [EPROM programmer] UV erase the EPROM (set all bytes to `0xff`);
  - F7: [EPROM programmer] write the EPROM to the file specified by `-z`;
- - F8: [EPROM programmer] toggle simulation of `READ ERROR` failure mode (see notes);
+ - F8: [EPROM programmer] toggle simulation of `READ ERROR` failure mode;
  - F9: exit emulator.
 
 All other keyboard input is sent to the emulation.
@@ -194,7 +194,7 @@ for a working example.
 
 #### Keyboard emulation
 
-This was fixed compared to Robin Stuart's emulator: the keyboard data
+This was modified from Robin Stuart's emulator: the keyboard data
 byte is strobed into port 3, with bit 8 set the whole time that the
 key is depressed, and unset when the key is released.  This reflects
 the behaviour of the real hardware.
@@ -267,14 +267,19 @@ The target binary file should be specified at the command line with
 `-z` option.  The file is loaded if it exists, otherwise a blank EPROM
 is created with all bits set to 1.  Note that in programming a 2708,
 bits can only be set to '0', not set to '1'.  This is implemented
-faithfully in the emulator.  Being an emulation the situation where
-bits which should be programmed to be '0' but remain '1' does not
-normally arise, however this failure mode (which results in a `READ
-ERROR`) can be simulated using function F8 (see below).  Contrariwise,
-since it is possible to load an _existing_ EPROM with arbitary bit
-pattern, the failure mode where bits which should be programmed to be
-'1' but are actually '0' can more easily arise (this results in a
-`PROGRAM ERROR`).
+faithfully in the emulator.  Being an emulation, the situation where
+bits which should be programmed to be '0' but remain '1' normally does
+not arise however this failure mode resulting in a `READ ERROR` can be
+simulated using function F8.  Conversely, since it is possible to load
+an _existing_ EPROM with arbitary bit pattern, the failure mode where
+bits which should be programmed to be '1' but are actually '0' can
+more easily arise and results in a `PROGRAM ERROR`.  It can be forced
+by loading a pre-made EPROM with all bits zet to '0', using a
+command line incantation similar to that mentioned already:
+```
+dd if=/dev/zero bs=1024 count=1 > blank_rom_all_zeros
+./triton -z blank_rom_all_zeros 
+```
 
 The following function keys are available to simulate the physical hardware:
 
@@ -305,14 +310,13 @@ peripheral interface (PPI) chip, directly interfaced to a [2708
 EPROM](https://en.wikipedia.org/wiki/EPROM) which provides 1k of
 memory configured as 1024 addresses (10-bits) of an 8-bit wide data
 bus.  Some auxiliary logic and discrete electronics implements a 20 V
-programming pulse of 1 ms duration, per write cycle (this delay was
-not included in the emulation).  The details of the EPROM programmer
-emulation are a little complicated although only the bare minimum
-functionality of the [Intel
-8255](https://en.wikipedia.org/wiki/Intel_8255) has been emulated.
-For completeness these details are given here.  The original
-description of the hardware and how it functions features in
-[Electronics Today
+programming pulse of 1 ms duration, per write cycle.  The details of
+the EPROM programmer emulation are a little complicated although only
+the bare minimum functionality of the [Intel
+8255](https://en.wikipedia.org/wiki/Intel_8255) has been emulated (the
+1 ms delay was omitted for example).  For completeness these details
+are given here.  The original description of the hardware and how it
+functions features in [Electronics Today
 International](https://en.wikipedia.org/wiki/Electronics_Today_International)
 (ETI) Jan 1980 p42-45, and the relevant issue can be found
 [here](https://worldradiohistory.com/ETI_Magazine.htm) (the article
@@ -355,23 +359,24 @@ bit 3 bit 2 (port C = Triton port FE)         logic test
 ```
 The logic test is exactly as implemented in the emulator.  In summary:
 
-- to _write_ data to the EPROM, set the control word to `0x88`, load
-  the least significant 8 bits of the required address onto port B, logical OR
-  the most significant two bits of the address with `0x08`, and output
-  these 4 bits to port C to initiate programming pulse;
-
 - to _read_ data from the EPROM, set the control word to `0x98`, load
   the least significant 8 bits of the required address onto port B, logical OR
   the most significant two bits of the address with `0x04` (chip
   select enabled) and output these 4 bits to port C, and then read the
   data from port A;
 
+- to _write_ data to the EPROM, set the control word to `0x88`, load
+  the least significant 8 bits of the required address onto port B, logical OR
+  the most significant two bits of the address with `0x08`, and output
+  these 4 bits to port C to initiate programming pulse;
+
 - to _test_ whether the programming pulse is complete one should read
   the top 4 bits of port C; if the high bit (bit 7) is unset the
   programming pulse is finished.
 
-In the emulator the 1 ms is not emulated so that after initiating the
-programming pulse the bit 7 of port C is _immediately_ set to 0.
+In the emulator, as mentioned, the 1 ms is not emulated so that after
+initiating the programming pulse the bit 7 of port C is _immediately_
+set to 0.
 
 For completeness, the L7.2 Monitor code that implements the 'Z'
 function is described next.  Despite some apparent inefficiencies, it
@@ -432,30 +437,30 @@ To accompany this is a short subroutine with entry points at `0F5F` and `0F63`:
 #### Notes
 
 The subroutine at `0F5F` doubles up to perform _two_ functions
-depending on the entry point.  One of the two port A (Triton port
-`FC`) operations in this subroutine is therefore always superfluous
-(which one depends on the function call).  It is presumed this was
-done to save space, despite it being obviously a bit inefficient.
+depending on the entry point.  There are two port A (Triton port `FC`)
+operations in this subroutine, but only one or the other of them is
+actually useful, depending on the function call.
 
-If called at `0F5F` the subroutine _reads_ data from the EPROM: it sets
-the 8255 control word to `0x98` so that the 8255 port A direction is
-IN, and sets bits 2 and 3 of the byte to be written to port C to '1'
-and '0' respectively to enable the chip select for the EPROM.  Then the
-instructions at `0F68` and `0F69` which pull data from memory and write to port A
-are superfluous (in the emulator, the data is discarded), but reading
-data from port A at `0F6F` recovers the byte stored in the desired EPROM
-memory location into the accumulator.
+If called at `0F5F` the subroutine _reads_ data from the EPROM: it
+sets the 8255 control word to `0x98` so that the 8255 port A direction
+is IN, and sets bits 2 and 3 of the byte to be written to port C to
+'1' and '0' respectively to enable the chip select for the EPROM.  The
+instructions at `0F68` and `0F69` which pull data from memory and
+write to port A are superfluous (in the emulator, the data is
+discarded), but reading data from port A at `0F6F` recovers the byte
+stored in the desired EPROM memory location into the accumulator.
 
-Conversely, when the main code (at `0F36`) calls entry point at `0F63`
-the subroutine _writes_ data to the EPROM: in the main code the control
-word is preset to `0x99` so that the 8255 port A direction is OUT, and
-bits 2 and 3 of the byte to be output to port C are set to '0' and '1'
-respectively to trigger a programming pulse.  The byte to be written
-is pulled from main memory and written to port A (at `0F69`) just
-before programming pulse is triggered, but reading data from port A
-into the accumulator (at `0F6F`) returns garbage (in the emulator,
-this is represented by `0xff`).  This returned value is unused
-(discarded) in the main code.
+Conversely, when the main code at `0F36` calls entry point at `0F63`
+the subroutine _writes_ data to the EPROM: in the main code the
+control word is preset to `0x99` so that the 8255 port A direction is
+OUT, and bits 2 and 3 of the byte to be output to port C are set to
+'0' and '1' respectively to trigger a programming pulse.  The byte to
+be written is pulled from main memory and written to port A just
+before programming pulse is triggered (ie the port C write at `0F6D`).
+At this point the step at `0F6F` where data is read from port A into
+the accumulator returns garbage (in the emulator, this is represented
+by `0xff`).  This returned value is unused however (discarded) in the
+main code.
 
 Note that this subroutine is called _three_ times in the main code,
 with the entry point at `0F5F` being used twice to read data from the
@@ -465,7 +470,8 @@ which set up a read operation _in the subroutine_, and to keep the
 instructions which set up a write operation in the main code.  Also it
 makes sense to combine the common elements of the read and write
 operations in a subroutine like this, despite the small inefficiency
-in the number of port operations.
+in the number of port operations.  It is presumed this was done to
+save space.
 
 Returning now to the main code, each of the 1024 data bytes in memory
 is written to the EPROM sequentially in an inner loop, starting from the
@@ -479,9 +485,8 @@ the position in main memory, and register C is initialised to `0x64`
 
 A `PROGRAM ERROR` occurs if a bit in the 2708 is '0' when it should be
 written as '1'. This test is made every time a byte is written to the
-EPROM and is implemented extremely concisely (at `0F2C` to `0F2E`).
-The way it works can be explained by looking at a truth table for a
-single bit.
+EPROM and is implemented concisely at `0F2C` to `0F2E`.  The way it
+works can be explained by looking at a truth table for a single bit.
 ```
 memory bit (M)  1  1  0  0
 EPROM bit (A)   1  0  1  0
@@ -491,7 +496,7 @@ A | M == A ?    t  f  t  t
 Thus we see `A | M == A` returns false only if the bit in memory is
 '1' and the corresponding bit in the EPROM is '0'.  This would
 correspond to an improperly erased bit in the EPROM. When applied to the
-A and M _registers_, this tests all 8 bits in parallel, and if the
+A and M registers, this tests all 8 bits in parallel, and if the
 result of the final comparison is non-zero then at least one of these
 bits failed (in the 8080, the truth of a comparison test is
 represented by '0' for true and '1' for false).  Again, there is a
@@ -500,19 +505,19 @@ since since it seems only strictly necessary to test after the first
 write cycle, but again presumably this was done to save space in the code.
 
 The test for whether the programming step is complete is performed by
-reading the upper 4 bits from port C into the accumulator (at `0F39`)
-and using the `ANA A` instruction (at `0F3B`).  This operation doesn't
+reading the upper 4 bits from port C into the accumulator at `0F39`,
+and using the `ANA A` instruction at `0F3B`.  This operation doesn't
 change the contents of the accumulator but it _does_ set the flags, in
 particular the sign flag now matches the high bit in the accumulator.
-Thus this affords a cheap (and space-saving) way to test for whether the
-high bit in the accumulator is set or reset, signalling the completion
-of the programming step.  Note the tight coupling between the firmware
-and hardware implementation at this point: the hardware design could
-have used any of the top 4 bits of C for this signal, but using bit
-7 simplifies the test and saves space in the code.
+Thus this affords a cheap (and space-saving) way to test for whether
+the high bit in the accumulator is set or reset, signalling the
+completion of the programming step.  Note the tight coupling between
+the firmware and hardware design at this point: any of the top 4 bits
+of C _could_ have been used for this signal, but using bit 7
+simplifies the test and saves space in the code.
 
 A `READ ERROR` occurs if the final byte read does not match that in
-memory.  This test (at `0F3F` and `0F40`) is performed _after_ the
+memory.  This test at `0F3F` and `0F40` is performed _after_ the
 last write cycle (even though register C has only counted down to
 `0x01`, the 100th write step has been done). This catches errors where
 a bit in the 2708 is '1' and it should have been written to be '0'.

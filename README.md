@@ -30,18 +30,18 @@ have been added such as printing and an emulation of the EPROM
 programmer.
 
 On my Triton, the tape cassette interface was hacked (ca 1995) to
-drive an [RS-232](https://en.wikipedia.org/wiki/RS-232) interfaceQ.
-To manage this, a serial data receiver (`tridat.c`) and transmitter
+drive an [RS-232](https://en.wikipedia.org/wiki/RS-232) interface.  To
+manage this, a serial data receiver (`tridat.c`) and transmitter
 (`trimcc.c`) were written. The transmitter implements a hybrid
-assembly / machine code TriMCC 'minilanguage', used by the `.tri`
-codes in the present repository, and converts it into binary which can
-be sent to a physically connected TRITON through a serial interface,
-or saved to a binary file to be used with the emulator.  To partner
-this, `disasm8080.py` is included.  This is a lightly modified version of 
-an 8080 disassembler written by Jeff Tranter, available on his [GitHub
-site](https://github.com/jefftranter/8080).
+assembly / machine code TriMCC 'minilanguage' which it converts into
+binary to send to a physically connected TRITON through a serial
+interface, or saved to a file to be used with the emulator.  To
+partner this, `disasm8080.py` is included.  This is a simplified
+version of an 8080 disassembler written by Jeff Tranter, available on
+his [GitHub site](https://github.com/jefftranter/8080).
 
-- [EMULATOR.md](EMULATOR.md) - more details of the emulator fork, and the Triton Level 7.2 code.
+- [EMULATOR.md](EMULATOR.md) - more details of the emulator fork,
+  and the Triton Level 7.2 code.
 - [TRIMCC.md](TRIMCC.md) - more details of the TriMCC codes and disassembler.
 
 ### Copying

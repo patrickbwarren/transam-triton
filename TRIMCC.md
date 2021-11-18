@@ -62,10 +62,9 @@ with the [emulator](EMULATOR.md).  Using `-p` sends the binary to
 ```
 ./trimcc <srcfile> -p | hexdump -C
 ```
-(see also below for another example using the disassembler).  In
-addition the `-v` option lists the compiled code plus the defined
-variables, and the `-s` option adds an extra column of space to the
-`-v` listing.  Note that you may have to add yourself the `dialout` group
+The `-C` option prints the information out in the most useful format.
+
+Note that you may have to add yourself the `dialout` group
 to use the serial device.  This is not necessary if just compiling
 `.tri` codes with `-o`.
 
@@ -103,7 +102,6 @@ one gets:
 00000050  02 11 6e 16 cd 2b 00 cd  17 16 cd 33 00 c3 02 16  |..n..+.....3....|
 etc
 ```
-(the `-C` option prints the information out in the most useful format).
 From this one can see the tape header ends with the byte sequence `20
 04 78 16` where the last two bytes are the end address of the code in
 little-endian format as required by the tape header.  Hence the actual
@@ -111,51 +109,9 @@ code from starts at `0x4b`.  To disassemble this therefore one can use:
 ```
 ./disasm8080.py -s 0x4b -a 0x1602 HEX2DEC_TAPE
 ```
-The result is (c.f. `hex2dec.tri` below):
-```
-1602            ORG     1602
-1602  11 4E 16  LXI     D,164E
-1605  CD 0B 02  CALL    020B
-1608  11 6E 16  LXI     D,166E
-160B  CD 2B 00  CALL    002B
-160E  CD 17 16  CALL    1617
-1611  CD 33 00  CALL    0033
-1614  C3 02 16  JMP     1602
-1617  11 10 27  LXI     D,2710
-161A  CD 36 16  CALL    1636
-161D  11 E8 03  LXI     D,03E8
-1620  CD 36 16  CALL    1636
-1623  11 64 00  LXI     D,0064
-1626  CD 36 16  CALL    1636
-1629  11 0A 00  LXI     D,000A
-162C  CD 36 16  CALL    1636
-162F  11 01 00  LXI     D,0001
-1632  CD 36 16  CALL    1636
-1635  C9        RET
-1636  06 30     MVI     B,30
-1638  05        DCR     B
-1639  04        INR     B
-163A  7D        MOV     A,L
-163B  93        SUB     E
-163C  6F        MOV     L,A
-163D  7C        MOV     A,H
-163E  9A        SBB     D
-163F  67        MOV     H,A
-1640  D2 39 16  JNC     1639
-1643  7D        MOV     A,L
-1644  83        ADD     E
-1645  6F        MOV     L,A
-1646  7C        MOV     A,H
-1647  8A        ADC     D
-1648  67        MOV     H,A
-1649  78        MOV     A,B
-164A  CD 13 00  CALL    0013
-164D  C9        RET
-```
-(the remainder is truncated since it corresponds to string data).
-This is practically identical what one gets by loading `HEX2DEC_TAPE`
-into the Triton emulator using the 'I' function and disassembling it
-using TRAP.
+The result is practically identical what one gets by loading
+`HEX2DEC_TAPE` into the Triton emulator using the 'I' function and
+disassembling it using TRAP.
 
 It's possible to compile code with `trimcc` and pipe it into the
 disassembler, for example with the core code in `fastvdu.tri`:
@@ -169,10 +125,8 @@ Equally, as hinted at above, it's possible to disassemble code with
 the disassembler, with the `-n` option, and pass it to `trimcc`, for example
 ```
 ./disasm8080.py -b -n -a 0x400 FASTVDU_ROM > code.tri
-./trimcc -v -s code.tri | head -15
+./trimcc -v -s code.tri
 ```
-(`head -15` truncates the listing so that the remaining addresses
-all filled with `FF` aren't shown).
 
 ### TriMCC minilanguage
 
