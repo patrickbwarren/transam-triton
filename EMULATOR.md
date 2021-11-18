@@ -268,9 +268,9 @@ The target binary file should be specified at the command line with
 is created with all bits set to 1.  
 
 Note that in programming a 2708, bits can only be set to '0', not set
-to '1'.  This is implemented faithfully in the emulator, although
-being an emulation the situation where bits which should be programmed
-to be '0' but remain '1' does not normally arise however this failure
+to '1'.  This is implemented faithfully in the emulator.
+Being an emulation the situation where bits which should be programmed
+to be '0' but remain '1' does not normally arise, however this failure
 mode (which results in a `READ ERROR`) can be simulated using function
 F8 (see below).  Contrariwise, since it is possible to load an
 _existing_ EPROM with arbitary bit pattern, the failure mode where bits
