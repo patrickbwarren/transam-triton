@@ -326,20 +326,21 @@ and variable list
 ### Other TriMCC codes
 
 All `.tri` codes below can be compiled to tape binaries suitable for the
-[emulator](EMULATOR.md) by
+[emulator](EMULATOR.md) by, for example,
 ```
-./trimcc <src_file> -o <tape_file>
+./trimcc example_tape.tri -o EXAMPLE_TAPE
 ```
-To load one of these into the emulator use the `-t <tape_file>` command
-line option, and then from within the emulator load the tape file with
-the 'I' Monitor command.  The 'tape headers' are listed below.  Note
-that you can concatenate the binaries into a singe tape file with `cat
-*_TAPE > COMBI_TAPE` for instance, then load this combi-tape into the
-emulator and pick out which code you want to load by using the I
-command with the appropriate tape header.
-
-To run these codes in Triton, use the 'G'
-Monitor command, with the starting address `1602`.
+To load this into the emulator use the `-t EXAMPLE_TAPE` command line
+option, and then from within the emulator load the tape file using the
+'I' Monitor command with the correct tape header name (listed below).
+These tape binaries can also be concatenated into a single master tape
+binary with `cat *_TAPE > TAPE` for instance.  This master tape can be
+loaded into the emulator with the `-t` option,and the code you want to
+load picked out by using the 'I' command with the appropriate tape
+header.  Compilation of all these example and the creation of a master
+tape is implemented as a `make tapes` target in the Makefile.  To run
+these codes in Triton, use the 'G' Monitor command, with the starting
+address `1602`.
 
 [`hex2dec_tape.tri`](hex2dec_tape.tri) (tape header `HEX2DEC`) -- convert a
 16-bit word to decimal, illustrating some of the features of the
@@ -371,8 +372,6 @@ The Space Invaders clone was modified from a hex dump in Computing Today
 out, another fleet doesn't appear - this seems to be a bug.  Apart
 from this it's surprisingly good!
 
-The above are also implemented as `make tapes` target in the Makefile.
-
 ### Triton ROM dumps
 
 ROM dumps for the Triton L7.2 Monitor and BASIC, and TRAP (Triton
@@ -384,8 +383,8 @@ compiled to binaries by
 ./trimcc basic72_rom.tri -o BASIC72_ROM
 ./trimcc trap_rom.tri -o TRAP_ROM
 ```
-(implemented as `make roms` in the Makefile).  These `_ROM` files can
-be used directly with the emulator.
+This is implemented as `make roms` in the Makefile, and the resulting
+binary ROM files can be used directly with the emulator.
 
 ### Fast VDU 
 
@@ -400,10 +399,10 @@ used to generate both a user ROM and a tape binary,
 ./trimcc fastvdu_tape.tri -o FASTVDU_TAPE
 ./trimcc fastvdu_rom.tri -o FASTVDU_ROM
 ```
-The user ROM can be run with the emulator using `-u FASTVDU_ROM`.  For
+The user ROM can be loaded into the emulator using `-u FASTVDU_ROM`.  For
 the tape binary (which is really only for testing purposes),
 re-vectorisation of the VDU output is set up by running the code at
-`1602` (i.e. with the 'G' Monitor function).
+`1602` with the Monitor 'G' function.
 
 ### Copying
 
