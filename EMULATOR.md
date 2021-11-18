@@ -323,7 +323,7 @@ operated in a simple I/O mode (mode 0) with the directionality
 governed by bits set in a control word.  The ports are mapped to
 Triton I/O ports as follows:
 ```
-Triton port FC = 8255 port A (configured bidirectionally)
+Triton port FC = 8255 port A (either as an input or as an output port)
 Triton port FD = 8255 port B (configured as an output port)
 Triton port FE = 8255 port C (upper 4 bits configured for input; lower 4 bits for output)
 Triton port FF = 8255 control word (output only)
@@ -336,8 +336,7 @@ control word     port A   port B   port C
 10011000 (0x98)   IN       OUT    IN / OUT
 ```
 Thus, bit 4 of the control word controls the direction of port A
-(Triton port `FC`) and as mentioned above already, for port C the
-upper 4 bits are configured for input and the lower 4 bits for output.
+(Triton port `FC`).
 
 The three ports A, B, and C, thus configured, are used as follows:
 ```
