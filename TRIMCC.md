@@ -325,7 +325,7 @@ and variable list
 
 ### Other TriMCC codes
 
-All `.tri` codes below can be compiled to binaries suitable for the
+All `.tri` codes below can be compiled to tape binaries suitable for the
 [emulator](EMULATOR.md) by
 ```
 ./trimcc <src_file> -o <tape_file>
