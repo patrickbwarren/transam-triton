@@ -4,7 +4,7 @@ This describes the fork of Robin Stuart's Triton emulator which is
 available in a [GitHub repository](https://github.com/woo-j/triton).
 Some features have been added and some small changes have been
 made to reflect better the actual hardware.  The emulator is targetted
-towards the Level 7.2 firmware (Monitor and BASIC), and the Triton
+towards the Level 7.2 firmware (monitor and BASIC), and the Triton
 Resident Assembly Language Package (TRAP).  Level 7.2 documentation
 can be found on Robin's [GitHub
 repository](https://github.com/woo-j/triton) and also in the 'ETI
@@ -92,7 +92,7 @@ the 8080 and jamming the corresponding RST op-code onto the databus.
 The upshot of all this is that after a hardware interrupt 1 (clear
 screen) or interrupt 2 (print registers + flags and escape to the
 function prompt), further interrupts are disabled.  They stay disabled
-until an EI instruction is encountered at some point in the Monitor
+until an EI instruction is encountered at some point in the monitor
 code.  One can check this in the emulator by using function F5 to
 write the 8080 status (the interrupt enabled/disbled flag status is
 E/D).  One can clearly see the interrupt enabled flag is left unset
@@ -102,7 +102,7 @@ this was a design choice.  The section of the Triton manual describing
 the CPU ("The Heart of It") states "Interrupt 0 should not be used
 even though it is available on the PCB. It simply duplicates the
 manual reset operation but would create major problems if used as the
-Monitor program contains an EI instruction early on in this routine. A
+monitor program contains an EI instruction early on in this routine. A
 very rapid build up of interrupt nests would occur which would fill up
 the stack in a fraction of a second."  Presumably the same could be
 true if EI was executed too soon after any interrupt was serviced.
@@ -134,7 +134,6 @@ result = 0x03 --> parity = T
 result = 0x04 --> parity = F
 result = 0x05 --> parity = T
 ```
-
 Some 8080 emulators get this the wrong way around (it is however
 correct in Robin's emulator).  In a Triton Level 7.2 emulation this
 leads to an extremely obscure bug since the problem only shows up when
@@ -155,7 +154,7 @@ One can test the effect of getting this the wrong way around by swapping the `tr
 
 #### System ROMs
 
-The ROM dumps for the Triton L7.2 Monitor and BASIC, and TRAP, can be
+The ROM dumps for the Triton L7.2 monitor and BASIC, and TRAP, can be
 compiled to binaries using `trimcc` as described in [TRIMCC.md](TRIMCC.md),
 ```
 ./trimcc mona72_rom.tri -o MONA72_ROM
@@ -165,7 +164,7 @@ compiled to binaries using `trimcc` as described in [TRIMCC.md](TRIMCC.md),
 ```
 (implemented as `make roms` in the Makefile).  If present, all these
 files are loaded by the emulator.  For the L7.2 emulation to work
-at least the two Monitor ROMs should be present.
+at least the two monitor ROMs should be present.
 
 The memory map for Level 7.2 Triton software is as follows
 ```
@@ -205,7 +204,7 @@ This remains as in Robin Stuart's emulator, except that the
 possibility to select the tape file is given as a command line option.
 Input bytes are read from the tape file as though from a cassette
 recorder, and likewise output bytes are appended to the tape file.
-This means that with the Monitor 'I' option, the emulated tape
+This means that with the monitor 'I' command, the emulated tape
 interface is expecting to see the correct tape header in front of any
 data file as described in [TRIMCC.md](TRIMCC.md).  If no tape is
 loaded (`-t` option missing) then bytes written to the tape are lost
@@ -219,18 +218,67 @@ which are then printed to `stdout`.  Since all other messages are
 written to `stderr`, printer output can be captured by redirecting
 `stdout` to a file, for example `./triton > printer_output.txt`.
 
-Close examination of the Monitor code (`0104`-`0154`) shows just
-what is happening with the serial printer output, which turns out to be
-not quite as stated as in the documentation.  There is a start bit
-(port 6 bit 8 high), followed by seven (7) data bits containing the
-7-bit ASCII character code, a fake parity bit (port 6 bit 8 high
-again), then two stop bits (port 6 bit 8 low).  For carriage return
-the output is left low for an additional delay equivalent to 30 bits.
-The two stop bits are handled in software by doubling the delay since
-there is no need to write out two successive `00` bytes to port 6
-(this has the potential to fool an emulation which is tracking port
-writes!).  Also port 6 is initialised to `00` during startup (Monitor
-code at `007D`).
+The relevant part of the monitor firmware that deals with printing
+starts from `0104`:
+```
+0104  3A 01 14  LDA     1401    # load printer control byte from 0x1401
+0107  FE 55     CPI     55      # compare to 0x55 (printing on)
+0109  C2 37 01  JNZ     0137    # if it is instead 0xAA just print to VDU
+010C  F1        POP     PSW
+010D  F5        PUSH    PSW
+010E  F3        DI              # disable interrupts for the next bit
+010F  C5        PUSH    B
+0110  2F        CMA
+0111  4F        MOV     C,A
+0112  06 08     MVI     B,08
+0114  3E 80     MVI     A,80
+0116  D3 06     OUT     06      # write data to printer .. MORE HERE
+0118  CD B3 01  CALL    01B3
+011B  79        MOV     A,C
+011C  0F        RRC
+011D  4F        MOV     C,A
+011E  05        DCR     B
+011F  F2 16 01  JP      0116
+0122  06 02     MVI     B,02
+0124  FE 79     CPI     79
+0126  C2 2B 01  JNZ     012B
+0129  06 20     MVI     B,20
+012B  AF        XRA     A
+012C  D3 06     OUT     06
+012E  CD B3 01  CALL    01B3
+0131  05        DCR     B
+0132  F2 2E 01  JP      012E
+0135  FB        EI              # enable interrupts again
+0136  C1        POP     B
+0137  F1        POP     PSW
+0138  E6 7F     ANI     7F
+013A  D3 05     OUT     05
+013C  CD 4A 01  CALL    014A
+013F  F6 80     ORI     80
+0141  D3 05     OUT     05
+0143  CD 4A 01  CALL    014A
+0146  E6 7F     ANI     7F
+0148  D3 05     OUT     05
+014A  D5        PUSH    D
+014B  16 00     MVI     D,00
+014D  15        DCR     D
+014E  00        NOP
+014F  00        NOP
+0150  C2 4D 01  JNZ     014D
+0153  D1        POP     D
+0154  C9        RET
+```
+Close examination shows just what is happening with the serial printer
+output, which turns out to be not quite as stated as in the
+documentation.  There is a start bit (port 6 bit 8 high), followed by
+seven (7) data bits containing the 7-bit ASCII character code, a fake
+parity bit (port 6 bit 8 high again), then two stop bits (port 6 bit 8
+low).  For carriage return the output is left low for an additional
+delay equivalent to 30 bits.  The two stop bits are handled in
+software by doubling the delay since there is no need to write out two
+successive `00` bytes to port 6 (this has the potential to fool an
+emulation which is tracking port writes!).  Also port 6 is initialised
+to `00` during startup (monitor code at `007D` not shown).
 
 An example output is captured below in the emulator, where the right
 hand column is a trace of the actual output to port 6 bit 8 and the
@@ -262,7 +310,7 @@ set these two bytes to `01` and `00` respectively.
 #### EPROM programmer emulation
 
 This feature was also added to Robin Stuart's emulator and has been
-tested to work with the 'Z' function command in the Level 7.2 Monitor.
+tested to work with the 'Z' command in the Level 7.2 monitor.
 The target binary file should be specified at the command line with
 `-z` option.  The file is loaded if it exists, otherwise a blank EPROM
 is created with all bits set to 1.  Note that in programming a 2708,
@@ -372,61 +420,61 @@ In the emulator, as mentioned, the 1 ms is not emulated so that after
 initiating the programming pulse the bit 7 of port C is _immediately_
 set to 0.
 
-For completeness, the L7.2 Monitor code that implements the 'Z'
+For completeness, the L7.2 monitor code that implements the 'Z'
 function is described next.  Despite some apparent inefficiencies, it
 is perhaps the most compact and elegant 8080 machine code that I have
 ever seen.  For an analysis, see notes below.  The entry point from
 the function prompt is at address `0F1C`:
 ```
-0F1C  CD 08 02  CALL    0208    ; prompt for start address, return in HL 
-0F1F  0E 64     MVI     C,64    ; number of write cycles is 0x64 = 100 decimal
-0F21  11 00 04  LXI     D,0400  ; load DE with 0x0400 = 1024 bytes (EPROM capacity)
-0F24  E5        PUSH    H       ; push HL (start address) onto stack
-0F25  D5        PUSH    D       ; push DE = 0x400 onto stack
-0F26  11 00 00  LXI     D,0000  ; load DE with start address of EPROM = 0x0000
-0F29  CD 5F 0F  CALL    0F5F    ; call to read byte from EPROM into A
-0F2C  47        MOV     B,A     ; copy A into B
-0F2D  B6        ORA     M       ; or A with memory at HL
-0F2E  B8        CMP     B       ; test for zero bits; ie does A | M == A ?
-0F2F  C2 72 0F  JNZ     0F72    ; if so, print 'PROGRAM ERROR' and abort to function prompt
-0F32  3E 88     MVI     A,88    ; set up for write cycle - control word to 0x88
-0F34  06 08     MVI     B,08    ; bits 2 and 3 of port C will be 1 and 0 respectively 
-0F36  CD 63 0F  CALL    0F63    ; call to write byte in A to EPROM
-0F39  DB FE     IN      FE      ; fetch upper 4 bits from 8255 port C
-0F3B  A7        ANA     A       ; set sign flag = bit 7 of A (program pulse)
-0F3C  FA 39 0F  JM      0F39    ; loop back if sign flag set (program pulse not finished)
-0F3F  79        MOV     A,C     ; copy number of remaining write cycles in C into A
-0F40  FE 01     CPI     01      ; are we at the final write cycle?
-0F42  C2 4C 0F  JNZ     0F4C    ; if not, skip the read test
-0F45  CD 5F 0F  CALL    0F5F    ; otherwise, call to read byte from EPROM into A
-0F48  BE        CMP     M       ; does it match what's in memory?
-0F49  C2 7B 0E  JNZ     0E7B    ; if not, print 'READ ERROR' and abort to function prompt
-0F4C  23        INX     H       ; increment HL (memory address)
-0F4D  13        INX     D       ; increment DE (EPROM address)
-0F4E  E3        XTHL            ; exchange stack with HL; HL now contains 0x400
-0F4F  CD BF 00  CALL    00BF    ; compare HL with DE, ie does DE = 0x400?
-0F52  E3        XTHL            ; exchange stack with HL, recovering memory address
-0F53  C2 29 0F  JNZ     0F29    ; if DE is not yet 0x400, loop back for next byte
-0F56  D1        POP     D       ; pop DE off stack (the value here is 0x400)
-0F57  E1        POP     H       ; pop HL off stack (the start address again)
-0F58  0D        DCR     C       ; decrement write cycle count
-0F59  C2 24 0F  JNZ     0F24    ; if not zero, loop back for another cycle
-0F5C  C3 3D 03  JMP     033D    ; print 'END' and return to function prompt
+0F1C  CD 08 02  CALL    0208    # prompt for start address, return in HL 
+0F1F  0E 64     MVI     C,64    # number of write cycles is 0x64 = 100 decimal
+0F21  11 00 04  LXI     D,0400  # load DE with 0x0400 = 1024 bytes (EPROM capacity)
+0F24  E5        PUSH    H       # push HL (start address) onto stack
+0F25  D5        PUSH    D       # push DE = 0x400 onto stack
+0F26  11 00 00  LXI     D,0000  # load DE with start address of EPROM = 0x0000
+0F29  CD 5F 0F  CALL    0F5F    # call to read byte from EPROM into A
+0F2C  47        MOV     B,A     # copy A into B
+0F2D  B6        ORA     M       # or A with memory at HL
+0F2E  B8        CMP     B       # test for zero bits; ie does A | M == A ?
+0F2F  C2 72 0F  JNZ     0F72    # if so, print 'PROGRAM ERROR' and abort to function prompt
+0F32  3E 88     MVI     A,88    # set up for write cycle - control word to 0x88
+0F34  06 08     MVI     B,08    # bits 2 and 3 of port C will be 1 and 0 respectively 
+0F36  CD 63 0F  CALL    0F63    # call to write byte in A to EPROM
+0F39  DB FE     IN      FE      # fetch upper 4 bits from 8255 port C
+0F3B  A7        ANA     A       # set sign flag = bit 7 of A (program pulse)
+0F3C  FA 39 0F  JM      0F39    # loop back if sign flag set (program pulse not finished)
+0F3F  79        MOV     A,C     # copy number of remaining write cycles in C into A
+0F40  FE 01     CPI     01      # are we at the final write cycle?
+0F42  C2 4C 0F  JNZ     0F4C    # if not, skip the read test
+0F45  CD 5F 0F  CALL    0F5F    # otherwise, call to read byte from EPROM into A
+0F48  BE        CMP     M       # does it match what's in memory?
+0F49  C2 7B 0E  JNZ     0E7B    # if not, print 'READ ERROR' and abort to function prompt
+0F4C  23        INX     H       # increment HL (memory address)
+0F4D  13        INX     D       # increment DE (EPROM address)
+0F4E  E3        XTHL            # exchange stack with HL; HL now contains 0x400
+0F4F  CD BF 00  CALL    00BF    # compare HL with DE, ie does DE = 0x400?
+0F52  E3        XTHL            # exchange stack with HL, recovering memory address
+0F53  C2 29 0F  JNZ     0F29    # if DE is not yet 0x400, loop back for next byte
+0F56  D1        POP     D       # pop DE off stack (the value here is 0x400)
+0F57  E1        POP     H       # pop HL off stack (the start address again)
+0F58  0D        DCR     C       # decrement write cycle count
+0F59  C2 24 0F  JNZ     0F24    # if not zero, loop back for another cycle
+0F5C  C3 3D 03  JMP     033D    # print 'END' and return to function prompt
 ```
 To accompany this is a short subroutine with entry points at `0F5F` and `0F63`:
 ```
-0F5F  3E 98     MVI     A,98    ; 8255 control word will be set to 0x98
-0F61  06 04     MVI     B,04    ; bits 2 and 3 of port C will be 0 and 1 respectively
-0F63  D3 FF     OUT     FF      ; output control word to 8255 (second entry point)
-0F65  7B        MOV     A,E     ; copy low byte of EPROM address in DE
-0F66  D3 FD     OUT     FD      ; output to 8255 port B
-0F68  7E        MOV     A,M     ; get data from main memory location in HL
-0F69  D3 FC     OUT     FC      ; output to 8255 port A (no effect unless control word is 0x88)
-0F6B  7A        MOV     A,D     ; copy high byte of EPROM address in DE (only lowest two bits are used)
-0F6C  B0        ORA     B       ; set bits 2 and 3 to control 2708
-0F6D  D3 FE     OUT     FE      ; output to 8255 port C (affects lower 4 bits only)
-0F6F  DB FC     IN      FC      ; input from 8255 port A (data acquired only if control word is 0x98)
-0F71  C9        RET             ; return
+0F5F  3E 98     MVI     A,98    # 8255 control word will be set to 0x98
+0F61  06 04     MVI     B,04    # bits 2 and 3 of port C will be 0 and 1 respectively
+0F63  D3 FF     OUT     FF      # output control word to 8255 (second entry point)
+0F65  7B        MOV     A,E     # copy low byte of EPROM address in DE
+0F66  D3 FD     OUT     FD      # output to 8255 port B
+0F68  7E        MOV     A,M     # get data from main memory location in HL
+0F69  D3 FC     OUT     FC      # output to 8255 port A (no effect unless control word is 0x88)
+0F6B  7A        MOV     A,D     # copy high byte of EPROM address in DE (only lowest two bits are used)
+0F6C  B0        ORA     B       # set bits 2 and 3 to control 2708
+0F6D  D3 FE     OUT     FE      # output to 8255 port C (affects lower 4 bits only)
+0F6F  DB FC     IN      FC      # input from 8255 port A (data acquired only if control word is 0x98)
+0F71  C9        RET             # return
 ```
 #### Notes
 

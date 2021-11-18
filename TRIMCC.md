@@ -168,7 +168,7 @@ and can span multiple lines.
 
 Variables are represented by 16-bit words and can be defined at any
 time with the syntax `VAR=<val>` where `<val>` is hexadecimal.  These
-can be used to define Monitor entry points for example.  Decimal
+can be used to define monitor entry points for example.  Decimal
 values in the range 0 to 65535 can also be assigned using the `%`
 notation above (note that these are stored as 16-bit words even if the
 value is less then 256).  Additionally a label of the form `LABEL:`
@@ -219,7 +219,7 @@ look like
 STRING: "THIS IS A STRING" 04
 ```
 This can be printed to the VDU by `LXI D !STRING; CALL 002B` where
-`002B` is the L7.2 Monitor entry point to print a string preceded by
+`002B` is the L7.2 monitor entry point to print a string preceded by
 CR/LF.
 
 The TriMCC compiler was written in C over twenty years ago and is
@@ -332,14 +332,14 @@ All `.tri` codes below can be compiled to tape binaries suitable for the
 ```
 To load this into the emulator use the `-t EXAMPLE_TAPE` command line
 option, and then from within the emulator load the tape file using the
-'I' Monitor command with the correct tape header name (listed below).
+monitor 'I' command with the correct tape header name (listed below).
 These tape binaries can also be concatenated into a single master tape
 binary with `cat *_TAPE > TAPE` for instance.  This master tape can be
 loaded into the emulator with the `-t` option,and the code you want to
 load picked out by using the 'I' command with the appropriate tape
 header.  Compilation of all these example and the creation of a master
 tape is implemented as a `make tapes` target in the Makefile.  To run
-these codes in Triton, use the 'G' Monitor command, with the starting
+these codes in Triton, use the monitor 'G' command, with the starting
 address `1602`.
 
 [`hex2dec_tape.tri`](hex2dec_tape.tri) (tape header `HEX2DEC`) -- convert a
@@ -374,7 +374,7 @@ from this it's surprisingly good!
 
 ### Triton ROM dumps
 
-ROM dumps for the Triton L7.2 Monitor and BASIC, and TRAP (Triton
+ROM dumps for the Triton L7.2 monitor and BASIC, and TRAP (Triton
 Resident Assembly Language Package), are also included.  These can be
 compiled to binaries by
 ```
@@ -388,7 +388,7 @@ binary ROM files can be used directly with the emulator.
 
 ### Fast VDU 
 
-In Level 7.2 Monitor (at least) output of a character is vectored
+In Level 7.2 monitor (at least) output of a character is vectored
 through `1479`, so that by intercepting this one can fine-tune the
 speed with which characters are written to the VDU.  This is the basis
 for a FAST VDU user ROM which can be found on [Gerald Sommariva's web
@@ -402,7 +402,7 @@ used to generate both a user ROM and a tape binary,
 The user ROM can be loaded into the emulator using `-u FASTVDU_ROM`.  For
 the tape binary (which is really only for testing purposes),
 re-vectorisation of the VDU output is set up by running the code at
-`1602` with the Monitor 'G' function.
+`1602` with the monitor 'G' command.
 
 ### Copying
 
