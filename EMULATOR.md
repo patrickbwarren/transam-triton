@@ -47,6 +47,7 @@ to control the emulation:
  - F5: write 8080 status to command line
  - F6: [EPROM programmer] UV erase the EPROM (set all bytes to 0xff)
  - F7: [EPROM programmer] write the EPROM to the file specified by `-z`
+ - F8: [EPROM programmer] simulate a `READ ERROR` failure mode (see notes)
  - F9: exit emulator
 
 All other keyboard input is sent to the emulation.
@@ -271,11 +272,12 @@ blank EPROM).
 Note that in programming a 2708, bits can only be set to '0', not set
 to '1'.  This is implemented faithfully in the emulator, although
 being an emulation the failure mode where bits which should be
-programmed to be '0' but remain '1' does not arise (this would be
-reported as a `READ ERROR`).  However, since it is possible to load an
-_existing_ ROM with arbitary bit pattern, the failure mode where bits
-which should be programmed to be '1' but are actually '0' can arise
-(this results in a `PROGRAM ERROR`).
+programmed to be '0' but remain '1' does not normally arise (this
+would be reported as a `READ ERROR`) however it can be simulated using
+function F?.  Contrariwise, since it is possible to load an _existing_
+ROM with arbitary bit pattern, the failure mode where bits which
+should be programmed to be '1' but are actually '0' can more easily
+arise (this results in a `PROGRAM ERROR`).
 
 Finally, function F7 causes the content of the EPROM (in whatever
 state it is in) to be written to the file specified by `-z` at the
@@ -302,11 +304,11 @@ The details of the EPROM programmer emulation are a little complicated
 although only the bare minimum functionality of the [Intel
 8255](https://en.wikipedia.org/wiki/Intel_8255) has been emulated.
 For completeness these details are given here.  The original
-description of the hardware and how it functions is in [Electronics
+description of the hardware and how it functions features in [Electronics
 Today International](https://en.wikipedia.org/wiki/Electronics_Today_International)
 (ETI) Jan 1980 p42-45, and the relevant issue can be found
-[here](https://worldradiohistory.com/ETI_Magazine.htm); the article
-has also been uploaded as a PDF to the Facebook group.
+[here](https://worldradiohistory.com/ETI_Magazine.htm) (the article
+has also been uploaded as a PDF to the Facebook group).
 
 In the programmer the three ports (A, B, C) available to the 8255 are
 operated in a simple I/O mode (mode 0) with the directionality
@@ -325,7 +327,9 @@ control word     port A   port B   port C
 10001000 (0x88)   OUT      OUT    IN / OUT
 10011000 (0x98)   IN       OUT    IN / OUT
 ```
-Thus, bit 4 of the control word controls the direction of port A (Triton port `FC`).
+Thus, bit 4 of the control word controls the direction of port A
+(Triton port `FC`) and as mentioned above already, for port C the
+upper 4 bits are configured for input and the lower 4 bits for output.
 
 The three ports A, B, and C, thus configured, are used as follows:
 ```
@@ -339,23 +343,23 @@ Reading and writing data to the 2708 is controlled by bits 2
 and 3 of port C (Triton port `FE`):
 ```
 bit 3 bit 2 (port C = Triton port FE)         logic test
-  0    1     2708 chip select enabled         port C & 0x0C = 0x04
-  1    0     2708 initiate programming pulse  port C & 0x0C = 0x08
+  0    1     2708 chip select enabled         port C & 0x0C == 0x04
+  1    0     initiate 2708 programming pulse  port C & 0x0C == 0x08
 ```
 The logic test is exactly as implemented in the emulator.  In summary:
 
-- To _read_ data from the EPROM, set the control word to `0x98`, load
+- to _read_ data from the EPROM, set the control word to `0x98`, load
   the least significant 8 bits of the required address onto port B, logical OR
   the most significant two bits of the address with `0x04` (chip
   select enabled) and output these 4 bits to port C, and then read the
-  data from port A.
+  data from port A;
 
-- To _write_ data to the EPROM, set the control word to `0x88`, load
+- to _write_ data to the EPROM, set the control word to `0x88`, load
   the least significant 8 bits of the required address onto port B, logical OR
   the most significant two bits of the address with `0x08`, and output
-  these 4 bits to port C to initiate programming pulse.
+  these 4 bits to port C to initiate programming pulse;
 
-- To _test_ whether the programming pulse is complete one should read
+- to _test_ whether the programming pulse is complete one should read
   the top 4 bits of port C; if the high bit (bit 7) is zero the
   programming pulse is finished.
 
