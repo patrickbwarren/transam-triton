@@ -266,39 +266,52 @@ The target binary file should be specified at the command line with
 `-z` option.  The file is loaded if it exists, otherwise a blank EPROM
 is created with all bits set to 1.  Also, function F6 performs the
 equivalent to a UV erase by setting all bits to 1 (not necessary for a
-blank EPROM), and function F7 causes the content of the EPROM to be
-written to the file specified by `-z` at the command line.
+blank EPROM).
 
-The EPROM programmer hardware consists of the above mentioned [Intel
-8255](https://en.wikipedia.org/wiki/Intel_8255) chip, directly
-interfaced to a [2708 EPROM](https://en.wikipedia.org/wiki/EPROM)
-which provides 1k of memory configured as 1024 addresses (10-bits) of an
-8-bit wide data bus.  Some auxiliary logic and discrete electronics
-implements a 20 V programming pulse of 1 ms duration, per write cycle
-(this delay was not included in the emulation).  In the programmer the
-three ports (A, B, C) available to the 8255 are operated in a simple
-I/O mode (mode 0), and the directionality is governed by a control
-word.  The ports are mapped to Triton I/O ports as follows:
+Note that in programming a 2708, bits can only be set to '0', not set
+to '1'.  This is implemented faithfully in the emulator, although
+being an emulation the failure mode where bits which should be
+programmed to be '0' but remain '1' does not arise (this would be
+reported as a `READ ERROR`).  However, since it is possible to load an
+_existing_ ROM with arbitary bit pattern, the failure mode where bits
+which should be programmed to be '1' but are actually '0' can arise
+(this results in a `PROGRAM ERROR`).
 
-When writing to the EPROM the number of write cycles per memory
+Finally, function F7 causes the content of the EPROM (in whatever
+state it is in) to be written to the file specified by `-z` at the
+command line.
+
+When programming the EPROM the number of write cycles per memory
 location is monitored to act as a check on the firmware.  When saving
-the EPROM to a file a warning is printed the write cycle count for any
-memory location is less than 100, though in the emulation only one
-write cycle is needed per memory location to store the data.  These
-write cycle counts are initialised to zero at the start, and
-reinitialised by the emulated UV erase step.
+the EPROM to a file (function F7) a warning is printed at the command
+line if the write cycle count for any memory location is less than
+100, though in the emulation only one write cycle is needed per memory
+location to store the data.  These write cycle counts are initialised
+to zero at the start, and reinitialised by the emulated UV erase step.
+
+In terms of physical hardware the EPROM programmer consists of an
+[Intel 8255](https://en.wikipedia.org/wiki/Intel_8255) programmable
+peripheral interface (PPI) chip, directly interfaced to a [2708
+EPROM](https://en.wikipedia.org/wiki/EPROM) which provides 1k of
+memory configured as 1024 addresses (10-bits) of an 8-bit wide data
+bus.  Some auxiliary logic and discrete electronics implements a 20 V
+programming pulse of 1 ms duration, per write cycle (this delay was
+not included in the emulation).  
 
 The details of the EPROM programmer emulation are a little complicated
 although only the bare minimum functionality of the [Intel
-8255](https://en.wikipedia.org/wiki/Intel_8255) programmable
-peripheral interface (PPI) chip has been emulated.  For completeness
-these details are given here.  The original description is in
-[Electronics Today
-International](https://en.wikipedia.org/wiki/Electronics_Today_International)
+8255](https://en.wikipedia.org/wiki/Intel_8255) has been emulated.
+For completeness these details are given here.  The original
+description of the hardware and how it functions is in [Electronics
+Today International](https://en.wikipedia.org/wiki/Electronics_Today_International)
 (ETI) Jan 1980 p42-45, and the relevant issue can be found
 [here](https://worldradiohistory.com/ETI_Magazine.htm); the article
 has also been uploaded as a PDF to the Facebook group.
 
+In the programmer the three ports (A, B, C) available to the 8255 are
+operated in a simple I/O mode (mode 0) with the directionality
+governed by bits set in a control word.  The ports are mapped to
+Triton I/O ports as follows:
 ```
 Triton port FC = 8255 port A (configured bidirectionally)
 Triton port FD = 8255 port B (configured as an output port)
@@ -308,12 +321,13 @@ Triton port FF = 8255 control word (output only)
 To correspond to the use-pattern of the firmware only two control
 words have been implemented in the emulator:
 ```
-  control word   port A   port B   port C
+control word     port A   port B   port C
 10001000 (0x88)   OUT      OUT    IN / OUT
 10011000 (0x98)   IN       OUT    IN / OUT
 ```
 Thus, bit 4 of the control word controls the direction of port A (Triton port `FC`).
-The ports are used as follows:
+
+The three ports A, B, and C, thus configured, are used as follows:
 ```
 port A (Triton FC) - 2708 data (input / output)
 port B (Triton FD) - lowest 8 bits of 2708 address (output)
@@ -328,30 +342,29 @@ bit 3 bit 2 (port C = Triton port FE)         logic test
   0    1     2708 chip select enabled         port C & 0x0C = 0x04
   1    0     2708 initiate programming pulse  port C & 0x0C = 0x08
 ```
-where the logic test is as implemented in the emulator.  In summary:
+The logic test is exactly as implemented in the emulator.  In summary:
 
 - To _read_ data from the EPROM, set the control word to `0x98`, load
-  the least significant 8 bits of the required address onto port B, OR
+  the least significant 8 bits of the required address onto port B, logical OR
   the most significant two bits of the address with `0x04` (chip
   select enabled) and output these 4 bits to port C, and then read the
   data from port A.
 
 - To _write_ data to the EPROM, set the control word to `0x88`, load
-  the least significant 8 bits of the required address onto port B, OR
+  the least significant 8 bits of the required address onto port B, logical OR
   the most significant two bits of the address with `0x08`, and output
   these 4 bits to port C to initiate programming pulse.
 
 - To _test_ whether the programming pulse is complete one should read
   the top 4 bits of port C; if the high bit (bit 7) is zero the
-  programming pulse is finished
+  programming pulse is finished.
 
 In the emulator the 1 ms is not emulated so that after initiating the
 programming pulse the bit 7 of port C is always set to 0.
 
-The Monitor code that implements the 'Z' function is tightly written.
-
-The entry point from L7.2 monitor is at address `0F1C` and the code
-is as follows:
+For completeness, the L7.2 Monitor code that implements the 'Z'
+function is given next (for an analysis, see notes below).  The entry
+point from the function prompt is at address `0F1C`:
 ```
 0F1C  CD 08 02  CALL    0208    ; prompt for start address, return in HL 
 0F1F  0E 64     MVI     C,64    ; number of write cycles is 0x64 = 100 decimal
@@ -388,11 +401,13 @@ is as follows:
 0F59  C2 24 0F  JNZ     0F24    ; if not zero, loop back for another cycle
 0F5C  C3 3D 03  JMP     033D    ; print 'END' and return to function prompt
 ```
-To accompany this is a short subroutine with two entry points. The entry point at
-`0F5F` sets the 8255 control word to `0x98` so that the 8255 port A direction is
-IN; and the entry point at `0F63` (called from `0F36`) should have the control word set
-to `0x99` so that the 8255 port A direction is OUT.  In both cases bits 2 and 3 of
-the lower half of port C are set appropriate to a read or write cycle.
+To accompany this is a short subroutine with two entry points. The
+entry point at `0F5F` sets the 8255 control word to `0x98` so that the
+8255 port A direction is IN; and the entry point at `0F63` (called
+from `0F36`) should have the control word set to `0x99` so that the
+8255 port A direction is OUT.  Bits 2 and 3 of the lower half of port
+C are set, or should be set, appropriate to a read or programming
+cycle respectively.
 ```
 0F5F  3E 98     MVI     A,98    ; 8255 control word will be set to 0x98
 0F61  06 04     MVI     B,04    ; bits 2 and 3 of port C will be 0 and 1 respectively
@@ -407,10 +422,20 @@ the lower half of port C are set appropriate to a read or write cycle.
 0F6F  DB FC     IN      FC      ; input from 8255 port A (data acquired only if control word is 0x98)
 0F71  C9        RET             ; return
 ```
+Notes
 
-More here...
+The doubled up functionality of the subroutine
 
-Test for zero bytes implements `A | M == A` - explanation.
+Each of the 1024 data bytes is written sequentially, and this is repeated 100 times.  
+
+A `PROGRAM ERROR` occurs if a bit in the 2708 is 0 when it should be
+written as 1. This test is implemented as `A | M == A` - explanation.
+
+A `READ ERROR` occurs if the final byte read does not match that in
+memory - this catches errors where a bit in the 2708 is 1 and it
+should be 0.
+
+The test for programming step complete using `ANA A`.
 
 ### Copying
 
