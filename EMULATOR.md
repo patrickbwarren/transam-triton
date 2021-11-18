@@ -466,7 +466,7 @@ Note that this subroutine is called _three_ times in the main code,
 with the entry point at `0F5F` being used twice to read data from the
 EPROM, and the entry point at `0F63` being used once to write data to
 the EPROM.  Thus to save space it makes sense to have the instructions
-which set up a read operation _in the subroutine_, and to keep the
+which set up a read operation in the subroutine, and to keep the
 instructions which set up a write operation in the main code.  Also it
 makes sense to combine the common elements of the read and write
 operations in a subroutine like this, despite the small inefficiency
@@ -499,10 +499,7 @@ correspond to an improperly erased bit in the EPROM. When applied to the
 A and M registers, this tests all 8 bits in parallel, and if the
 result of the final comparison is non-zero then at least one of these
 bits failed (in the 8080, the truth of a comparison test is
-represented by '0' for true and '1' for false).  Again, there is a
-presumed inefficiency in making this test after every write cycle
-since since it seems only strictly necessary to test after the first
-write cycle, but again presumably this was done to save space in the code.
+represented by '0' for true and '1' for false).
 
 The test for whether the programming step is complete is performed by
 reading the upper 4 bits from port C into the accumulator at `0F39`,
