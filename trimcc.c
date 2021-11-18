@@ -138,15 +138,15 @@ int main(int argc, char *argv[]) {
     case 'p': pipe_to_stdout = 1; break;
     case 'o': binary_file = strdup(optarg); break;
     case 't': serial_device = strdup(optarg); break;
-    case 'h':
+    case 'h': case '?':
       printf("Compile and optionally transmit RS-232 data to Triton through a serial device\n");
-      printf("%s [-h] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file\n", argv[0]);
-      printf("-h (help): print this help\n");
-      printf("-v (verbose): print the byte stream and variables\n");
-      printf("-s (spaced): add a column of spaces after the 7th byte\n");
-      printf("-p (pipe): write the byte stream in binary to stdout (obviates -o)\n");
-      printf("-o <binary_file>: write the byte stream in binary to a file\n");
-      printf("-t (transmit): write the byte stream to a serial device, for example /dev/ttyS0\n");
+      printf("usage: %s  [-h|-?] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file\n", argv[0]);
+      printf("-h or -? (help) : print this help\n");
+      printf("-v (verbose) : print the byte stream and variables\n");
+      printf("-s (spaced) : add a column of spaces after the 7th byte\n");
+      printf("-p (pipe) : write the byte stream in binary to stdout (obviates -o)\n");
+      printf("-o <binary_file> : write the byte stream in binary to a file\n");
+      printf("-t (transmit) : write the byte stream to a serial device, for example /dev/ttyS0\n");
       printf("the source file should be specified, for example a .tri file\n");
       exit(0);
     }

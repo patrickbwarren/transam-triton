@@ -70,8 +70,16 @@ The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
 
 The 8080 disassembler `disasm8080.py` is released under an Apache
 License, Version 2.0 and is copyright &copy; 2013-2015 by Jeff Tranter
-<tranter@pobox.com>, with minor modifications copyright &copy; 2021
+<tranter@pobox.com>, with modifications copyright &copy; 2021
 Patrick B Warren <patrickbwarren@gmail.com>.
+
+The original copyright on the fast VDU code is unknown but it may
+belong to Gerald Sommariva, from whose [web
+site](https://sites.google.com/view/transam-triton/downloads) the
+`FASTVDU.ED82` user ROM was downloaded which forms the basis of the
+current code.  Modifications to this original code are copyright (c)
+2021 Patrick B Warren <patrickbwarren@gmail.com> and are released into
+the public domain.
 
 The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a
 hex dump in Computing Today (March 1980; page 32).  Copyright &copy; is

@@ -57,11 +57,11 @@ int main(int argc, char *argv[]) {
   while ((c = getopt(argc, argv, "ho:")) != -1) {
     switch (c) {
     case 'o': filename = strdup(optarg); break;
-    case 'h':
+    case 'h': case '?':
       printf("Receive Triton RS-232 data from a serial device\n");
-      printf("%s [-h] [-o binary_file] serial_device\n", argv[0]);
-      printf("-h (help): print this help\n");
-      printf("-o <binary_file>: capture the byte stream in a binary file\n");
+      printf("usage: %s [-h|-?] [-o binary_file] serial_device\n", argv[0]);
+      printf("-h or -? (help) : print this help\n");
+      printf("-o <binary_file> : capture the byte stream in a binary file\n");
       printf("the serial device should be specified, for example /dev/ttyS0\n");
       exit(0);
     }

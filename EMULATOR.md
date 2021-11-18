@@ -23,7 +23,7 @@ The following command line options are available:
  - `-m` sets the top of memory, for example `-m 0x4000`; the default is `0x2000`
  - `-t` specifies a tape binary, for example `-t TAPE`
  - `-u` installs one or two user ROM(s);
- - `-z` [EPROM programmer] specifies the file to write the EPROM to with function key F8
+ - `-z` [EPROM programmer] specifies the file to write the EPROM to with function key F7
  
 To install two user ROMS using the `-u` option, separate the filenames
 by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are
@@ -92,7 +92,7 @@ The upshot of all this is that after a hardware interrupt 1 (clear
 screen) or interrupt 2 (print registers + flags and escape to the
 function prompt), further interrupts are disabled.  They stay disabled
 until an EI instruction is encountered at some point in the Monitor
-code.  One can check this in the emulator by using function F6 to
+code.  One can check this in the emulator by using function F5 to
 write the 8080 status (the interrupt enabled/disbled flag status is
 E/D).  One can clearly see the interrupt enabled flag is left unset
 after one of these hardware interrupts, but becomes re-enabled for
@@ -266,8 +266,19 @@ The target binary file should be specified at the command line with
 `-z` option.  The file is loaded if it exists, otherwise a blank EPROM
 is created with all bits set to 1.  Also, function F6 performs the
 equivalent to a UV erase by setting all bits to 1 (not necessary for a
-blank EPROM), and function F8 causes the content of the EPROM to be
+blank EPROM), and function F7 causes the content of the EPROM to be
 written to the file specified by `-z` at the command line.
+
+The EPROM programmer hardware consists of the above mentioned [Intel
+8255](https://en.wikipedia.org/wiki/Intel_8255) chip, directly
+interfaced to a [2708 EPROM](https://en.wikipedia.org/wiki/EPROM)
+which provides 1k of memory configured as 1024 addresses (10-bits) of an
+8-bit wide data bus.  Some auxiliary logic and discrete electronics
+implements a 20 V programming pulse of 1 ms duration, per write cycle
+(this delay was not included in the emulation).  In the programmer the
+three ports (A, B, C) available to the 8255 are operated in a simple
+I/O mode (mode 0), and the directionality is governed by a control
+word.  The ports are mapped to Triton I/O ports as follows:
 
 When writing to the EPROM the number of write cycles per memory
 location is monitored to act as a check on the firmware.  When saving
@@ -288,16 +299,6 @@ International](https://en.wikipedia.org/wiki/Electronics_Today_International)
 [here](https://worldradiohistory.com/ETI_Magazine.htm); the article
 has also been uploaded as a PDF to the Facebook group.
 
-The EPROM programmer hardware consists of the above mentioned [Intel
-8255](https://en.wikipedia.org/wiki/Intel_8255) chip, directly
-interfaced to a [2708 EPROM](https://en.wikipedia.org/wiki/EPROM)
-which provides 1k of memory configured as 1024 addresses (10-bits) of an
-8-bit wide data bus.  Some auxiliary logic and discrete electronics
-implements a 20 V programming pulse of 1 ms duration, per write cycle
-(this delay was not included in the emulation).  In the programmer the
-three ports (A, B, C) available to the 8255 are operated in a simple
-I/O mode (mode 0), and the directionality is governed by a control
-word.  The ports are mapped to Triton I/O ports as follows:
 ```
 Triton port FC = 8255 port A (configured bidirectionally)
 Triton port FD = 8255 port B (configured as an output port)

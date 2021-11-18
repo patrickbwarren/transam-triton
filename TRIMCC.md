@@ -25,26 +25,32 @@ needed to run the emulator.
 ### Receiver (`tridat.c`)
 
 Receive RS-232 data from a physically-connected Triton using a serial
-device such `/dev/ttyS0`. Usage is:
+device such `/dev/ttyS0`. Usage is
 ```
-./tridat [-o binary_file] serial_device
+./tridat [-?|-h] [-o binary_file] serial_device
 ```
-The single command line option is `-o <binary_file>` which captures
-the byte stream in a binary file.  Note that you may have to add
-yourself the `dialout` group to use the serial ports.
+The command line options are:
+
+- `-h` or `-?` (help) : print out the help;
+- `-o <binary_file>` : write the byte stream in binary to a file.
+
+Note that you may have to add yourself the `dialout` group to use the
+serial device.
 
 ### Transmitter (`trimcc.c`)
 
 Compile and optionally transmit RS-232 data to Triton through a serial device.  Usage is
 ```
-./trimcc [-h] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file
+./trimcc [-?|-h] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file
 ```
-where the command line options are
-- `-v` (verbose): print the byte stream and variables
-- `-s` (spaced): add a column of spaces after the 7th byte
-- `-p` (pipe): write the byte stream in binary to stdout (obviates -o)
-- `-o <binary_file>`: write the byte stream in binary to a file
-- `-t` (transmit): write the byte stream to a serial device, for example `/dev/ttyS0`
+The command line options are:
+
+- `-h` or `-?` (help) : print out the help;
+- `-v` (verbose) : print the byte stream and variables;
+- `-s` (spaced) : add a column of spaces after the 7th byte;
+- `-p` (pipe) : write the byte stream in binary to `/dev/stdout` (obviates `-o`);
+- `-o <binary_file>` : write the byte stream in binary to a file;
+- `-t` (transmit) : write the byte stream to a serial device, for example `/dev/ttyS0`.
 
 The source file should be specified, for example a `.tri` file.
 
@@ -52,38 +58,44 @@ With the `-t` option this transmits bytes to a physically-connected
 Triton through a serial device such `/dev/ttyS0`.  Alternatively with
 the `-o` option the code can also be used to generate binaries to run
 with the [emulator](EMULATOR.md).  Using `-p` sends the binary to
-`stdout` so for example one can do `./trimcc <srcfile> -p | hexdump
--C` (see also below for an example using the disassembler).  In
+`/dev/stdout` so for example one can do
+```
+./trimcc <srcfile> -p | hexdump -C
+```
+(see also below for another example using the disassembler).  In
 addition the `-v` option lists the compiled code plus the defined
 variables, and the `-s` option adds an extra column of space to the
-listing.  Note that you may have to add yourself the `dialout` group
-to use the serial ports.  This is not necessary if just compiling
+`-v` listing.  Note that you may have to add yourself the `dialout` group
+to use the serial device.  This is not necessary if just compiling
 `.tri` codes with `-o`.
 
 ### Disassembler (`disasm8080.py`)
 
-This is provided for convenience and is a lightly modified version of
-an 8080 disassembler written by Jeff Tranter, available on his [GitHub
+This is provided for convenience and is a simplified version of an 8080
+disassembler written by Jeff Tranter, available on his [GitHub
 site](https://github.com/jefftranter/8080).  The usage is
 ```
-./disasm8080.py [-h] [-n] [-u] [-a ADDRESS] [-s SKIP] [-b] [-f {1,2,3,4}] <binary>
+./disasm8080.py [-h] [-b] [-n] [-a address] [-s skip] filename
 ```
-where `<binary>` is a binary file, or `-` to pipe from stdin.  Command line options are
-- `-h`: print help and exit
-- `-n`: don't list instruction bytes (make output suitable for assembler)
-- `-u`: use uppercase for mnemonics
-- `-a`: specify starting address, for example `-a 0x1602` for a Triton user code
-- `-s`: skip initial bytes, for example to discard the tape header in a tape binary
-- `-b`: interpret data bytes as binary, not as printable ASCII characters
-- `-f`: use number format: 1=$1234 2=1234h 3=1234 4=177777 
+Command line options are:
 
-The combination of formatting options which most closely
-matches the TRAP disassembler for example is `-u -b -f 3`
+- `-h` : print help and exit;
+- `-b` : treat all ASCII characters as binary;
+- `-n` : make output suitable for `trimcc` (don't list instruction addresses or instruction bytes);
+- `-a` : specify starting address, for example `-a 0x1602` for a Triton user code;
+- `-s` : skip initial bytes, for example to discard the tape header in a tape binary;
+
+The required argument is a binary file to disassemble, or `-` to pipe
+from `/dev/stdin` (see example below).  The `-a` and `-s` options can
+take decimal, or hexadecimal values if preceeded by `0x`.
 
 To figure out how many bytes to skip in order to discard the tape header at
 the start of a tape binary, one can investigate the binary using
-`hexdump` (a standard unix/linux utility).  For example, with `hexdump
--C HEX2DEC_TAPE`one gets:
+`hexdump` (a standard unix/linux utility).  For example, with
+```
+hexdump -C HEX2DEC_TAPE
+```
+one gets:
 ```
 00000000  0d 0d 0d 0d 0d 0d 0d 0d  0d 0d 0d 0d 0d 0d 0d 0d  |................|
 *
@@ -97,7 +109,7 @@ From this one can see the tape header ends with the byte sequence `20
 little-endian format as required by the tape header.  Hence the actual
 code from starts at `0x4b`.  To disassemble this therefore one can use:
 ```
-./disasm8080.py -u -b -f 3 -s 0x4b -a 0x1602 HEX2DEC_TAPE
+./disasm8080.py -s 0x4b -a 0x1602 HEX2DEC_TAPE
 ```
 The result is (c.f. `hex2dec.tri` below):
 ```
@@ -148,10 +160,19 @@ using TRAP.
 It's possible to compile code with `trimcc` and pipe it into the
 disassembler, for example with the core code in `fastvdu.tri`:
 ```
-./trimcc fastvdu.tri -p | ./disasm8080.py -u -b -f 3 -
+./trimcc fastvdu.tri -p | ./disasm8080.py -
 ```
 This is particularly simple because there is no tape header to avoid.  User
 ROMs can likewise be disassembled.
+
+Equally, as hinted at above, it's possible to disassemble code with
+the disassembler, with the `-n` option, and pass it to `trimcc`, for example
+```
+./disasm8080.py -b -n -a 0x400 FASTVDU_ROM > code.tri
+./trimcc -v -s code.tri | head -15
+```
+(`head -15` truncates the listing so that the remaining addresses
+all filled with `FF` aren't shown).
 
 ### TriMCC minilanguage
 
@@ -451,8 +472,16 @@ Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
 
 The 8080 disassembler `disasm8080.py` is released under an Apache
 License, Version 2.0 and is copyright &copy; 2013-2015 by Jeff Tranter
-<tranter@pobox.com>, with minor modifications copyright &copy; 2021
+<tranter@pobox.com>, with modifications copyright &copy; 2021
 Patrick B Warren <patrickbwarren@gmail.com>.
+
+The original copyright on the fast VDU code is unknown but it may
+belong to Gerald Sommariva, from whose [web
+site](https://sites.google.com/view/transam-triton/downloads) the
+`FASTVDU.ED82` user ROM was downloaded which forms the basis of the
+current code.  Modifications to this original code are copyright (c)
+2021 Patrick B Warren <patrickbwarren@gmail.com> and are released into
+the public domain.
 
 The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a
 hex dump in Computing Today (March 1980; page 32).  Copyright &copy; is

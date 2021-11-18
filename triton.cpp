@@ -454,8 +454,8 @@ int main(int argc, char** argv) {
     case 'z': eprom.file = optarg; break;
     case 'h': case '?':
       printf("SFML-based Triton emulator\n");
-      printf("%s -m <mem_top> -t <tape_file> -u <user_rom(s)> -z <user_eprom> -h -?\n", argv[0]);
-      printf("-h or -? (help): print this help\n");
+      printf("usage: %s [-h|-?] [-m mem_top] [-t tape_file] [-u user_rom(s)] [-z user_eprom]\n", argv[0]);
+      printf("-h or -? (help) : print this help\n");
       printf("-m sets the top of memory, for example -m 0x4000, defaults to 0x2000\n");
       printf("-t specifies a tape binary, eg -t TAPE\n");
       printf("-u installs user ROM(s); to install two ROMS separate the filenames by a comma\n");
@@ -589,10 +589,10 @@ int main(int argc, char** argv) {
 	    break;
 	  case sf::Keyboard::F4: // Toggle emulator pause
 	    pause = !pause;
-	    if (pause) fprintf(stderr, "Emulation paused - press F5 to resume, or F9 to exit\n");
+	    if (pause) fprintf(stderr, "Emulation paused - press F4 to resume, or F9 to exit\n");
 	    else fprintf(stderr, "Emulation resumed\n");
 	    break;
-	  case sf::Keyboard::F5: // Write status
+	  case sf::Keyboard::F5: // Write status of 8080
 	    WriteStatus8080(stderr, &state); fprintf(stderr, "\n");
 	    break;
 	  case sf::Keyboard::F6: // UV erase EPROM
