@@ -273,13 +273,7 @@ not arise however this failure mode resulting in a `READ ERROR` can be
 simulated using function F8.  Conversely, since it is possible to load
 an _existing_ EPROM with arbitary bit pattern, the failure mode where
 bits which should be programmed to be '1' but are actually '0' can
-more easily arise and results in a `PROGRAM ERROR`.  It can be forced
-by loading a pre-made EPROM with all bits zet to '0', using a
-command line incantation similar to that mentioned already:
-```
-dd if=/dev/zero bs=1024 count=1 > blank_rom_all_zeros
-./triton -z blank_rom_all_zeros 
-```
+more easily arise and results in a `PROGRAM ERROR`.
 
 The following function keys are available to simulate the physical hardware:
 
@@ -495,11 +489,18 @@ A | M == A ?    t  f  t  t
 ```
 Thus we see `A | M == A` returns false only if the bit in memory is
 '1' and the corresponding bit in the EPROM is '0'.  This would
-correspond to an improperly erased bit in the EPROM. When applied to the
-A and M registers, this tests all 8 bits in parallel, and if the
+correspond to an improperly erased bit in the EPROM. When applied to
+the A and M registers, this tests all 8 bits in parallel, and if the
 result of the final comparison is non-zero then at least one of these
 bits failed (in the 8080, the truth of a comparison test is
-represented by '0' for true and '1' for false).
+represented by '0' for true and '1' for false).  This results in a
+`PROGRAM ERROR`.  The situation can be simulated by creating and loading an EPROM
+with all bits zet to '0', using a command line incantation similar to
+that mentioned already, thus for example:
+```
+dd if=/dev/zero bs=1024 count=1 > blank_rom_all_zeros
+./triton -z blank_rom_all_zeros 
+```
 
 The test for whether the programming step is complete is performed by
 reading the upper 4 bits from port C into the accumulator at `0F39`,
