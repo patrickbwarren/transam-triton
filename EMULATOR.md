@@ -253,9 +253,10 @@ starts from `0104`:
 0136  C1        POP     B       # recover BC from safe keeping
 ```
 The standard VDU output follows from this point at `0137`, starting
-with a `POP PSW` to recover the character to be printed into A.  The
-above main code is complemented by a timer delay routine that sets the
-baud rate (A is lost):
+with a `POP PSW` to recover the character to be printed into A.
+
+The above main code is complemented by a timer delay routine that sets
+the baud rate (A is lost):
 ```
 01B3  E5        PUSH    H       # stash HL for safe keeping
 01B4  2A 02 14  LHLD    1402    # fetch the delay value into HL from 1402
@@ -406,21 +407,21 @@ bit 3 bit 2 (port C = Triton port FE)         logic test
 The logic test is exactly as implemented in the emulator.  In summary:
 
 - to _fetch_ data from the EPROM, write `0x98` to Triton port `FF`
-  (8255 control word), write the least significant 8 bits of the
-  required address to Triton port `FD` (8255 port B), logical OR the
+  (control word), write the least significant 8 bits of the
+  required address to Triton port `FD` (port B), logical OR the
   most significant two bits of the address with `0x04` (chip select
-  enabled) and write these 4 bits to Triton port `FE` (8255 port C),
-  then read the data from Triton port `FC` (8255 port A);
+  enabled) and write these 4 bits to Triton port `FE` (port C),
+  then read the data from Triton port `FC` (port A);
 
-- to _program_ the EPROM, write `0x88` (8255 control word), write the
-  data to Triton port `FC` (8255 port A), write the least significant
-  8 bits of the required address to Triton port `FD` (8255 port B),
+- to _program_ the EPROM, write `0x88` (control word), write the
+  data to Triton port `FC` (port A), write the least significant
+  8 bits of the required address to Triton port `FD` (port B),
   logical OR the most significant two bits of the address with `0x08`,
-  and write these 4 bits to Triton port `FE` (8255 port C) to initiate
+  and write these 4 bits to Triton port `FE` (port C) to initiate
   programming pulse;
 
 - to _test_ whether the programming pulse has completed read the top 4
-  bits of Triton port `FE` (8255 port C) and test if bit 7 is set to
+  bits of Triton port `FE` (port C) and test if bit 7 is set to
   '0'.
 
 In the emulator, as mentioned, the 1 ms is not emulated so that after
