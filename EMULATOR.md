@@ -484,12 +484,11 @@ To accompany this is a short subroutine with entry points at `0F5F` and `0F63`:
 0F6F  DB FC     IN      FC      # input from 8255 port A (data acquired only if control word is 0x98)
 0F71  C9        RET             # return
 ```
-#### Notes
-
-The subroutine at `0F5F` doubles up to perform _two_ functions
-depending on the entry point.  There are two port A (Triton port `FC`)
-operations in this subroutine, but only one or the other of them is
-actually useful, depending on the function call.
+Examining this, first note that the subroutine at `0F5F` doubles up to
+perform _two_ functions depending on the entry point.  There are two
+port A (Triton port `FC`) operations in this subroutine, but only one
+or the other of them is actually useful, depending on the function
+call.
 
 If called at `0F5F` the subroutine _reads_ data from the EPROM: it
 sets the 8255 control word to `0x98` so that the 8255 port A direction
