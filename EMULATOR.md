@@ -222,9 +222,9 @@ printer_output.txt`.
 The relevant part of the monitor firmware that deals with printing
 starts from `0104`:
 ```
-0104  3A 01 14  LDA     1401    # load printer control byte from 0x1401
+0104  3A 01 14  LDA     1401    # load printer control byte from 1401
 0107  FE 55     CPI     55      # check if printing is switched on
-0109  C2 37 01  JNZ     0137    # if not, vector to VDU output at 0x0137
+0109  C2 37 01  JNZ     0137    # if not, vector to VDU output at 0137
 010C  F1        POP     PSW     # pop character to be printed in A off stack
 010D  F5        PUSH    PSW     # and push it back again for VDU output routine
 010E  F3        DI              # disable interrupts when printing
@@ -252,10 +252,13 @@ starts from `0104`:
 0135  FB        EI              # enable interrupts again
 0136  C1        POP     B       # recover BC from safe keeping
 ```
-This is complemented by the timer delay routine that sets the baud rate (A is lost)
+The standard VDU output follows from this point at `0137`, starting
+with a `POP PSW` to recover the character to be printed into A.  The
+above main code is complemented by a timer delay routine that sets the
+baud rate (A is lost):
 ```
 01B3  E5        PUSH    H       # stash HL for safe keeping
-01B4  2A 02 14  LHLD    1402    # fetch the delay value into HL from 0x1402
+01B4  2A 02 14  LHLD    1402    # fetch the delay value into HL from 1402
 01B7  2B        DCX     H       #   decrement HL
 01B8  7D        MOV     A,L     #   move low byte into A
 01B9  B4        ORA     H       #   logical OR with high byte
@@ -263,21 +266,17 @@ This is complemented by the timer delay routine that sets the baud rate (A is lo
 01BD  E1        POP     H       # recover HL from safe keeping
 01BE  C9        RET             # return - end of delay routine
 ```
-The standard VDU output follows from `0137` in the main routine,
-starting with a `POP PSW` to recover the character to be printed into
-A.
-
-A close examination now shows just what is happening with the serial printer
-output, which turns out to be not quite as stated as in the
+A close examination now shows just what is happening with the serial
+printer output, which turns out to be not quite as stated as in the
 documentation.  There is a start bit (port 6 bit 7 high), followed by
 seven (7) data bits containing the 7-bit ASCII character code, a fake
 parity bit (port 6 bit 7 high again), then two stop bits (port 6 bit 7
-low).  For carriage return the output is left low for an additional
-delay equivalent to 30 bits.  The two stop bits are handled in
-software by doubling the delay since there is no need to write out two
-successive `00` bytes to port 6 (this has the potential to fool an
-emulation which is tracking port writes!).  Also port 6 is initialised
-to `00` during startup (monitor code at `007D` not shown).
+low).  For carriage return the output is left low for an _additional_
+delay equivalent to 30 bits (the bit counter is set to `0x20` = 32
+decimal, rather than `0x02`).  The stop bits are handled in software
+by increasing the delay rather than writing successive `00` bytes to
+port 6.  Also port 6 is initialised to `00` during startup (monitor
+code at `007D` not shown).
 
 The test for carriage return is made at `0124` in the main routine
 where the accumulator is compared to `0x79`.  This is what the
