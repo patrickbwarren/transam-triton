@@ -413,16 +413,16 @@ The logic test is exactly as implemented in the emulator.  In summary:
   enabled) and write these 4 bits to Triton port `FE` (port C),
   then read the data from Triton port `FC` (port A);
 
-- to _program_ the EPROM, write `0x88` (control word), write the
-  data to Triton port `FC` (port A), write the least significant
-  8 bits of the required address to Triton port `FD` (port B),
-  logical OR the most significant two bits of the address with `0x08`,
-  and write these 4 bits to Triton port `FE` (port C) to initiate
-  programming pulse;
+- to _program_ the EPROM, write `0x88` to Triton port `FF` (control
+  word), write the data to Triton port `FC` (port A), write the least
+  significant 8 bits of the required address to Triton port `FD` (port
+  B), logical OR the most significant two bits of the address with
+  `0x08`, and write these 4 bits to Triton port `FE` (port C) to
+  initiate programming pulse;
 
-- to _test_ whether the programming pulse has completed read the top 4
-  bits of Triton port `FE` (port C) and test if bit 7 is set to
-  '0'.
+- to _test_ whether the programming pulse is completed, read the top 4
+  bits of Triton port `FE` (port C); the programming pulse is
+  completed if bit 7 is set to '0'.
 
 In the emulator, as mentioned, the 1 ms is not emulated so that after
 initiating the programming pulse the bit 7 of port C is _immediately_
