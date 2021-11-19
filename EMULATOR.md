@@ -511,7 +511,7 @@ the accumulator returns garbage (in the emulator, this is represented
 by `0xff`).  This returned value is unused however (discarded) in the
 main code.
 
-Note that this subroutine is called _three_ times in the main code,
+This subroutine is called _three_ times in the main code,
 with the entry point at `0F5F` being used twice to read data from the
 EPROM, and the entry point at `0F63` being used once to write data to
 the EPROM.  Thus to save space it makes sense to have the instructions
