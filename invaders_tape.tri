@@ -102,9 +102,9 @@ ORG=1600
 
 # Revised code copies 1C00-1FFF to 1000-13FF.
 
-# Entry point is 17A5 not 17A6 as in the original.
+# Entry point is 17A5 not 17A6 as in the original.  This can be
+# verified by examining the value of COPY with the -v option.
 
-NOP>17A5
 COPY: LXI D 1C00; LXI H 1000;
 LOOP: LDAX D; MOV M,A; INX D; INX H; MVI A 14; CMP H; JNZ !LOOP;
 RET;
@@ -114,10 +114,10 @@ RET;
 # The 'cheat' here is to use the 20 (ASCII SPACE) stored in the
 # accumulator both to poke into memory and to compare H with.
 # Note the repeat use of the LOOP variable.
-# Entry point is 17B6 as in the original.
+# Entry point is 17B6 as in the original.  This can be verified by
+# examining the value of FILL with the -v option.
 
-NOP>17B6 FILL: 
-LXI H 1C40; MVI A ' ';
+FILL: LXI H 1C40; MVI A ' ';
 LOOP: MOV M, A; INX H; CMP H; JNZ !LOOP;
 RET;
 
@@ -219,5 +219,3 @@ NOP>1900 # Pad to restart at 1900.
 
 "     LASER BASE  3                 YOUR SCORE  190"
 ' '>1C40 # Pad to 1C40 with ASCII spaces.
-
-
