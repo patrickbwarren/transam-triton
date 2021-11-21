@@ -359,10 +359,10 @@ peripheral interface (PPI) chip, directly interfaced to a [2708
 EPROM](https://en.wikipedia.org/wiki/EPROM) which provides 1k of
 memory configured as 1024 addresses (10-bits) of an 8-bit wide data
 bus.  Some auxiliary logic and discrete electronics implements a 20 V
-programming pulse of 1 ms duration, per write cycle (the 1 ms delay
-was omitted in the emulation).  The details of the EPROM programmer
-emulation are a little complicated although only the bare minimum
-functionality of the [Intel
+programming pulse of 1 ms duration, per write cycle (this 1 ms
+hardware delay was omitted in the emulation).  The details of the
+EPROM programmer emulation are a little complicated although only the
+bare minimum functionality of the [Intel
 8255](https://en.wikipedia.org/wiki/Intel_8255) has been emulated.
 For completeness these details are given here.  The original
 description of the hardware and how it functions features in
@@ -432,10 +432,8 @@ initiating the programming pulse the bit 7 of port C is _immediately_
 set to 0.
 
 For completeness, the L7.2 monitor code that implements the 'Z'
-function is described next.  Despite some apparent inefficiencies, it
-is perhaps the most compact and elegant 8080 machine code that I have
-ever seen.  For an analysis, see notes below.  The entry point from
-the function prompt is at address `0F1C`:
+function is described next.  The entry point from the function prompt
+is at address `0F1C`:
 ```
 0F1C  CD 08 02  CALL    0208    # prompt for start address, return in HL
 0F1F  0E 64     MVI     C,64    # number of write cycles is 0x64 = 100 decimal
@@ -481,8 +479,8 @@ To accompany this is a short subroutine with entry points at `0F5F` and `0F63`:
 0F66  D3 FD     OUT     FD      # write to 8255 port B
 0F68  7E        MOV     A,M     # get data from main memory location in HL
 0F69  D3 FC     OUT     FC      # write to 8255 port A (no effect unless control word is 0x88)
-0F6B  7A        MOV     A,D     # copy high byte of EPROM address in DE (only lowest two bits are used)
-0F6C  B0        ORA     B       # set bits 2 and 3 to control 2708
+0F6B  7A        MOV     A,D     # copy high bits of EPROM address from DE (only lowest two bits are used)
+0F6C  B0        ORA     B       # set bits 2 and 3 for the 2708 chip select or program pulse
 0F6D  D3 FE     OUT     FE      # write to 8255 port C (affects lower 4 bits only)
 0F6F  DB FC     IN      FC      # read from 8255 port A (data acquired only if control word is 0x98)
 0F71  C9        RET             # return
