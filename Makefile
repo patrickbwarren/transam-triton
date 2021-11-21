@@ -60,8 +60,6 @@ clean :
 	rm -f $(OBJS)
 
 pristine: clean
-	rm -f *~
-	rm -f triton tridat trimcc
-
-rom-clean: 
 	rm -f *_ROM
+	rm -f *_TAPE TAPE
+	rm -f triton tridat trimcc

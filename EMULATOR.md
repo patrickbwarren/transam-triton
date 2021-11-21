@@ -268,8 +268,7 @@ the baud rate (A is lost):
 01BE  C9        RET             # return - end of delay routine
 ```
 A close examination now shows just what is happening with the serial
-printer output, which turns out to be not quite as stated as in the
-documentation.  There is a start bit (port 6 bit 7 high), followed by
+printer output.  There is a start bit (port 6 bit 7 high), followed by
 seven (7) data bits containing the 7-bit ASCII character code, a fake
 parity bit (port 6 bit 7 high again), then two stop bits (port 6 bit 7
 low).  For carriage return the output is left low for an _additional_
@@ -326,7 +325,7 @@ not arise however this failure mode resulting in a `READ ERROR` can be
 simulated using function F8.  Conversely, since it is possible to load
 an _existing_ EPROM with arbitary bit pattern, the failure mode where
 bits which should be programmed to be '1' but are actually '0' can
-more easily arise and results in a `PROGRAM ERROR`.
+be more easily created and results in a `PROGRAM ERROR`.
 
 The following function keys are available to simulate the physical hardware:
 
@@ -357,13 +356,14 @@ peripheral interface (PPI) chip, directly interfaced to a [2708
 EPROM](https://en.wikipedia.org/wiki/EPROM) which provides 1k of
 memory configured as 1024 addresses (10-bits) of an 8-bit wide data
 bus.  Some auxiliary logic and discrete electronics implements a 20 V
-programming pulse of 1 ms duration, per write cycle.  The details of
-the EPROM programmer emulation are a little complicated although only
-the bare minimum functionality of the [Intel
-8255](https://en.wikipedia.org/wiki/Intel_8255) has been emulated (the
-1 ms delay was omitted for example).  For completeness these details
-are given here.  The original description of the hardware and how it
-functions features in [Electronics Today
+programming pulse of 1 ms duration, per write cycle (the 1 ms delay
+was omitted in the emulation).  The details of the EPROM programmer
+emulation are a little complicated although only the bare minimum
+functionality of the [Intel
+8255](https://en.wikipedia.org/wiki/Intel_8255) has been emulated.
+For completeness these details are given here.  The original
+description of the hardware and how it functions features in
+[Electronics Today
 International](https://en.wikipedia.org/wiki/Electronics_Today_International)
 (ETI) Jan 1980 p42-45, and the relevant issue can be found
 [here](https://worldradiohistory.com/ETI_Magazine.htm) (the article
@@ -437,58 +437,55 @@ the function prompt is at address `0F1C`:
 0F1C  CD 08 02  CALL    0208    # prompt for start address, return in HL
 0F1F  0E 64     MVI     C,64    # number of write cycles is 0x64 = 100 decimal
 0F21  11 00 04  LXI     D,0400  # load DE with 0x0400 = 1024 bytes (EPROM capacity)
-0F24  E5        PUSH    H       # push HL (start address) onto stack
-0F25  D5        PUSH    D       # push DE = 0x400 onto stack
-0F26  11 00 00  LXI     D,0000  # load DE with start address of EPROM = 0x0000
-0F29  CD 5F 0F  CALL    0F5F    # call to read byte from EPROM into A
-0F2C  47        MOV     B,A     # copy A into B
-0F2D  B6        ORA     M       # or A with memory at HL
-0F2E  B8        CMP     B       # test for zero bits; ie does A | M == A ?
-0F2F  C2 72 0F  JNZ     0F72    # if so, print 'PROGRAM ERROR' and abort to function prompt
-0F32  3E 88     MVI     A,88    # set up for write cycle - control word to 0x88
-0F34  06 08     MVI     B,08    # bits 2 and 3 of port C will be 1 and 0 respectively
-0F36  CD 63 0F  CALL    0F63    # call to write byte in A to EPROM
-0F39  DB FE     IN      FE      # fetch upper 4 bits from 8255 port C
-0F3B  A7        ANA     A       # set sign flag = bit 7 of A (program pulse)
-0F3C  FA 39 0F  JM      0F39    # loop back if sign flag set (program pulse not finished)
-0F3F  79        MOV     A,C     # copy number of remaining write cycles in C into A
-0F40  FE 01     CPI     01      # are we at the final write cycle?
-0F42  C2 4C 0F  JNZ     0F4C    # if not, skip the read test
-0F45  CD 5F 0F  CALL    0F5F    # otherwise, call to read byte from EPROM into A
-0F48  BE        CMP     M       # does it match what's in memory?
-0F49  C2 7B 0E  JNZ     0E7B    # if not, print 'READ ERROR' and abort to function prompt
-0F4C  23        INX     H       # increment HL (memory address)
-0F4D  13        INX     D       # increment DE (EPROM address)
-0F4E  E3        XTHL            # exchange stack with HL; HL now contains 0x400
-0F4F  CD BF 00  CALL    00BF    # compare HL with DE, ie does DE = 0x400?
-0F52  E3        XTHL            # exchange stack with HL, recovering memory address
-0F53  C2 29 0F  JNZ     0F29    # if DE is not yet 0x400, loop back for next byte
-0F56  D1        POP     D       # pop DE off stack (the value here is 0x400)
-0F57  E1        POP     H       # pop HL off stack (the start address again)
-0F58  0D        DCR     C       # decrement write cycle count
-0F59  C2 24 0F  JNZ     0F24    # if not zero, loop back for another cycle
+0F24  E5        PUSH    H       #   push HL (start address) onto stack
+0F25  D5        PUSH    D       #   push DE = 0x400 onto stack
+0F26  11 00 00  LXI     D,0000  #   load DE with start address of EPROM = 0x0000
+0F29  CD 5F 0F  CALL    0F5F    #     call to read byte from EPROM (DE) into A
+0F2C  47        MOV     B,A     #     copy A into B
+0F2D  B6        ORA     M       #     or A with memory at HL
+0F2E  B8        CMP     B       #     test for zero bits; ie does A | M == A ?
+0F2F  C2 72 0F  JNZ     0F72    #     if so, print 'PROGRAM ERROR' and abort to function prompt
+0F32  3E 88     MVI     A,88    #     set up for write cycle - control word to 0x88
+0F34  06 08     MVI     B,08    #     bits 2 and 3 of port C will be 1 and 0 respectively
+0F36  CD 63 0F  CALL    0F63    #     call to write byte from memory (HL) into EPROM (DE)
+0F39  DB FE     IN      FE      #       read upper 4 bits from 8255 port C
+0F3B  A7        ANA     A       #       set sign flag = bit 7 of A (program pulse)
+0F3C  FA 39 0F  JM      0F39    #     loop back if sign flag set (program pulse not finished)
+0F3F  79        MOV     A,C     #     copy number of remaining write cycles in C into A
+0F40  FE 01     CPI     01      #     are we at the final write cycle?
+0F42  C2 4C 0F  JNZ     0F4C    #     if not, skip the read test
+0F45  CD 5F 0F  CALL    0F5F    #       otherwise, call to read byte from EPROM (DE) into A
+0F48  BE        CMP     M       #       does it match what's in memory (HL)?
+0F49  C2 7B 0E  JNZ     0E7B    #       if not, print 'READ ERROR' and abort to function prompt
+0F4C  23        INX     H       #     increment HL (memory address)
+0F4D  13        INX     D       #     increment DE (EPROM address)
+0F4E  E3        XTHL            #     exchange stack with HL; HL now contains 0x400
+0F4F  CD BF 00  CALL    00BF    #     compare HL with DE, ie does DE = 0x400?
+0F52  E3        XTHL            #     exchange stack with HL, recovering memory address
+0F53  C2 29 0F  JNZ     0F29    #   if DE is not yet 0x400, loop back for next byte
+0F56  D1        POP     D       #   pop DE off stack (the value here is 0x400)
+0F57  E1        POP     H       #   pop HL off stack (the start address again)
+0F58  0D        DCR     C       #   decrement write cycle count
+0F59  C2 24 0F  JNZ     0F24    # if not zero, loop back for another write cycle
 0F5C  C3 3D 03  JMP     033D    # print 'END' and return to function prompt
 ```
 To accompany this is a short subroutine with entry points at `0F5F` and `0F63`:
 ```
 0F5F  3E 98     MVI     A,98    # 8255 control word will be set to 0x98
 0F61  06 04     MVI     B,04    # bits 2 and 3 of port C will be 0 and 1 respectively
-0F63  D3 FF     OUT     FF      # output control word to 8255 (second entry point)
+0F63  D3 FF     OUT     FF      # write control word to 8255 (second entry point)
 0F65  7B        MOV     A,E     # copy low byte of EPROM address in DE
-0F66  D3 FD     OUT     FD      # output to 8255 port B
+0F66  D3 FD     OUT     FD      # write to 8255 port B
 0F68  7E        MOV     A,M     # get data from main memory location in HL
-0F69  D3 FC     OUT     FC      # output to 8255 port A (no effect unless control word is 0x88)
+0F69  D3 FC     OUT     FC      # write to 8255 port A (no effect unless control word is 0x88)
 0F6B  7A        MOV     A,D     # copy high byte of EPROM address in DE (only lowest two bits are used)
 0F6C  B0        ORA     B       # set bits 2 and 3 to control 2708
-0F6D  D3 FE     OUT     FE      # output to 8255 port C (affects lower 4 bits only)
-0F6F  DB FC     IN      FC      # input from 8255 port A (data acquired only if control word is 0x98)
+0F6D  D3 FE     OUT     FE      # write to 8255 port C (affects lower 4 bits only)
+0F6F  DB FC     IN      FC      # read from 8255 port A (data acquired only if control word is 0x98)
 0F71  C9        RET             # return
 ```
 Examining this, first note that the subroutine at `0F5F` doubles up to
-perform _two_ functions depending on the entry point.  There are two
-port A (Triton port `FC`) operations in this subroutine, but only one
-or the other of them is actually useful, depending on the function
-call.
+perform _two_ functions depending on the entry point.
 
 If called at `0F5F` the subroutine _reads_ data from the EPROM: it
 sets the 8255 control word to `0x98` so that the 8255 port A direction
@@ -549,9 +546,11 @@ the A and M registers, this tests all 8 bits in parallel, and if the
 result of the final comparison is non-zero then at least one of these
 bits failed (in the 8080, the truth of a comparison test is
 represented by '0' for true and '1' for false).  This results in a
-`PROGRAM ERROR`.  The situation can be simulated by creating and loading an EPROM
-with all bits zet to '0', using a command line incantation similar to
-that mentioned already, thus for example:
+`PROGRAM ERROR`.  The situation can be simulated by attempting to
+write to an EPROM with all bits zet to '0'. This can be created either
+using 'Z' in the Triton emulation writing from `0x1600` having filled all
+the memory locations with `0x00`, or outside the emulation using a
+command line incantation similar to that mentioned already:
 ```
 dd if=/dev/zero bs=1024 count=1 > blank_rom_all_zeros
 ./triton -z blank_rom_all_zeros
