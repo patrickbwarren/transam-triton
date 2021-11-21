@@ -1,262 +1,223 @@
-###
-This file is part of my Transam Triton code repository.
+# This file is part of my Transam Triton code repository.
 
-This is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+# Space Invaders clone - runs with Triton L7.2 monitor.
 
-This is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
+# Modified from a hex dump in Computing Today (March 1980; page 32).
+# Copyright (c) is claimed in the magazine (page 3) but the copyright
+# holder is not identified.  No license terms were given and the code
+# is hereby presumed to be reproducible and modifiable under the
+# equivalent of a modern open source license.  The changes listed below
+# are copyright &copy; 2021 Patrick B Warren, and are hereby released
+# into the public domain.
 
-Copyright (c) 2021 Patrick B Warren <patrickbwarren@gmail.com>.
+# A later Computing Today (May 1980; page 9) contains a news erratum
+# entitled 'Begging Your Pardon' but just to say the printed hex dump is
+# for a Level 5.2 Triton.
 
-You should have received a copy of the GNU General Public License
-along with this file.  If not, see <http://www.gnu.org/licenses/>.
-###
+# Control keys (see below) are '1' and '3' for left and right, and
 
-# Standard tape header #
+# Currently if a complete set of invaders is wiped out, another fleet
+# doesn't appear - this seems to be a bug.
+
+# Summary of changes from original.
+
+# 18B6: changed CD BC 00 to CD 4A 01 (L7.2 'DLY');
+# 1A20: changed CD E3 00 to CD D4 00 (L7.2 'CLRSCN');
+# 1C32: changed 00 to 20 (ASCII space) - spurious;
+# 1C40: with 20 (ASCII space) - redundant and therefore dropped.
+
+# Monitor routines : (undocumented) L7.2 replacements as above
+
+# 00BC DLY    (3ms delay)    in L5.2  <-->  014A in L7.2
+# 00E3 CLRSCN (clear screen) in L5.2  <-->  00D4 in L7.2
+
+# Originally the code relied on testing for an 0xFF byte to determine
+# the memory top, and *assumed* this was at 0x2000 to correspond to
+# the main-board RAM on a standard Triton.  This obviously fails if
+# there is a larger memory (for example an additional 8k RAM card, or
+# emulated).  This peculiarity has been fixed, with 17A5 to 17C4 being
+# rewritten to stop at memory location 0x1FFF. This necessitated changing
+# the entry point for one of the routines from 17A6 to 17A5 at the
+# following locations: 1649, 16EB, 1E38, 1A8B, 1BAE.
+
+# The code segment 18D2-18FF was re-written to streamline the
+# keyboard interface and make it easier to change the controls
+# Following this, the location of the frame size variable was
+# changed from 18E0 to 18F0, necessitating changes at the following
+# locations: 1874, 18A9, 19C0, 19DD, 1B1C, 1B24, 1B57.
+
+# According to the Computing Today (March 1980) article,
+# the following variables are used
+
+# 17CE  Laser number
+# 17CF  Number of Invaders left
+# 17D0  Display loop number
+# 17D1  Displacement of Invaders
+# 17D3  Move direction
+# 17D4  Invader fire in progress
+# 17D5  Keyboard byte
+# 17D6  Laser fire in progress
+# 17D8  Laser fire address
+# 17DB  Invader fire address
+# 17DD  Displacement of new frame
+# 18F0  Size of frame (changed here, was originally 18E0)
+# 1842  Last Invader to fire
+
+FRAME=18F0 # defined for later use
+
+# Standard tape header.
+
 64*0D "INVADERS" 20 04
 
-# Space Invaders clone - runs with Triton L7.2 monitor. #
+ORG=1600
 
-# Modified from a hex dump in Computing Today (March 1980; page 32). #
-# Copyright (c) is claimed in the magazine (page 3) but the copyright #
-# holder is not identified.  No license terms were given and the code #
-# is hereby presumed to be reproducible and modifiable under the #
-# equivalent of a modern open source license.  The changes listed below #
-# are copyright &copy; 2021 Patrick B Warren, and are hereby released #
-# into the public domain. #
+#1600#  40 1C CD C0 1A 36 03 23  36 36 23 36 36 23 36 48
+#1610#  23 36 00 23 36 01 23 36  00 21 D6 17 3E 00 77 23
+#1620#  77 23 77 23 77 23 77 23  77 2A 01 17 22 DD 17 00
+#1630#  21 03 17 36 80 CD 20 1A  00 00 00 00 00 00 00 00
+#1640#  CD E0 17 CD 43 1B CD D2  18 CD A5 17 CD A0 16 CD
+#1650#  C4 17 C3 40 16 21 CE 17  7E 3D 77 00 CA E1 1A CD
+#1660#  D9 1A CD B6 18 CD 61 1A  CD 56 17 C9 2A DD 17 7D
+#1670#  C6 80 D2 76 16 24 6F CD  D0 19 22 DD 17 21 CF 17
+#1680#  36 36 23 36 36 33 33 21  D2 17 C3 13 16 CD 72 1A
+#1690#  C3 40 16 FE 7A C2 9A 16  36 7F FE 7F C0 36 20 C9
+#16A0#  21 D4 17 7E FE 01 C0 2A  DB 17 3E 20 77 7D C6 40
+#16B0#  D2 B4 16 24 6F 7C FE 1F  C2 C1 16 7D FE C0 D2 D5
+#16C0#  16 7E FE 20 C2 CD 16 36  1F 22 DB 17 C9 CD 93 16
+#16D0#  C3 F1 16 00 00 7E FE 20  CA F1 16 2B 2B 36 42 23
+#16E0#  36 4C 23 36 41 23 36 4D  23 36 21 CD A5 17 C3 F7
+#16F0#  16 21 D4 17 36 00 C9 21  D4 17 36 00 C3 55 16 00
 
-# A later Computing Today (May 1980; page 9) contains a news erratum #
-# entitled 'Begging Your Pardon' but just to say the printed hex dump is #
-# for a Level 5.2 Triton. #
+#1700#  06 03 21 C0 14 E5 11 C0  1B 0E 40 1A 77 23 13 0D
+#1710#  C2 0B 17 3E 80 E1 85 D2  1B 17 24 6F 05 C2 05 17
+#1720#  3A 03 17 FE C0 CA 39 17  21 C0 1B 01 40 00 CD 3A
+#1730#  17 21 03 17 36 C0 C3 00  17 C9 23 0B 78 B1 C8 7E
+#1740#  FE 71 C2 4B 17 36 72 00  C3 3A 17 FE 72 C2 00 1A
+#1750#  36 71 00 C3 3A 17 21 C1  1F 3E 09 77 23 3E 18 77
+#1760#  23 3E 08 77 00 C9 21 0C  1F 3E 7A 77 23 77 23 77
+#1770#  21 1D 1F 77 23 77 23 77  21 2F 1F 77 23 77 23 77
+#1780#  21 4C 1F 77 23 77 23 77  21 5D 1F 77 23 77 23 77
+#1790#  21 6F 1F 77 23 77 23 77  C9 77 23 77 C9 AF 1F 77
+#17A0#  23 77 23 77 C9 
 
-# Control keys (see below) are '1' and '3' for left and right, and #
-# 'SPACE' for fire. At the end of a game press 'G' to start a new game. #
+# Revised code copies 1C00-1FFF to 1000-13FF.
 
-# Currently if a complete set of invaders is wiped out, another fleet #
-# doesn't appear - this seems to be a bug. #
+# Entry point is 17A5 not 17A6 as in the original.
 
-# Summary of changes from original. #
-
-# 18B6: changed CD BC 00 to CD 4A 01 (L7.2 'DLY'); #
-# 1A20: changed CD E3 00 to CD D4 00 (L7.2 'CLRSCN'); #
-# 1C32: changed 00 to 20 (ASCII space) - spurious; #
-# 1C40: with 20 (ASCII space) - redundant and therefore dropped. #
-
-# Monitor routines : (undocumented) L7.2 replacements as above #
-
-# 00BC DLY    (3ms delay)    in L5.2  <-->  014A in L7.2 #
-# 00E3 CLRSCN (clear screen) in L5.2  <-->  00D4 in L7.2 #
-
-# Originally the code relied on testing for an 0xFF byte to determine #
-# the memory top, and *assumed* this was at 0x2000 to correspond to #
-# the main-board RAM on a standard Triton.  This obviously fails if #
-# there is a larger memory (for example an additional 8k RAM card, or #
-# emulated).  This peculiarity has been fixed, with 17A5 to 17C4 being #
-# rewritten to stop at memory location 0x1FFF. This necessitated changing #
-# the entry point for one of the routines from 17A6 to 17A5 at the #
-# following locations: 1649, 16EB, 1E38, 1A8B, 1BAE. #
-
-# The code segment 18D2-18FF was re-written to streamline the #
-# keyboard interface and make it easier to change the controls #
-# Following this, the location of the frame size variable was #
-# changed from 18E0 to 18F0, necessitating changes at the following #
-# locations: 1874, 18A9, 19C0, 19DD, 1B1C, 1B24, 1B57. #
-
-# According to the Computing Today (March 1980) article, #
-# the following variables are used #
-
-# 17CE  Laser number #
-# 17CF  Number of Invaders left #
-# 17D0  Display loop number #
-# 17D1  Displacement of Invaders #
-# 17D3  Move direction #
-# 17D4  Invader fire in progress #
-# 17D5  Keyboard byte #
-# 17D6  Laser fire in progress #
-# 17D8  Laser fire address #
-# 17DB  Invader fire address #
-# 17DD  Displacement of new frame #
-# 18F0  Size of frame (changed here, was originally 18E0) #
-# 1842  Last Invader to fire #
-
-FRAME=18F0
-
-# The space 1C00-1FFF is apparently a work area for constructing #
-# the 64x16 VDU display at 1000-13FF.  The top line of the display #
-# at 1C00-1C3F is hard-coded below. #
-
-ORG=1600 # Start of code #
-
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-# 1600 # 40 1C CD C0 1A 36 03 23 36 36 23 36 36 23 36 48
-# 1610 # 23 36 00 23 36 01 23 36 00 21 D6 17 3E 00 77 23
-# 1620 # 77 23 77 23 77 23 77 23 77 2A 01 17 22 DD 17 00
-# 1630 # 21 03 17 36 80 CD 20 1A 00 00 00 00 00 00 00 00
-# 1640 # CD E0 17 CD 43 1B CD D2 18 CD A5 17 CD A0 16 CD
-# 1650 # C4 17 C3 40 16 21 CE 17 7E 3D 77 00 CA E1 1A CD
-# 1660 # D9 1A CD B6 18 CD 61 1A CD 56 17 C9 2A DD 17 7D
-# 1670 # C6 80 D2 76 16 24 6F CD D0 19 22 DD 17 21 CF 17
-# 1680 # 36 36 23 36 36 33 33 21 D2 17 C3 13 16 CD 72 1A
-# 1690 # C3 40 16 FE 7A C2 9A 16 36 7F FE 7F C0 36 20 C9
-# 16A0 # 21 D4 17 7E FE 01 C0 2A DB 17 3E 20 77 7D C6 40
-# 16B0 # D2 B4 16 24 6F 7C FE 1F C2 C1 16 7D FE C0 D2 D5
-# 16C0 # 16 7E FE 20 C2 CD 16 36 1F 22 DB 17 C9 CD 93 16
-# 16D0 # C3 F1 16 00 00 7E FE 20 CA F1 16 2B 2B 36 42 23
-# 16E0 # 36 4C 23 36 41 23 36 4D 23 36 21 CD A5 17 C3 F7
-# 16F0 # 16 21 D4 17 36 00 C9 21 D4 17 36 00 C3 55 16 00
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-# 1700 # 06 03 21 C0 14 E5 11 C0 1B 0E 40 1A 77 23 13 0D
-# 1710 # C2 0B 17 3E 80 E1 85 D2 1B 17 24 6F 05 C2 05 17
-# 1720 # 3A 03 17 FE C0 CA 39 17 21 C0 1B 01 40 00 CD 3A
-# 1730 # 17 21 03 17 36 C0 C3 00 17 C9 23 0B 78 B1 C8 7E
-# 1740 # FE 71 C2 4B 17 36 72 00 C3 3A 17 FE 72 C2 00 1A
-# 1750 # 36 71 00 C3 3A 17 21 C1 1F 3E 09 77 23 3E 18 77
-# 1760 # 23 3E 08 77 00 C9 21 0C 1F 3E 7A 77 23 77 23 77
-# 1770 # 21 1D 1F 77 23 77 23 77 21 2F 1F 77 23 77 23 77
-# 1780 # 21 4C 1F 77 23 77 23 77 21 5D 1F 77 23 77 23 77
-# 1790 # 21 6F 1F 77 23 77 23 77 C9 77 23 77 C9 AF 1F 77
-# 17A0 # 23 77 23 77 C9 
-
-### original code ###
-# 17A0                  00 21 00 10 11 00 1C 1A FE FF C8 #
-# 17B0   77 23 13 C3 AC 17 21 40 1C 7E FE FF C8 3E 20 77 #
-# 17C0   23 C3 B9 17 #
-
-### Revised code copies 1C00-1FFF to 1000-13FF. ###
-# Entry point is 17A5 not 17A6 as in the original #
-
-NOP>17A5 COPY: 
-LXI D 1C00; LXI H 1000;
+NOP>17A5
+COPY: LXI D 1C00; LXI H 1000;
 LOOP: LDAX D; MOV M,A; INX D; INX H; MVI A 14; CMP H; JNZ !LOOP;
 RET;
 
-### Revised code fills 1C40 to 2000 with ASCII spaces. ###
-# The 'cheat' here is to use the 20 (ASCII SPACE) stored in the #
-# accumulator both to poke into memory and to compare H with. #
-# Note the repeat use of the LOOP variable #
-# Entry point is 17B6 as in the original #
+# Revised code fills 1C40 to 2000 with ASCII spaces.
+
+# The 'cheat' here is to use the 20 (ASCII SPACE) stored in the
+# accumulator both to poke into memory and to compare H with.
+# Note the repeat use of the LOOP variable.
+# Entry point is 17B6 as in the original.
 
 NOP>17B6 FILL: 
 LXI H 1C40; MVI A ' ';
 LOOP: MOV M, A; INX H; CMP H; JNZ !LOOP;
 RET;
 
-NOP>17C4 # pad out to get back on track #
+NOP>17C4 # Pad out to get back on track.
 
-# 17C0 #             21 D6 17 7E FE 01 CA 51 19 C9 00 23
-# 17D0 # 05 8A 00 FF 00 9B 01 00 1A 1E 00 9B 1F 03 21 00
-# 17E0 # 21 D0 17 7E FE 00 CA F1 17 35 CD 00 1B 00 00 00
-# 17F0 # C9 21 CF 17 7E 23 77 00 00 00 00 00 00 00 00 00
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
+#17C0#              21 D6 17 7E  FE 01 CA 51 19 C9 00 23
+#17D0#  05 8A 00 FF 00 9B 01 00  1A 1E 00 9B 1F 03 21 00
+#17E0#  21 D0 17 7E FE 00 CA F1  17 35 CD 00 1B 00 00 00
+#17F0#  C9 21 CF 17 7E 23 77 00  00 00 00 00 00 00 00 00
 
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-# 1800 # 21 D3 17 7E FE FF C2 24 18 21 04 1C CD 40 18 D2
-# 1810 # 1A 18 21 D3 17 36 01 C3 70 18 2A D1 17 2B 22 D1
-# 1820 # 17 C3 70 18 21 3A 1C CD 40 18 D2 35 18 21 D3 17
-# 1830 # 36 FF C3 70 18 2A D1 17 23 22 D1 17 C3 70 18 00
-# 1840 # 06 0F 7E FE 20 C2 57 18 3E 40 85 6F D2 50 18 24
-# 1850 # 05 C2 42 18 D0 3F C9 2A D1 17 CD C0 18 7D C6 40
-# 1860 # D2 64 18 24 6F 22 D1 17 37 C9 00 00 00 00 00 00
-# 1870 # 2A D1 17 EB 2A F0 18 E5 C1 21 00 1C 19 11 80 14
-# 1880 # 1A 77 23 13 0B 79 B0 C2 80 18 C3 DD 19 00 00 00
-# 1890 # 77 23 77 23 77 23 77 23 77 C9 3E 7F 77 C3 78 19
-# 18A0 # 3E 20 77 C3 78 19 00 00 00 2A F0 18 E5 C1 21 80
-# 18B0 # 14 CD 3A 17 C9 00 CD 4A 01 0B 79 B0 C8 C3 B6 18
-# 18C0 # E5 EB 21 00 1C 19 06 32 3E 20 77 23 05 C2 CA 18
-# 18D0 # E1 C9
+#1800#  21 D3 17 7E FE FF C2 24  18 21 04 1C CD 40 18 D2
+#1810#  1A 18 21 D3 17 36 01 C3  70 18 2A D1 17 2B 22 D1
+#1820#  17 C3 70 18 21 3A 1C CD  40 18 D2 35 18 21 D3 17
+#1830#  36 FF C3 70 18 2A D1 17  23 22 D1 17 C3 70 18 00
+#1840#  06 0F 7E FE 20 C2 57 18  3E 40 85 6F D2 50 18 24
+#1850#  05 C2 42 18 D0 3F C9 2A  D1 17 CD C0 18 7D C6 40
+#1860#  D2 64 18 24 6F 22 D1 17  37 C9 00 00 00 00 00 00
+#1870#  2A D1 17 EB 2A F0 18 E5  C1 21 00 1C 19 11 80 14
+#1880#  1A 77 23 13 0B 79 B0 C2  80 18 C3 DD 19 00 00 00
+#1890#  77 23 77 23 77 23 77 23  77 C9 3E 7F 77 C3 78 19
+#18A0#  3E 20 77 C3 78 19 00 00  00 2A F0 18 E5 C1 21 80
+#18B0#  14 CD 3A 17 C9 00 CD 4A  01 0B 79 B0 C8 C3 B6 18
+#18C0#  E5 EB 21 00 1C 19 06 32  3E 20 77 23 05 C2 CA 18
+#18D0#  E1 C9
 
-# original version #
+# Re-written version streamlining the keyboard interface.
 
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-# 18D0  E1 C9 21 D5 17 DB 00 77 DB 00 BE CA E5 18 C9 00 #
-# 18E0  4F 01 00 00 C9 FE DD CA 00 19 FE DB CA 15 19 FE #
-# 18F0  9B CA 2A 19 FE FB CA 2A 19 FE 8D CA 2A 19 C9 00 #
-
-# Re-written version streamlining the keyboard interface. #
-
-# Test for the strobe bit to see if a key is pressed, then #
-# if true remove the strobe bit (ANI 7F) and test against #
-# ASCII codes.  This makes it easier to change the controls. #
+# Test for the strobe bit to see if a key is pressed, then
+# if true remove the strobe bit (ANI 7F) and test against
+# ASCII codes.  This makes it easier to change the controls.
 
 LXI H 17D5; IN 00; MOV M,A; ANI 80; RZ; MOV A,M; ANI 7F
-CPI '1'; JZ 1915; # move left #
-CPI '3'; JZ 1900; # move right #
-CPI ' '; JZ 192A; # fire #
+CPI '1'; JZ 1915; # move left
+CPI '3'; JZ 1900; # move right
+CPI ' '; JZ 192A; # fire
 RET;
 
-NOP>!FRAME # pad to get to where the frame size variable lives #
+NOP>!FRAME # Pad to get to where the frame size variable lives.
 
-014F # frame size variable (should be at 18F0) #
+014F # Frame size variable (should be at 18F0).
 
-NOP>1900 # pad to restart at 1900 #
+NOP>1900 # Pad to restart at 1900.
 
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-# 1900 # 21 FE 1F 11 FD 1F 06 3E 1A FE 20 C0 1A 77 1B 2B
-# 1910 # 05 C2 0C 19 C9 21 C1 1F 11 C2 1F 06 3E 7E FE 20
-# 1920 # C0 1A 77 23 13 05 C2 21 19 C9 21 D6 17 7E FE 00
-# 1930 # C2 51 19 E5 21 C0 1F 3E 18 23 BE C2 39 19 7D D6
-# 1940 # 40 D2 46 19 25 00 6F 22 D8 17 3E 7B 77 E1 36 01
-# 1950 # C9 2A D8 17 3E 20 77 7D D6 40 D2 5E 19 25 6F 7C
-# 1960 # FE 1C C2 6B 19 7D FE 40 DA 78 19 7E FE 20 C2 80
-# 1970 # 19 3E 7B 77 22 D8 17 C9 21 D6 17 36 00 C9 00 00
-# 1980 # FE 71 CA 83 1A FE C0 CA 83 1A FE 72 CA 83 1A FE
-# 1990 # 7A CA 9A 18 FE 7F CA A0 18 FE 1F CA 72 1A 00 00
-# 19A0 # CD 20 1B CD A9 18 21 CF 17 7E FE 00 CA B3 19 00
-# 19B0 # C3 78 19 E1 00 C3 6C 16 3A 42 1B FE 00 C2 55 1B
-# 19C0 # 2A F0 18 0E 00 C3 6C 1B 00 00 00 00 00 00 00 00
-# 19D0 # 7C FE 01 C2 D9 19 C3 B2 1B 22 D1 17 C9 2A F0 18
-# 19E0 # E5 C1 21 80 14 CD 3A 17 3A D6 17 FE 00 C8 2A D8
-# 19F0 # 17 7E FE 7B C8 FE 20 C2 80 19 36 7B C9 00 00 00
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
+#1900#  21 FE 1F 11 FD 1F 06 3E  1A FE 20 C0 1A 77 1B 2B
+#1910#  05 C2 0C 19 C9 21 C1 1F  11 C2 1F 06 3E 7E FE 20
+#1920#  C0 1A 77 23 13 05 C2 21  19 C9 21 D6 17 7E FE 00
+#1930#  C2 51 19 E5 21 C0 1F 3E  18 23 BE C2 39 19 7D D6
+#1940#  40 D2 46 19 25 00 6F 22  D8 17 3E 7B 77 E1 36 01
+#1950#  C9 2A D8 17 3E 20 77 7D  D6 40 D2 5E 19 25 6F 7C
+#1960#  FE 1C C2 6B 19 7D FE 40  DA 78 19 7E FE 20 C2 80
+#1970#  19 3E 7B 77 22 D8 17 C9  21 D6 17 36 00 C9 00 00
+#1980#  FE 71 CA 83 1A FE C0 CA  83 1A FE 72 CA 83 1A FE
+#1990#  7A CA 9A 18 FE 7F CA A0  18 FE 1F CA 72 1A 00 00
+#19A0#  CD 20 1B CD A9 18 21 CF  17 7E FE 00 CA B3 19 00
+#19B0#  C3 78 19 E1 00 C3 6C 16  3A 42 1B FE 00 C2 55 1B
+#19C0#  2A F0 18 0E 00 C3 6C 1B  00 00 00 00 00 00 00 00
+#19D0#  7C FE 01 C2 D9 19 C3 B2  1B 22 D1 17 C9 2A F0 18
+#19E0#  E5 C1 21 80 14 CD 3A 17  3A D6 17 FE 00 C8 2A D8
+#19F0#  17 7E FE 7B C8 FE 20 C2  80 19 36 7B C9 00 00 00
 
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-# 1A00 # FE 1F C2 3A 17 36 20 C3 3A 17 20 20 72 C0 71 20
-# 1A10 # CD 0B 00 FE 47 C2 10 1A 33 33 C3 02 16 00 00 00
-# 1A20 # CD D4 00 CD B6 17 CD 00 17 CD 00 1B CD 70 18 CD
-# 1A30 # 56 17 CD 66 17 00 00 00 CD A5 17 C9 00 00 00 00
-# 1A40 # 2A D1 17 EB 21 00 1C 19 01 80 01 11 00 00 7E FE
-# 1A50 # C0 C2 55 1A 13 23 0B 78 B1 C2 4E 1A 7B 32 CF 17
-# 1A60 # C9 21 C0 1F 06 40 3E 20 77 23 05 C2 68 1A C9 00
-# 1A70 # 21 20 36 05 E5 CD A4 1B E1 36 20 21 D4 17 36 00
-# 1A80 # C3 78 19 2B 2B E5 3E 05 CD 90 18 CD A5 17 21 CF
-# 1A90 # 17 35 CD A0 1A E1 3E 20 CD 90 18 C3 A0 19 00 00
-# 1AA0 # 21 30 1C 7E FE 20 C2 AC 1A 36 31 C9 3C FE 3A CA
-# 1AB0 # B4 1A 77 C9 36 30 2B C3 A3 1A 20 20 20 20 20 20
-# 1AC0 # 21 2D 1C 3E 20 23 77 23 77 23 77 23 77 3E 30 77
-# 1AD0 # 21 11 1C 36 31 21 CE 17 C9 21 11 1C 34 01 00 01
-# 1AE0 # C9 11 EA 1A CD 23 00 C3 10 1A 47 41 4D 45 20 4F
-# 1AF0 # 56 45 52 20 43 41 50 54 27 20 4C 41 53 45 52 04
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
+#1A00#  FE 1F C2 3A 17 36 20 C3  3A 17 20 20 72 C0 71 20
+#1A10#  CD 0B 00 FE 47 C2 10 1A  33 33 C3 02 16 00 00 00
+#1A20#  CD D4 00 CD B6 17 CD 00  17 CD 00 1B CD 70 18 CD
+#1A30#  56 17 CD 66 17 00 00 00  CD A5 17 C9 00 00 00 00
+#1A40#  2A D1 17 EB 21 00 1C 19  01 80 01 11 00 00 7E FE
+#1A50#  C0 C2 55 1A 13 23 0B 78  B1 C2 4E 1A 7B 32 CF 17
+#1A60#  C9 21 C0 1F 06 40 3E 20  77 23 05 C2 68 1A C9 00
+#1A70#  21 20 36 05 E5 CD A4 1B  E1 36 20 21 D4 17 36 00
+#1A80#  C3 78 19 2B 2B E5 3E 05  CD 90 18 CD A5 17 21 CF
+#1A90#  17 35 CD A0 1A E1 3E 20  CD 90 18 C3 A0 19 00 00
+#1AA0#  21 30 1C 7E FE 20 C2 AC  1A 36 31 C9 3C FE 3A CA
+#1AB0#  B4 1A 77 C9 36 30 2B C3  A3 1A 20 20 20 20 20 20
+#1AC0#  21 2D 1C 3E 20 23 77 23  77 23 77 23 77 3E 30 77
+#1AD0#  21 11 1C 36 31 21 CE 17  C9 21 11 1C 34 01 00 01
+#1AE0#  C9 11 EA 1A CD 23 00 C3  10 1A 47 41 4D 45 20 4F
+#1AF0#  56 45 52 20 43 41 50 54  27 20 4C 41 53 45 52 04
 
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
-# 1B00 # 21 CF 17 46 21 00 00 11 80 14 1A FE C0 C2 14 1B
-# 1B10 # 05 CA 19 1B 23 13 C3 0A 1B 23 23 23 22 F0 18 C9
-# 1B20 # 2A D1 17 EB 2A F0 18 E5 C1 21 00 1C 19 11 80 14
-# 1B30 # 7E FE 1F C2 38 1B 3E 20 12 23 13 0B 78 B1 C2 30
-# 1B40 # 1B C9 16 3A D4 17 FE 00 C0 2A D1 17 EB 21 00 1C
-# 1B50 # 19 EB C3 B8 19 47 4F 2A F0 18 00 2B 13 7D B4 CA
-# 1B60 # 9E 1B 1A FE C0 C2 5B 1B 05 C2 5B 1B 13 2B 7D B4
-# 1B70 # CA 9E 1B 1A FE C0 C2 6C 1B 0C D5 7B C6 40 D2 82
-# 1B80 # 1B 14 5F 1A FE 20 CA 8D 1B D1 C3 6C 1B EB 36 1F
-# 1B90 # 22 DB 17 21 D4 17 36 01 E1 79 32 42 1B C9 3E 00
-# 1BA0 # 32 42 1B C9 21 42 1B 7E FE 00 CA AE 1B 35 CD A5
-# 1BB0 # 17 C9 7D FE C0 DA D9 19 21 48 00 C3 D9 19 00 00
-# 1BC0 # 20 72 C0 71 20 20 72 C0 71 20 20 72 C0 71 20 20
-# 1BD0 # 72 C0 71 20 20 72 C0 71 20 20 72 C0 71 20 20 72
-# 1BE0 # C0 71 20 20 72 C0 71 20 20 72 C0 71 20 20 20 20
-# 1BF0 # 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20
-#        0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F #
+#1B00#  21 CF 17 46 21 00 00 11  80 14 1A FE C0 C2 14 1B
+#1B10#  05 CA 19 1B 23 13 C3 0A  1B 23 23 23 22 F0 18 C9
+#1B20#  2A D1 17 EB 2A F0 18 E5  C1 21 00 1C 19 11 80 14
+#1B30#  7E FE 1F C2 38 1B 3E 20  12 23 13 0B 78 B1 C2 30
+#1B40#  1B C9 16 3A D4 17 FE 00  C0 2A D1 17 EB 21 00 1C
+#1B50#  19 EB C3 B8 19 47 4F 2A  F0 18 00 2B 13 7D B4 CA
+#1B60#  9E 1B 1A FE C0 C2 5B 1B  05 C2 5B 1B 13 2B 7D B4
+#1B70#  CA 9E 1B 1A FE C0 C2 6C  1B 0C D5 7B C6 40 D2 82
+#1B80#  1B 14 5F 1A FE 20 CA 8D  1B D1 C3 6C 1B EB 36 1F
+#1B90#  22 DB 17 21 D4 17 36 01  E1 79 32 42 1B C9 3E 00
+#1BA0#  32 42 1B C9 21 42 1B 7E  FE 00 CA AE 1B 35 CD A5
+#1BB0#  17 C9 7D FE C0 DA D9 19  21 48 00 C3 D9 19 00 00
+#1BC0#  20 72 C0 71 20 20 72 C0  71 20 20 72 C0 71 20 20
+#1BD0#  72 C0 71 20 20 72 C0 71  20 20 72 C0 71 20 20 72
+#1BE0#  C0 71 20 20 72 C0 71 20  20 72 C0 71 20 20 20 20
+#1BF0#  20 20 20 20 20 20 20 20  20 20 20 20 20 20 20 20
 
-# 1C00-1C3F is the top line of the display (64 bytes) #
-# pad to 1C40 with ASCII spaces #
+# The space 1C00-1FFF is apparently a work area for constructing
+# the 64x16 VDU display at 1000-13FF.
 
-"     LASER BASE  3                 YOUR SCORE  190" ' '>1C40
+# 1C00-1C3F is the top line of the display (64 bytes).
 
-# End of code #
+"     LASER BASE  3                 YOUR SCORE  190"
+' '>1C40 # Pad to 1C40 with ASCII spaces.
+
+

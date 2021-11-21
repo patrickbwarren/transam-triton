@@ -1,41 +1,43 @@
-###
-This file is part of my Transam Triton code repository.
+# This file is part of my Transam Triton code repository.
 
-This is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+# 16-bit word to decimal converter
 
-This is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
+# This is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
-Copyright (c) 1979-2021 Patrick B Warren <patrickbwarren@gmail.com>.
+# This is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this file.  If not, see <http://www.gnu.org/licenses/>.
-###
+# Copyright (c) 1979-2021 Patrick B Warren <patrickbwarren@gmail.com>.
 
-# 16-bit word to decimal converter #
-
-# Standard tape header #
-64*0D "HEX2DEC" 20 04 ORG=1600 !END
+# You should have received a copy of the GNU General Public License
+# along with this file.  If not, see <http://www.gnu.org/licenses/>.
  
-# Entry points for Triton L7.2 monitor #
+# Entry points for Triton L7.2 monitor
+
 GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
 
-# Constants #
-A=%10000 B=%1000 C=%100 D=%10 E=%1
+A=%10000 B=%1000 C=%100 D=%10 E=%1 # Constants
 
-# Main program loops indefinitely #
+# Standard tape header.
+
+64*0D "HEX2DEC" 20 04
+ORG=1600 !END
+
+# Main program loops indefinitely.
+
 ENTRY:
 LXI D !SMESSG; CALL !GETADR;
 LXI D !SVALUE; CALL !PSTRNG;
 CALL !PDEC; CALL !PCRLF
 JMP !ENTRY
 
-# Print HL in decimal format #
+# Print HL in decimal format
+
 PDEC:
 LXI D !A; CALL !SUB
 LXI D !B; CALL !SUB
@@ -44,7 +46,8 @@ LXI D !D; CALL !SUB
 LXI D !E; CALL !SUB
 RET
 
-# Obtain a decimal digit and print it out #
+# Obtain a decimal digit and print it out.
+
 SUB:
 MVI B '0'; DCR B;
 LOOP: INR B; MOV A,L; SUB E; MOV L,A; MOV A,H; SBB D; MOV H,A; JNC !LOOP
@@ -52,6 +55,7 @@ MOV A,L; ADD E; MOV L,A; MOV A,H; ADC D; MOV H,A;
 MOV A,B; CALL !OUTCH;
 RET
 
-# Text for messages #
+# Text for messages.
+
 SMESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
 SVALUE: "VALUE IS " 04

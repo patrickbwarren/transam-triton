@@ -163,8 +163,9 @@ The token stream comprises:
 - an ASCII text string designated by `"..."`, which is exported as the
   corresponding stream of ASCII bytes.
 
-Comments can be included at any point: they are delimited by `#...#`
-and can span multiple lines.
+Comments can be included at any point: they are start with a `#`
+character and are terminated either by another `#` character, or by the
+end of the line.
 
 Variables are represented by 16-bit words and can be defined at any
 time with the syntax `VAR=<val>` where `<val>` is hexadecimal.  These

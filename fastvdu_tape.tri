@@ -1,23 +1,22 @@
-###
-This file is part of my Transam Triton code repository.
+# This file is part of my Transam Triton code repository.
 
-The original copyright on the fast VDU code is unknown but it may
-belong to Gerald Sommariva, from whose website the `FASTVDU.ED82` user
-ROM was downloaded which forms the basis of the current code.
-https://sites.google.com/view/transam-triton/downloads
-Modifications to this original code are copyright (c) 2021 Patrick B
-Warren <patrickbwarren@gmail.com> and are released into the public
-domain.
-###
+# Wrapper for fastvdu_core for testing in user memory.
 
-### Wrapper for fastvdu_core for testing in user memory ###
+# The original copyright on the fast VDU code is unknown but it may
+# belong to Gerald Sommariva, from whose website the `FASTVDU.ED82` user
+# ROM was downloaded which forms the basis of the current code.
+# https://sites.google.com/view/transam-triton/downloads
+# Modifications to this original code are copyright (c) 2021 Patrick B
+# Warren <patrickbwarren@gmail.com> and are released into the public
+# domain.
 
-# Standard tape header #
+# Standard tape header.
+
 64*0D "FASTVDU" 20 04
-
 ORG=1600 !END
 
-# Intercept video output routine at hook #
+# Intercept video output routine at hook.
+
 LXI H, !MAIN
 SHLD !OUTVEC
 RET

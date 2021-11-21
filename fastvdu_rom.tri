@@ -1,24 +1,23 @@
-###
-This file is part of my Transam Triton code repository.
+# This file is part of my Transam Triton code repository.
 
-The original copyright on the fast VDU code is unknown but it may
-belong to Gerald Sommariva, from whose website the `FASTVDU.ED82` user
-ROM was downloaded which forms the basis of the current code.
-https://sites.google.com/view/transam-triton/downloads
-Modifications to this original code are copyright (c) 2021 Patrick B
-Warren <patrickbwarren@gmail.com> and are released into the public
-domain.
-###
+# This is a user ROM providing VDU speedup, for the Triton Level 7.2 Monitor.
 
-### Wrapper for fastvdu to generate a user ROM ###
+# The original copyright on the fast VDU code is unknown but it may
+# belong to Gerald Sommariva, from whose website the `FASTVDU.ED82` user
+# ROM was downloaded which forms the basis of the current code.
+# https://sites.google.com/view/transam-triton/downloads
+# Modifications to this original code are copyright (c) 2021 Patrick B
+# Warren <patrickbwarren@gmail.com> and are released into the public
+# domain.
 
-STACK=1470 # initial stack pointer #
-REENTRY=0182 # re-entry point after call out to 0400 from monitor #
+STACK=1470 # initial stack pointer
+REENTRY=0182 # re-entry point after call out to 0400 from monitor
 
 ORG=0400
 END=0800
 
-# Intercept video output routine at hook #
+# Intercept video output routine at hook.
+
 LXI SP, !STACK
 LXI H, !MAIN
 SHLD !OUTVEC

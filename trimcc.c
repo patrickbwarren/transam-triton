@@ -493,7 +493,7 @@ int tokin(char *s, FILE *fp, int maxlen) {
   int verbatim = 0;
   if (cc == EOF) return EOF;
   while (whitespace(cc)) {
-    if (cc == '#') while ((cc = getc(fp)) != '#' && cc != EOF) ;
+    if (cc == '#') while ((cc = getc(fp)) != '#' && cc != '\n' && cc != EOF) ;
     cc = getc(fp);
   }
   if (cc == EOF) return EOF;

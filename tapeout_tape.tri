@@ -1,29 +1,34 @@
-###
-This file is part of my Transam Triton code repository.
+# This file is part of my Transam Triton code repository.
 
-This is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+# Read characters from keyboard and output to tape.
 
-This is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
+# This is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
-Copyright (c) 1979-2021 Patrick B Warren <patrickbwarren@gmail.com>.
+# This is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this file.  If not, see <http://www.gnu.org/licenses/>.
-###
+# Copyright (c) 1979-2021 Patrick B Warren <patrickbwarren@gmail.com>.
 
-# Read characters from keyboard and output to tape #
+# You should have received a copy of the GNU General Public License
+# along with this file.  If not, see <http://www.gnu.org/licenses/>.
 
-# Standard tape header #
-64*0D "TAPEOUT" 20 04 ORG=1600 !END
+# Standard tape header.
 
-# Entry points for Triton L7.2 monitor #
+64*0D "TAPEOUT" 20 04
+ORG=1600 !END
+
+# Entry points for Triton L7.2 monitor.
+
 ECHOCH=003B  URTOUT=003E
 
-# get character and output to RS-232, repeat indefinitely #
-LOOP: CALL !ECHOCH, CALL !URTOUT, JMP !LOOP
+# Main loop: get character and output to RS-232, repeat indefinitely.
+
+LOOP:
+CALL !ECHOCH
+CALL !URTOUT
+JMP !LOOP

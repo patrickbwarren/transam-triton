@@ -1,44 +1,42 @@
-###
-This file is part of my Transam Triton code repository.
+# This file is part of my Transam Triton code repository.
 
-This is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+# Continuously read from keyboard port and output to screen.
 
-This is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
+# This is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
-Copyright (c) 2021 Patrick B Warren <patrickbwarren@gmail.com>.
+# This is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this file.  If not, see <http://www.gnu.org/licenses/>.
-###
+# Copyright (c) 2021 Patrick B Warren <patrickbwarren@gmail.com>.
 
-# Continuously read from keyboard port and output to screen #
+# You should have received a copy of the GNU General Public License
+# along with this file.  If not, see <http://www.gnu.org/licenses/>.
 
 # Note that when a program is run with 'G', a 'return' instruction
-  will return to the monitor provided the stack is not reset. #
+# will return to the monitor provided the stack is not reset.
 
-# Standard tape header #
-64*0D "KBDTEST" 20 04 ORG=1600 !END
+# Entry points for Triton L7.2 monitor.
 
-# Entry points for Triton L7.2 monitor #
+OUTCH=0013    # Character output routine; outputs to the VDU.
+SWAPCASE=01E2 # Swap case of A (undocumented).
+PRTDAT=02AB   # Print accumulator in hex.
+PCRLF=0033    # Print CR/LF.
 
-OUTCH=0013 # Character output routine; outputs to the VDU #
-SWAPCASE=01E2 # Undocumented: swap case of A #
-PRTDAT=02AB # print accumulator in hex #
-PCRLF=0033 # print CR/LF #
+# Standard tape header.
 
-# Main loop #
+64*0D "KBDTEST" 20 04
+ORG=1600 !END
 
-LOOP:
-IN 00; MOV B,A      # input from port 00 and save in B #
-ANI 80; JZ !LOOP    # loop back if strobe bit is not set #
-MOV A,B; ANI 7F     # recover from B and remove strobe bit #
-CPI 03; RZ          # return to monitor if ctrl-C #
-CALL !SWAPCASE      # swap case and print out to screen #
+LOOP:               # main program loops indefinitely
+IN 00; MOV B,A      # input from port 00 and save in B
+ANI 80; JZ !LOOP    # loop back if strobe bit is not set
+MOV A,B; ANI 7F     # recover from B and remove strobe bit
+CPI 03; RZ          # return to monitor if ctrl-C
+CALL !SWAPCASE      # swap case and print out to screen
 CALL !OUTCH
 JMP !LOOP
