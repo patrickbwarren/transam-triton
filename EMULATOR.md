@@ -320,13 +320,15 @@ The target binary file should be specified at the command line with
 `-z` option.  The file is loaded if it exists, otherwise a blank EPROM
 is created with all bits set to 1.  Note that in programming a 2708,
 bits can only be set to '0', not set to '1'.  This is implemented
-faithfully in the emulator.  Being an emulation, the situation where
-bits which should be programmed to be '0' but remain '1' normally does
-not arise however this failure mode resulting in a `READ ERROR` can be
-simulated using function F8.  Conversely, since it is possible to load
-an _existing_ EPROM with arbitary bit pattern, the failure mode where
-bits which should be programmed to be '1' but are actually '0' can
-be more easily created and results in a `PROGRAM ERROR`.
+faithfully in the emulator.
+
+Being an emulation, the situation where bits which should be
+programmed to be '0' but remain '1' normally does not arise however
+this failure mode resulting in a `READ ERROR` can be simulated using
+function F8.  Conversely, since it is possible to load an _existing_
+EPROM with arbitary bit pattern, the failure mode where bits which
+should be programmed to be '1' but are actually '0' can be more easily
+created and results in a `PROGRAM ERROR`.
 
 The following function keys are available to simulate the physical hardware:
 
