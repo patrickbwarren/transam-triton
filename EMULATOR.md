@@ -15,15 +15,16 @@ Makefile, or `make codes`.  The [SFML library](https://www.sfml-dev.org/) is req
 
 ### Usage
 ```
-./triton -m <mem_top> -t <tape_file> -u <user_rom(s)> -z <user_eprom> -h -?
+./triton [-h|-?] [-m mem_top] [-u user_rom(s)] [-z user_eprom] [tape_file]
 ```
 The following command line options are available:
 
  - `-h` or `-?` prints a summary of command line options and function keys
  - `-m` sets the top of memory, for example `-m 0x4000`; the default is `0x2000`
- - `-t` specifies a tape binary, for example `-t TAPE`
  - `-u` installs one or two user ROM(s);
  - `-z` [EPROM programmer] specifies the file to write the EPROM to with function key F7
+
+An optional binary tape file can be specified.
 
 To install two user ROMS using the `-u` option, separate the filenames
 by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are

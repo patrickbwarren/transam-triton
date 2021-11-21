@@ -448,17 +448,15 @@ int main(int argc, char** argv) {
   // into a static area that might be overwritten.
 
   opterr = 0;
-  while ((c = getopt(argc, argv, "hm:t:u:z:")) != -1) switch (c) {
+  while ((c = getopt(argc, argv, "hm:u:z:")) != -1) switch (c) {
     case 'm': mem_top_opt = optarg; break;
-    case 't': tape_file = optarg; break;
     case 'u': user_rom = optarg; break;
     case 'z': eprom.file = optarg; break;
     case 'h': case '?':
       printf("SFML-based Triton emulator\n");
-      printf("usage: %s [-h|-?] [-m mem_top] [-t tape_file] [-u user_rom(s)] [-z user_eprom]\n", argv[0]);
+      printf("usage: %s [-h|-?] [-m mem_top] [-u user_rom(s)] [-z user_eprom] [tape_file]\n", argv[0]);
       printf("-h or -? (help) : print this help\n");
       printf("-m sets the top of memory, for example -m 0x4000, defaults to 0x2000\n");
-      printf("-t specifies a tape binary, eg -t TAPE\n");
       printf("-u installs user ROM(s); to install two ROMS separate the filenames by a comma\n");
       printf("-z specifies a file to write the EPROM to, with F7\n");
       printf("F1: interrupt 1 (RST 1) - clear screen\n");
@@ -473,6 +471,8 @@ int main(int argc, char** argv) {
     default:
       exit(0);
     }
+
+  if (optind < argc) tape_file = argv[optind]; // grab the tape file if one specified
 
   // One microcycle is 1.25uS = effective clock rate of 800kHz
 
