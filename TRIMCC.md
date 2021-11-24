@@ -34,8 +34,8 @@ The command line options are:
 - `-h` or `-?` (help) : print out the help;
 - `-o <binary_file>` : write the byte stream in binary to a file.
 
-Note that you may have to add yourself the `dialout` group to use the
-serial device.
+Note that to use the serial device you may have to add yourself to the
+`dialout` group.
 
 ### Transmitter (`trimcc.c`)
 
@@ -66,9 +66,8 @@ Using `-p` sends the binary to `/dev/stdout` so for example one can do
 ```
 The `-C` option prints the data out in the most useful format.
 
-Note that you may have to add yourself the `dialout` group
-to use the serial device.  This is not necessary if just compiling
-`.tri` codes with `-o`.
+Note that to use the serial device with `-t` option you may have to
+add yourself to the `dialout` group.
 
 ### Disassembler (`disasm8080.py`)
 
