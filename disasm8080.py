@@ -321,8 +321,8 @@ lookupTable = [
 # Parse command line options
 
 parser = argparse.ArgumentParser()
-parser.add_argument('filename', help='binary file to disassemble, or - for /dev/stdin')
-parser.add_argument('-b', '--binary', action='store_true', help='treat all ASCII characters as binary')
+parser.add_argument('binary', nargs='?', help='binary file to disassemble')
+parser.add_argument('-c', '--chars', action='store_true', help='treat ASCII codes as characters')
 parser.add_argument('-n', '--nolist', action='store_true', help='make output suitable for TriMCC')
 parser.add_argument('-a', '--address', help='Specify starting address (defaults to 0)')
 parser.add_argument('-s', '--skip', help='Skip initial bytes (defaults to 0)')
@@ -330,7 +330,7 @@ args = parser.parse_args()
 
 # Get file name from command line arguments ('-' reads from stdin)
 
-file_name = '/dev/stdin' if args.filename == '-' else args.filename
+file_name = '/dev/stdin' if args.binary is None else args.binary
 
 # Current instruction address. Silently force it to be in valid range.
 # Use an eval in here to allow for hexadecimal.
@@ -416,7 +416,7 @@ while True:
         # Handle any operands
 
         if n == 2:
-            if not args.binary and str(op1).isprintable(): # use python 3 string method here
+            if args.chars and op1 > 0x1f and op1 < 0x7f: # ASCII printable characters
                 line += "'%c'" % op1
             else:
                 line += '%02X' % op1
