@@ -28,15 +28,8 @@ An optional binary tape file can be specified.
 
 To install two user ROMS using the `-u` option, separate the filenames
 by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are
-always installed at `0400` first followed by `0800`.  To override
-this one could make a blank ROM filled with `FF` bytes using the
-EPROM programmer.  Alternatively one can use the following unix (linux) command
-which generates 1024 zero bytes from `/dev/zero` and pipes them through
-`sed` to change them to `FF` bytes:
-```
-dd if=/dev/zero bs=1024 count=1 | sed 's/\x00/\xff/g' > binfile
-```
-(obviously one can change `0xff` in this to another value if required).
+always installed at `0400` first followed by `0800`.  An example of a
+user ROM is the fast VDU ROM described in [TRIMCC.md](TRIMCC.md).
 
 When the emulator is running the following function keys can be used
 to control the emulation:
@@ -188,12 +181,23 @@ C000 - DFFF = TRAP_ROM (TRAP)
 These can be loaded using the `-u` option at the command line.  If
 just one file is specified it is loaded to `0400`-`07FF`.  If two
 files are specified, for example `-u ROM1,ROM2`, then the second one
-is loaded to `0800`-`0BFF`.  An example of a user ROM is the fast VDU
-ROM described in [TRIMCC.md](TRIMCC.md). If the first byte in the
-first user ROM is LXI SP (op code `31`), then the code is executed
-automatically.  See the L7.2 documentation for more details and the
-fast VDU user ROM (specifically [`fastvdu_rom.tri`](fastvdu_rom.tri))
-for a working example.
+is loaded to `0800`-`0BFF`.
+
+If the first byte in the first user ROM is the instruction LXI SP (op
+code `31`), then the code is executed automatically.  See the L7.2
+documentation for more details, and the fast VDU user ROM (specifically
+[`fastvdu_rom.tri`](fastvdu_rom.tri)) described in
+[TRIMCC.md](TRIMCC.md) for a working example.
+
+To just load a ROM in the second position, make up a blank ROM filled
+with `FF` bytes using the EPROM programmer and load that into the
+first position.  Alternatively one can make such a blank ROM with the
+following unix (linux) command which generates 1024 zero bytes from
+`/dev/zero` and pipes them through `sed` to change them to `FF` bytes:
+```
+dd if=/dev/zero bs=1024 count=1 | sed 's/\x00/\xff/g' > binfile
+```
+(obviously one can change `0xff` in this to another value if required).
 
 #### Keyboard emulation
 
@@ -204,15 +208,15 @@ This reflects the behaviour of the real hardware.
 
 #### Tape emulation
 
-This remains as in Robin Stuart's emulator, except that the
-possibility to select the tape file is given as a command line option.
+This remains as in Robin Stuart's emulator, except that the binary
+tape file should be provided at the command line as indicated above.
 Input bytes are read from the tape file as though from a cassette
 recorder, and likewise output bytes are appended to the tape file.
 This means that with the monitor 'I' command, the emulated tape
 interface is expecting to see the correct tape header in front of any
 data file as described in [TRIMCC.md](TRIMCC.md).  If no tape is
-loaded (`-t` option missing) then bytes written to the tape are lost
-and bytes read from the tape return `FF`.
+loaded then bytes written to the tape are lost and bytes read from the
+tape return `FF`.
 
 #### Printer emulation
 
