@@ -196,7 +196,7 @@ first position.  Alternatively one can make such a blank ROM with the
 following unix (linux) command which generates 1024 zero bytes from
 `/dev/zero` and pipes them through `sed` to change them to `FF` bytes:
 ```
-dd if=/dev/zero bs=1024 count=1 | sed 's/\x00/\xff/g' > binfile
+dd if=/dev/zero bs=1024 count=1 | sed 's/\x00/\xff/g' > blank_rom
 ```
 (obviously one can change `0xff` in this to another value if required).
 

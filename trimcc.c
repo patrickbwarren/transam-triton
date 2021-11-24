@@ -26,6 +26,7 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #define MAXTOK 200    /* Max token length (note include strings) */
 #define MAXREG 10     /* Max register (pair) name length */
@@ -34,13 +35,13 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 #define NMN    78     /* # mnemonic codes */
 #define DELAY  10     /* Delay in ms after a byte transmitted */
 #define NOVAL -1      /* Signals no value assigned in name, value pair */
-#define MAXFP 5       /* Max level of file inclusion */
+#define MAXSTACK 5    /* Max level of file inclusion */
 
 int nparse = 0;       /* count number of times have parsed file */
 int verbose = 0;      /* Verbosity in reporting results */
 int zcount;           /* Keeps track of number of bytes printed out */
 int extra_space = 0;  /* Whether to print a space after the 8th byte */
-char cc;              /* Keeps track of the current character */
+int ipos = 0;         /* Keep track of current position in source */
 
 int origin, end_prog; /* Position variables */
 int byte_count;       /* Byte counter */
@@ -56,10 +57,10 @@ struct termios newtio;      /* Triton required port settings */
 char *tri_ext = ".tri";     /* file name extension (source files) */
 
 /* 8080 mnemonic codes follow: see 8080 bugbook */
-/* Note that 'CC' has been replaced by 'CCC' to avoid a clash with 0xCC */
+/* Note the intepretation of CC as a mnemonic or hex code depends on context */
 
 char *mnemonic[NMN] =
-{ "ACI",  "ADC",  "ADD",  "ADI",  "ANA",  "ANI",  "CALL", "CCC",  "CM",
+{ "ACI",  "ADC",  "ADD",  "ADI",  "ANA",  "ANI",  "CALL", "CxC",  "CM",
   "CMA",  "CMC",  "CMP",  "CNC",  "CNZ",  "CP",   "CPE",  "CPI",  "CPO",
   "CZ",   "DAA",  "DAD",  "DCR",  "DCX",  "DI",   "EI",   "HLT",  "IN",
   "INR",  "INX",  "JC",   "JM",   "JMP",  "JNC",  "JNZ",  "JP",   "JPE",
@@ -89,10 +90,10 @@ char *name[MAXNNV];
 
 /* Function prototypes */
 
-void parse(FILE *);
-int regin(FILE *);
-int pairin(FILE *);
-int rstnin(FILE *);
+void parse(char *);
+int regin(char *);
+int pairin(char *);
+int rstnin(char *);
 void zinit();
 void mninit();
 void word_out(int);
@@ -105,7 +106,8 @@ void newnv(char *, int);
 int eval(char *);
 int split(char *, char *, char);
 int myscmp(char *, char *);
-int tokin(char *, FILE *, int);
+char tokin(char *, char *, int);
+char next_char(char *);
 int whitespace(char);
 void startio(char *);
 void finishio();
@@ -125,15 +127,28 @@ void *emalloc(size_t size) {
   return p;
 }
 
+/* Slurp the entire contents of a file into a string */
+
+/* We do this because this is a two-pass compiler, but we can't assume
+   we can rewind the file since we also want to allow the input to be
+   piped in. */
+
+/* https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c */
+
+char *slurp(FILE *fp) {
+  char *bytes = NULL; 
+  size_t len;
+  ssize_t bytes_read;
+  bytes_read = getdelim(&bytes, &len, '\0', fp);
+  if (bytes_read == -1) error("no bytes read from file");
+  return bytes;
+}
+
 int main(int argc, char *argv[]) {
   char c;
-  char *s;
   char *source = NULL; 
-  char *src_file = NULL;
   FILE *fp;
   int pipe_to_stdout = 0;
-  long bufsize;
-  size_t newLen;
   /* Sort out command line options */
   while ((c = getopt(argc, argv, "hvspo:t:")) != -1) {
     switch (c) {
@@ -144,115 +159,87 @@ int main(int argc, char *argv[]) {
     case 't': serial_device = strdup(optarg); break;
     case 'h': case '?':
       printf("Compile and optionally transmit RS-232 data to Triton through a serial device\n");
-      printf("usage: %s  [-h|-?] [-v] [-s] [-p] [-o binary_file] [-t serial_device] src_file\n", argv[0]);
+      printf("usage: %s  [-h|-?] [-v] [-s] [-p] [-o binary_file] [-t serial_device] [src_file]\n", argv[0]);
       printf("-h or -? (help) : print this help\n");
       printf("-v (verbose) : print the byte stream and variables\n");
       printf("-s (spaced) : add a column of spaces after the 7th byte\n");
       printf("-p (pipe) : write the byte stream in binary to stdout (obviates -o)\n");
       printf("-o <binary_file> : write the byte stream in binary to a file\n");
       printf("-t (transmit) : write the byte stream to a serial device, for example /dev/ttyS0\n");
-      printf("the source file should be specified, for example a .tri file\n");
+      printf("if the source file is not specified, it is taken to be stdin\n");
       exit(0);
     }
   }
-  if (optind == argc) { /* missing non-option argument (source file) */
-    fprintf(stderr, "missing source file, for example a .tri file, using stdin\n");
-    fp = stdin;
-  } else {
-    src_file = strdup(argv[optind]);
-    if (strchr(src_file, '.') == NULL) { /* append file extension */
-      s = strdup(src_file); free(src_file);
-      src_file = (char *)emalloc(strlen(s) + strlen(tri_ext) + 1);
-      strcpy(src_file, s); free(s);
-      strcat(src_file, tri_ext);
-    }
-    fp = fopen(src_file, "rb");
-  }
+  fp = (optind == argc) ? stdin : fopen(argv[optind], "rb");
   if (fp == NULL) error("couldn't open the source file");
-  else {
-    /* Go to the end of the file. */
-    if (fseek(fp, 0L, SEEK_END) == 0) {
-      /* Get the size of the file. */
-      bufsize = ftell(fp); printf("buffer size = %li\n", bufsize);
-      if (bufsize == -1) error("buffer size == -1, error");
-      /* Allocate our buffer to that size. */
-      source = malloc(sizeof(char) * (bufsize + 1));
-      /* Go back to the start of the file. */
-      if (fseek(fp, 0L, SEEK_SET) != 0) error("could not go back to start, error");
-      /* Read the entire file into memory. */
-      newLen = fread(source, sizeof(char), bufsize, fp);
-      if ( ferror( fp ) != 0 ) error("error reading file");
-      else source[newLen++] = '\0'; /* Just to be safe. */
-    }
-    fclose(fp);
-  }
-
-  printf("%s", source);
-  free(source); /* Don't forget to call free() later! */
-  exit(0);
-
-  
+  source = slurp(fp);
+  fclose(fp);
   mninit();
   if (verbose) {
     printf("\nTriton Relocatable Machine Code Compiler\n\n");
     if (fp == stdin) printf("Parsing tokens from stdin\n");
-    else printf("Parsing tokens from %s\n", src_file);
+    else printf("Parsing tokens from %s\n", argv[optind]);
   }
-  rewind(fp); parse(fp); /* First pass through */
+  parse(source); /* First pass through */
   if (verbose && binary_file) printf("Writing to %s\n", binary_file);
   if (!nvlistok()) { printnvlist(); error("undefined variables"); }
   if (pipe_to_stdout) fsp = stdout;
   else if (binary_file) {
-    if ((fsp = fopen(binary_file, "wb")) == NULL) {
-      error("Couldn't open file for saving");
-    }
+    fsp = fopen(binary_file, "wb");
+    if (fsp == NULL) error("Couldn't open file for saving");
   }
   if (serial_device) {
-    printf("Transmitting down the wires...\n");
-    startio(serial_device);
+    printf("Transmitting down the wires...\n"); startio(serial_device);
   }
-  rewind(fp); parse(fp); /* Second pass through */
+  parse(source); /* Second pass through */
   if (serial_device) {
-    printf("\nFinished transmitting down the wires\n");
-    finishio();
+    printf("\nFinished transmitting down the wires\n"); finishio();
   }
   if (fsp && fsp != stdout) fclose(fsp);
-  if (verbose) {
-    printf("\nVariable list\n\n"); printnvlist();
-  }
+  if (verbose) { printf("\nVariable list\n\n"); printnvlist(); }
+  free(source);
   return 0;
 }
 
 /* Reads in tokens from src_file and generates 8080 machine code */
 
-void parse(FILE *fp) {
+void parse(char *source) {
   int i, j, len, val, valhi, vallo, nrpt, wasplit, found;
-  int fpstackpos = 0;
+  int stack_pos = 0;
   char tok[MAXTOK] = "";
   char mod[MAXTOK] = "";
-  char *punkt, *tempfile;
-  FILE *fp2, *fpstack[MAXFP];
+  char *punkt, *include_file;
+  char *source_stack[MAXSTACK];
+  int ipos_stack[MAXSTACK];
+  FILE *fp;
   byte_count = 0;
   origin = addval("ORG", 0);
+  ipos = 0; /* initial position in source */
   if (nparse == 0) end_prog = addval("END", 0);
   do { /* Outer do loop around file inclusion levels */
-    cc = ' ';    /* set initial character properly */
-    while (tokin(tok, fp, MAXTOK) != EOF) {
-      if (myscmp("include", tok)) {     /* Process include files */
-        if (tokin(tok, fp, MAXTOK) == EOF) error("Expected a file name");
+    /* printf(">>> CURRENT SOURCE <<<\n%s\n", source); */
+    /* if (stack_pos > 0) exit(1); */
+    while (tokin(tok, source, MAXTOK) != '\0') {
+      if (myscmp("include", tok)) { /* Process include files */
+        if (tokin(tok, source, MAXTOK) == '\0') error("Expected a file name");
         if ((punkt = strchr(tok, '.')) == NULL) {
-          tempfile = (char *)emalloc(strlen(tok) + strlen(tri_ext) + 1);
-          strcpy(tempfile, tok); strcat(tempfile, tri_ext);
-        } else tempfile = strdup(tok);
+          include_file = (char *)emalloc(strlen(tok) + strlen(tri_ext) + 1);
+          strcpy(include_file, tok); strcat(include_file, tri_ext);
+        } else include_file = strdup(tok);
         if (verbose && (nparse == 0)) {
-	  printf("Including tokens from %s\n",tempfile);
+	  printf("Including tokens from %s\n", include_file);
 	}
-        if ((fp2 = fopen(tempfile, "r")) == NULL) {
-          error("I couldn't find the file.");
-        } else {
-          if (fpstackpos < MAXFP) { fpstack[fpstackpos++] = fp; fp = fp2; }
-          else { fclose(fp2); error("I'm out of file pointer stack space"); }
-        }
+	if (stack_pos == MAXSTACK) error("I'm out of source file stack space");
+	source_stack[stack_pos] = source;
+	ipos_stack[stack_pos] = ipos;
+	fp = fopen(include_file, "rb");
+	if (fp == NULL) error("couldn't open the source file");
+	source = slurp(fp);
+	fclose(fp);
+	ipos = 0; /* start at beginning */
+	/* printf("slurped %s\n", include_file); */
+	/* printf("%s", source); */
+	stack_pos++;
       } else { /* Process tokens normally - first extract any modifiers */
         if (split(tok, mod, '=')) { addval(mod, eval(tok) & 0xFFFF); continue; }
         if (split(tok, mod, ':')) addval(mod, value[origin] + byte_count);
@@ -311,25 +298,27 @@ void parse(FILE *fp) {
 	    val = mnval[i];
 	    switch (mntype[i]) {
 	    case 0: break;
-	    case 1: val |= regin(fp); break;
-	    case 2: val |= regin(fp) << 3; break;
-	    case 3: val |= regin(fp) << 3; val |= regin(fp); break;
-	    case 4: val |= pairin(fp) << 3; break;
-	    case 5: val |= rstnin(fp) << 3; break;
+	    case 1: val |= regin(source); break;
+	    case 2: val |= regin(source) << 3; break;
+	    case 3: val |= regin(source) << 3; val |= regin(source); break;
+	    case 4: val |= pairin(source) << 3; break;
+	    case 5: val |= rstnin(source) << 3; break;
 	    }
 	    for (i=0; i<nrpt; i++) byte_out(val);
 	  } else { /* Encountered hex code */
 	    if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val);
 	    else for (i=0; i<nrpt; i++) word_out(val & 0xFFFF); /* remove 16-bit word flag */
 	  }
-        }
-      }
+        } /* switch(tok[0]) */
+      } /* normal token */
+    } /* while tokin */
+    if (stack_pos > 0) { /* jump back up a level */
+      free(source);
+      source = source_stack[stack_pos];
+      ipos = ipos_stack[stack_pos];
+      stack_pos--;
     }
-    if (--fpstackpos >= 0) { /* jump back up a level */
-      if (fclose(fp) != 0) error("I couldn't close the file.");
-      fp = fpstack[fpstackpos];
-    }
-  } while (fpstackpos >= 0);
+  } while (stack_pos > 0);
   value[end_prog] = value[origin] + byte_count; /* capture end point */
   if (verbose && (nparse > 0)) printf("\n"); /* Catch trailing printout */
   nparse++;
@@ -337,9 +326,9 @@ void parse(FILE *fp) {
 
 /* Reads next token and returns code for register B,C,D,E,H,L,M, or A */
 
-int regin(FILE*fp) {
+int regin(char *source) {
   char reg[MAXREG];
-  if (tokin(reg, fp, MAXREG) == EOF) error("unexpected end of file");
+  if (tokin(reg, source, MAXREG) == '\0') error("unexpected end of file");
   if (reg[1] == '\0') switch (reg[0]) {
     case 'B': return 0;
     case 'C': return 1;
@@ -355,9 +344,9 @@ int regin(FILE*fp) {
 
 /* Reads next token and returns code for register pair B,D,H, or SP/PSW */
 
-int pairin(FILE*fp) {
+int pairin(char *source) {
   char reg[MAXREG];
-  if (tokin(reg, fp, MAXREG) == EOF) error("unexpected end of file");
+  if (tokin(reg, source, MAXREG) == '\0') error("unexpected end of file");
   if (reg[1] == '\0') switch (reg[0]) {
     case 'B': return 0;
     case 'D': return 2;
@@ -369,11 +358,11 @@ int pairin(FILE*fp) {
 
 /* Reads next token after RST and returns value */
 
-int rstnin(FILE*fp) {
+int rstnin(char *source) {
   int val = NOVAL;
   char reg[MAXREG];
-  if (tokin(reg, fp, MAXREG) == EOF) error("unexpected end of file");
-  if (reg[1] == '\0') val = ctoi(reg[0]);
+  if (tokin(reg, source, MAXREG) == '\0') error("unexpected end of file");
+  if (reg[1] == '\0') val = reg[0] - '0';
   if (val >= 0 && val <= 7) return val;
   warn("invalid number in RST N"); return 0;
 }
@@ -518,32 +507,47 @@ int myscmp(char *s, char *t) {
   return 0;
 }
 
-/* Read in next token in s, return length of token, or EOF */
+/* Read in next token in s, return length of token, or '\0' */
 /* An error occurs if the token is longer than maxlen */
 
-int tokin(char *s, FILE *fp, int maxlen) {
+char tokin(char *s, char *source, int maxlen) {
   int i = 0;
+  char c;
   int verbatim = 0;
-  if (cc == EOF) return EOF;
-  while (whitespace(cc)) {
-    if (cc == '#') while ((cc = getc(fp)) != '#' && cc != '\n' && cc != EOF) ;
-    cc = getc(fp);
+  c = next_char(source);
+  if (c == '\0') return '\0';
+  while (whitespace(c)) {
+    if (c == '#') while ((c = next_char(source)) != '#' && c != '\n' && c != '\0') ;
+    c = next_char(source);
   }
-  if (cc == EOF) return EOF;
-  while (!whitespace(cc) || verbatim) {
-    if (cc == '"' || cc == '\'') verbatim = !verbatim;
+  if (c == '\0') return '\0';
+  while (!whitespace(c) || verbatim) {
+    if (c == '"' || c == '\'') verbatim = !verbatim;
     if (i == maxlen) error("token too long, probable syntax error");
-    s[i++] = cc;
-    if ((cc = getc(fp)) == EOF) break;
+    s[i++] = c;
+    if ((c = next_char(source)) == '\0') break;
   }
   s[i++] = '\0';
+  /* printf("tokin: s='%s', i=%i\n", s, i); */
   return i;
 }
 
-/* Return true if character c is whitespace */
+/* Return the next character in the source and advance the position
+   marker, else '\0' */
+
+char next_char(char *source) {
+  char c;
+  c = source[ipos];
+  if (c != '\0') ipos++;
+  /* printf("next_char: c = '%c', ipos = %i\n", c, ipos); */
+  return c;
+}
+
+/* Return true if character c is whitespace, including '#', ',', ';' */
 
 int whitespace(char c) {
-  return ((c > EOF && c <= ' ') || c == ',' || c == ';' || c == '#');
+  if (isspace(c) || c == ',' || c == ';' || c == '#') return 1;
+  else return 0;
 }
 
 /* Initialise io port settings */
