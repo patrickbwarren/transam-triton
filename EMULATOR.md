@@ -24,7 +24,8 @@ The following command line options are available:
  - `-u` installs one or two user ROM(s);
  - `-z` [EPROM programmer] specifies the file to write the EPROM to with function key F4
 
-An optional binary tape file can be specified.
+An optional binary tape file can be specified.  Several examples are
+given in [TRIMCC.md](TRIMCC.md).
 
 To install two user ROMS using the `-u` option, separate the filenames
 by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are
