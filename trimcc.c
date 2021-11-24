@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
       printf("-p (pipe) : write the byte stream in binary to stdout (obviates -o)\n");
       printf("-o <binary_file> : write the byte stream in binary to a file\n");
       printf("-t (transmit) : write the byte stream to a serial device, for example /dev/ttyS0\n");
-      printf("if the source file is not specified, it is taken to be stdin\n");
+      printf("if the source file is not provided, the input is taken from /dev/stdin\n");
       exit(0);
     }
   }

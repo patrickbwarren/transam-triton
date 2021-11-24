@@ -321,14 +321,14 @@ lookupTable = [
 # Parse command line options
 
 parser = argparse.ArgumentParser()
-parser.add_argument('binary', nargs='?', help='binary file to disassemble')
-parser.add_argument('-c', '--chars', action='store_true', help='treat ASCII codes as characters')
+parser.add_argument('binary', nargs='?', help='binary file to disassemble, or /dev/stdin')
+parser.add_argument('-c', '--chars', action='store_true', help='treat printable ASCII codes as characters')
 parser.add_argument('-n', '--nolist', action='store_true', help='make output suitable for TriMCC')
 parser.add_argument('-a', '--address', help='Specify starting address (defaults to 0)')
 parser.add_argument('-s', '--skip', help='Skip initial bytes (defaults to 0)')
 args = parser.parse_args()
 
-# Get file name from command line arguments ('-' reads from stdin)
+# Get file name from command line arguments
 
 file_name = '/dev/stdin' if args.binary is None else args.binary
 
