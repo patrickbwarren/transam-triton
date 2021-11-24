@@ -28,9 +28,8 @@ An optional binary tape file can be specified.  Several examples are
 given in [TRIMCC.md](TRIMCC.md).
 
 To install two user ROMS using the `-u` option, separate the filenames
-by a comma with no spaces, for example `-u ROM1,ROM2`.  ROMs are
-always installed at `0400` first followed by `0800`.  An example of a
-user ROM is the fast VDU ROM described in [TRIMCC.md](TRIMCC.md).
+by a comma with no spaces, for example `-u ROM1,ROM2`. For more
+information see the section on user ROMs below.
 
 When the emulator is running the following function keys can be used
 to control the emulation:
@@ -185,8 +184,8 @@ files are specified, for example `-u ROM1,ROM2`, then the second one
 is loaded to `0800`-`0BFF`.
 
 If the first byte in the first user ROM is the instruction LXI SP (op
-code `31`), then the code is executed automatically.  See the L7.2
-documentation for more details, and the fast VDU user ROM (specifically
+code `31`), then Triton vectors here to execute the code automatically: see
+the L7.2 documentation for more details, and
 [`fastvdu_rom.tri`](fastvdu_rom.tri)) described in
 [TRIMCC.md](TRIMCC.md) for a working example.
 
