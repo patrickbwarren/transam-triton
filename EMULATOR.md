@@ -22,7 +22,7 @@ The following command line options are available:
  - `-h` or `-?` prints a summary of command line options and function keys
  - `-m` sets the top of memory, for example `-m 0x4000`; the default is `0x2000`
  - `-u` installs one or two user ROM(s);
- - `-z` [EPROM programmer] specifies the file to write the EPROM to with function key F7
+ - `-z` [EPROM programmer] specifies the file to write the EPROM to with function key F4
 
 An optional binary tape file can be specified.
 
@@ -44,14 +44,17 @@ to control the emulation:
  - F1: interrupt 1 (RST 1) - clear screen;
  - F2: interrupt 2 (RST 2) - save and dump registers;
  - F3: reset (RST 0);
- - F4: toggle emulator pause;
- - F5: write 8080 status to command line;
- - F6: [EPROM programmer] UV erase the EPROM (set all bytes to `0xff`);
- - F7: [EPROM programmer] write the EPROM to the file specified by `-z`;
- - F8: [EPROM programmer] toggle simulation of `READ ERROR` failure mode;
+ - F4: write the EPROM to the file specified by `-z`;
+ - shift + F4: toggle simulation of EPROM `READ ERROR` failure mode;
+ - ctrl + shift + F4: UV erase the EPROM (set all bytes to `0xff`);
+ - F5: toggle emulator pause;
+ - shift + F5: write 8080 status to command line;
+ - ctrl + shift + F5: dump core;
  - F9: exit emulator.
 
-All other keyboard input is sent to the emulation.
+All other keyboard input is sent to the emulation.  In a core dump
+(ctrl + shift + F5) the entire contents of memory (64k) are written to
+`core`.
 
 ### Implementation notes
 
@@ -94,7 +97,7 @@ The upshot of all this is that after a hardware interrupt 1 (clear
 screen) or interrupt 2 (print registers + flags and escape to the
 function prompt), further interrupts are disabled.  They stay disabled
 until an EI instruction is encountered at some point in the monitor
-code.  One can check this in the emulator by using function F5 to
+code.  One can check this in the emulator by using shift + F5 to
 write the 8080 status (the interrupt enabled/disbled flag status is
 E/D).  One can clearly see the interrupt enabled flag is left unset
 after one of these hardware interrupts, but becomes re-enabled for
@@ -325,31 +328,31 @@ faithfully in the emulator.
 Being an emulation, the situation where bits which should be
 programmed to be '0' but remain '1' normally does not arise however
 this failure mode resulting in a `READ ERROR` can be simulated using
-function F8.  Conversely, since it is possible to load an _existing_
+shift + F4.  Conversely, since it is possible to load an _existing_
 EPROM with arbitary bit pattern, the failure mode where bits which
 should be programmed to be '1' but are actually '0' can be more easily
 created and results in a `PROGRAM ERROR`.
 
 The following function keys are available to simulate the physical hardware:
 
-- function F6 performs the equivalent to a UV erase by setting all
-  bits to 1 (not necessary for a blank EPROM);
-
-- function F7 causes the content of the EPROM (in whatever state it is
+- F4 causes the content of the EPROM (in whatever state it is
   in) to be written to the file specified by `-z` at the command line;
 
-- function F8 toggles a `READ ERROR` failure mode simulation in which
+- shift + F4 toggles a `READ ERROR` failure mode simulation in which
   the emulator does not overwrite the existing data in the EPROM and the
   bit pattern is unchanged after a programming pulse.
 
+- ctrl + shift + F4 performs the equivalent to a UV erase by setting all
+  bits to 1 (not necessary for a blank EPROM);
+
 When programming the EPROM the number of write cycles per memory
 location is monitored to act as a check on the firmware.  When saving
-the EPROM to a file (function F7) a warning is printed at the command
+the EPROM to a file (function F4) a warning is printed at the command
 line if the write cycle count for any memory location is less than
 100, though in the emulation only one write cycle is needed per memory
 location to store the data.  These write cycle counts are initialised
 to zero at the start, and reinitialised by the emulated UV erase step.
-If the `READ ERROR` simulation mode is turned on (function F8), the
+If the `READ ERROR` simulation mode is turned on (shift + F4), the
 cycle count is still incremented but the emulator does not overwrite
 the existing data in the EPROM.
 
@@ -575,7 +578,7 @@ last write cycle (even though register C has only counted down to
 `0x01`, the 100th write step has been done). This catches errors where
 a bit in the 2708 is '1' and it should have been written to be '0'.
 In the emulator this failure mode can be simulated by toggling the
-`READ ERROR` failure mode simulation (function F8).
+`READ ERROR` failure mode simulation (shift + F4).
 
 ### Copying
 

@@ -89,7 +89,7 @@ char *name[MAXNNV];
 
 /* Function prototypes */
 
-void parse(char *);
+void parse(FILE *);
 int regin(FILE *);
 int pairin(FILE *);
 int rstnin(FILE *);
@@ -128,8 +128,12 @@ void *emalloc(size_t size) {
 int main(int argc, char *argv[]) {
   char c;
   char *s;
+  char *source = NULL; 
   char *src_file = NULL;
+  FILE *fp;
   int pipe_to_stdout = 0;
+  long bufsize;
+  size_t newLen;
   /* Sort out command line options */
   while ((c = getopt(argc, argv, "hvspo:t:")) != -1) {
     switch (c) {
@@ -152,21 +156,49 @@ int main(int argc, char *argv[]) {
     }
   }
   if (optind == argc) { /* missing non-option argument (source file) */
-    fprintf(stderr, "missing source file, for example a .tri file\n");
-    exit(1);
-  } else src_file = strdup(argv[optind]);
-  if (strchr(src_file, '.') == NULL) { /* append file extension */
-    s = strdup(src_file); free(src_file);
-    src_file = (char *)emalloc(strlen(s) + strlen(tri_ext) + 1);
-    strcpy(src_file, s); free(s);
-    strcat(src_file, tri_ext);
+    fprintf(stderr, "missing source file, for example a .tri file, using stdin\n");
+    fp = stdin;
+  } else {
+    src_file = strdup(argv[optind]);
+    if (strchr(src_file, '.') == NULL) { /* append file extension */
+      s = strdup(src_file); free(src_file);
+      src_file = (char *)emalloc(strlen(s) + strlen(tri_ext) + 1);
+      strcpy(src_file, s); free(s);
+      strcat(src_file, tri_ext);
+    }
+    fp = fopen(src_file, "rb");
   }
+  if (fp == NULL) error("couldn't open the source file");
+  else {
+    /* Go to the end of the file. */
+    if (fseek(fp, 0L, SEEK_END) == 0) {
+      /* Get the size of the file. */
+      bufsize = ftell(fp); printf("buffer size = %li\n", bufsize);
+      if (bufsize == -1) error("buffer size == -1, error");
+      /* Allocate our buffer to that size. */
+      source = malloc(sizeof(char) * (bufsize + 1));
+      /* Go back to the start of the file. */
+      if (fseek(fp, 0L, SEEK_SET) != 0) error("could not go back to start, error");
+      /* Read the entire file into memory. */
+      newLen = fread(source, sizeof(char), bufsize, fp);
+      if ( ferror( fp ) != 0 ) error("error reading file");
+      else source[newLen++] = '\0'; /* Just to be safe. */
+    }
+    fclose(fp);
+  }
+
+  printf("%s", source);
+  free(source); /* Don't forget to call free() later! */
+  exit(0);
+
+  
   mninit();
   if (verbose) {
     printf("\nTriton Relocatable Machine Code Compiler\n\n");
-    printf("Parsing tokens from %s\n", src_file);
+    if (fp == stdin) printf("Parsing tokens from stdin\n");
+    else printf("Parsing tokens from %s\n", src_file);
   }
-  parse(src_file); /* First pass through */
+  rewind(fp); parse(fp); /* First pass through */
   if (verbose && binary_file) printf("Writing to %s\n", binary_file);
   if (!nvlistok()) { printnvlist(); error("undefined variables"); }
   if (pipe_to_stdout) fsp = stdout;
@@ -179,7 +211,7 @@ int main(int argc, char *argv[]) {
     printf("Transmitting down the wires...\n");
     startio(serial_device);
   }
-  parse(src_file); /* Second pass through */
+  rewind(fp); parse(fp); /* Second pass through */
   if (serial_device) {
     printf("\nFinished transmitting down the wires\n");
     finishio();
@@ -193,14 +225,13 @@ int main(int argc, char *argv[]) {
 
 /* Reads in tokens from src_file and generates 8080 machine code */
 
-void parse(char *file) {
+void parse(FILE *fp) {
   int i, j, len, val, valhi, vallo, nrpt, wasplit, found;
   int fpstackpos = 0;
   char tok[MAXTOK] = "";
   char mod[MAXTOK] = "";
   char *punkt, *tempfile;
-  FILE *fp, *fp2, *fpstack[MAXFP];
-  if ((fp = fopen(file, "r")) == NULL) error("couldn't open file");
+  FILE *fp2, *fpstack[MAXFP];
   byte_count = 0;
   origin = addval("ORG", 0);
   if (nparse == 0) end_prog = addval("END", 0);
@@ -220,7 +251,7 @@ void parse(char *file) {
           error("I couldn't find the file.");
         } else {
           if (fpstackpos < MAXFP) { fpstack[fpstackpos++] = fp; fp = fp2; }
-          else error("I'm out of file pointer stack space");
+          else { fclose(fp2); error("I'm out of file pointer stack space"); }
         }
       } else { /* Process tokens normally - first extract any modifiers */
         if (split(tok, mod, '=')) { addval(mod, eval(tok) & 0xFFFF); continue; }
@@ -294,8 +325,10 @@ void parse(char *file) {
         }
       }
     }
-    if (fclose(fp) != 0) error("I couldn't close the file.");
-    if (--fpstackpos >= 0) fp = fpstack[fpstackpos];
+    if (--fpstackpos >= 0) { /* jump back up a level */
+      if (fclose(fp) != 0) error("I couldn't close the file.");
+      fp = fpstack[fpstackpos];
+    }
   } while (fpstackpos >= 0);
   value[end_prog] = value[origin] + byte_count; /* capture end point */
   if (verbose && (nparse > 0)) printf("\n"); /* Catch trailing printout */

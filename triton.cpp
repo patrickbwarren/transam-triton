@@ -105,6 +105,8 @@ const int mem_top_default = 0x2000;
 char *tape_file = NULL;
 char *user_rom = NULL;
 
+const char *core_dump = "core";
+
 // Takes input from port 5 buffer (IC 51) and attempts to duplicate
 // Thomson-CSF VDU controller (IC 61) interface with video RAM
 
@@ -458,15 +460,16 @@ int main(int argc, char** argv) {
       printf("-h or -? (help) : print this help\n");
       printf("-m sets the top of memory, for example -m 0x4000, defaults to 0x2000\n");
       printf("-u installs user ROM(s); to install two ROMS separate the filenames by a comma\n");
-      printf("-z specifies a file to write the EPROM to, with F7\n");
+      printf("-z specifies a file to write the EPROM to, with F4\n");
       printf("F1: interrupt 1 (RST 1) - clear screen\n");
       printf("F2: interrupt 2 (RST 2) - save and dump registers\n");
       printf("F3: reset (RST 0)\n");
-      printf("F4: toggle emulator pause\n");
-      printf("F5: write 8080 status to command line\n");
-      printf("F6: EPROM programmer: UV erase the EPROM (set all bytes to 0xff)\n");
-      printf("F7: EPROM programmer: write the EPROM to the file specified by -z\n");
-      printf("F8: EPROM programmer: toggle simulation of READ ERROR failure mode\n");
+      printf("F4: write the EPROM to the file specified by -z\n");
+      printf("shift + F4: toggle simulation of READ ERROR failure mode\n");
+      printf("ctrl + shift + F4: UV erase the EPROM (set all bytes to 0xff)\n");
+      printf("F5: toggle emulator pause\n");
+      printf("shift + F5: write 8080 status to command line\n");
+      printf("ctrl + shift + F5: dump core\n");
       printf("F9: exit emulator\n");
     default:
       exit(0);
@@ -589,36 +592,49 @@ int main(int argc, char** argv) {
 	  case sf::Keyboard::F3: // Perform a hardware reset
 	    Reset8080(&state);
 	    break;
-	  case sf::Keyboard::F4: // Toggle emulator pause
-	    pause = !pause;
-	    if (pause) fprintf(stderr, "Emulation paused - press F4 to resume, or F9 to exit\n");
-	    else fprintf(stderr, "Emulation resumed\n");
+	  case sf::Keyboard::F4: // EPROM programmer functions
+	    if (shifted) {
+	      if (ctrl) { // ctrl + shift = UV erase EPROM
+		UV_erase(&eprom);
+		fprintf(stderr, "EPROM programmer: UV erased EPROM\n");
+	      } else { // shift = toggle simulate READ ERROR failure
+		eprom.failed = !eprom.failed;
+		if (!eprom.failed) fprintf(stderr, "EPROM programmer: failure mode turned OFF\n");
+		else fprintf(stderr, "EPROM programmer: failure mode turned ON, no data will be written\n");
+	      }
+	    } else { // save EPROM to file
+	      if (eprom.file != NULL) {
+ 		fstream fs;
+		fs.open(eprom.file, ios::out | ios::binary);
+		if (fs.is_open()) {
+		  fs.write((char *)eprom.rom, _1K);
+		  fs.close();
+		  fprintf(stderr, "EPROM programmer: saved EPROM to %s\n", eprom.file);
+		  if (check_write_counts(&eprom)) {
+		    fprintf(stderr, "EPROM programmer: one or more write counts < 100\n");
+		  }
+		} else fprintf(stderr, "EPROM programmer: file %s could not be opened for writing\n", eprom.file);
+	      } else fprintf(stderr, "EPROM programmer: no file specified (-z missing)\n");
+	    }
 	    break;
-	  case sf::Keyboard::F5: // Write status of 8080
-	    WriteStatus8080(stderr, &state); fprintf(stderr, "\n");
-	    break;
-	  case sf::Keyboard::F6: // UV erase EPROM
-	    UV_erase(&eprom);
-	    fprintf(stderr, "EPROM programmer: UV erased EPROM\n");
-	    break;
-	  case sf::Keyboard::F7: // Save EPROM to file
-	    if (eprom.file != NULL) {
-	      fstream fs;
-	      fs.open(eprom.file, ios::out | ios::binary);
-	      if (fs.is_open()) {
-		fs.write((char *)eprom.rom, _1K);
-		fs.close();
-		fprintf(stderr, "EPROM programmer: saved EPROM to %s\n", eprom.file);
-		if (check_write_counts(&eprom)) {
-		  fprintf(stderr, "EPROM programmer: one or more write counts < 100\n");
+	  case sf::Keyboard::F5: // Debugging functions
+	    if (shifted) {
+	      if (ctrl) { // ctrl + shift = core dump
+		fstream fs;
+		fs.open(core_dump, ios::out | ios::binary);
+		if (fs.is_open()) {
+		  fs.write((char *)main_memory, _64K);
+		  fs.close();
+		  fprintf(stderr, "core dump: saved memory to '%s'\n", core_dump);
 		}
-	      }	else fprintf(stderr, "EPROM programmer: file %s could not be opened for writing\n", eprom.file);
-	    } else fprintf(stderr, "EPROM programmer: no file specified (-z missing)\n");
-	    break;
-	  case sf::Keyboard::F8: // Toggle simulate READ ERROR failure
-	    if (eprom.failed) fprintf(stderr, "EPROM programmer: failure mode turned OFF\n");
-	    else fprintf(stderr, "EPROM programmer: failure mode turned ON, no data will be written\n");
-	    eprom.failed = !eprom.failed;
+	      } else { // shift = write status of 8080
+		WriteStatus8080(stderr, &state); fprintf(stderr, "\n");
+	      }
+	    } else { // toggle emulator pause
+	      pause = !pause;
+	      if (!pause) fprintf(stderr, "Emulation resumed\n");
+	      else fprintf(stderr, "Emulation paused - press F5 to resume, or F9 to exit\n");
+	    }
 	    break;
 	  case sf::Keyboard::F9: // Exit emulator
 	    window.close();
