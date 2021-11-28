@@ -169,9 +169,9 @@ standard 8080 mnemonics, three mode settings are allowed:
 
 - `mode hex` : signals that `CC` should always be interpreted as hexadecimal;
 - `mode op` : signals the `CC` should always be interpreted as the 8080 mnemonic;
-- `mode smart` (default) : interprets `CC` according to context, as described next.
+- `mode smart` (default) : interprets `CC` according to context.
 
-The 'smart' reading mode takes as context the preceding op-code: if
+In the 'smart' reading mode the preceding op-code is used as context: if
 this was an 8080 mnemonic then the compiler assumes `CC` is likewise a
 mnemonic; conversely if this was hexadecimal then the compiler assumes
 `CC` is hexadecimal.  The compiler is smart enough to ignore bytes
@@ -181,7 +181,7 @@ strings.  In practice, `CC` as a mnemonic is not in any of the `.tri`
 codes in the present repository, and `CC` as hexadecimal is as such
 restricted to raw machine code dumps such as the Galaxians clone and
 the system ROMs.  A short test sequence in `mode_test.tri` is included
-though to verify the automated mode switching in 'smart' mode.
+though to verify the context setting in smart mode.
 
 Variables are represented by 16-bit words and can be defined at any
 time with the syntax `VAR=<val>` where `<val>` is hexadecimal.  These
