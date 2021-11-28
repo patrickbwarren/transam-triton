@@ -37,6 +37,9 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 #define NOVAL -1      /* Signals no value assigned in name, value pair */
 #define MAXSTACK 5    /* Max level of file inclusion */
 
+typedef enum { MOOD_HEX, MOOD_ASCII, MOOD_DEC, MOOD_VAR, MOOD_OPCODE } mood_t;
+typedef enum { MODE_HEX, MODE_OPCODE, MODE_SMART } read_mode_t;
+
 int nparse = 0;       /* count number of times have parsed file */
 int verbose = 0;      /* Verbosity in reporting results */
 int zcount;           /* Keeps track of number of bytes printed out */
@@ -45,6 +48,9 @@ int ipos = 0;         /* Keep track of current position in source */
 
 int origin, end_prog; /* Position variables */
 int byte_count;       /* Byte counter */
+
+int countdown = 0;      /* count down number of bytes in multi-byte 'immediate' instruction */
+mood_t mood = MOOD_HEX; /* current mood, used for intepreting 'CC' */
 
 char *binary_file = NULL; /* If set, write byte stream to this file */
 char *serial_device = NULL; /* If set, write byte stream to this device */
@@ -56,30 +62,43 @@ struct termios oldtio;      /* original port settings */
 struct termios newtio;      /* Triton required port settings */
 char *tri_ext = ".tri";     /* file name extension (source files) */
 
-/* 8080 mnemonic codes follow: see 8080 bugbook */
-/* Note the intepretation of CC as a mnemonic or hex code depends on context */
+/* 8080 mnemonic codes follow: see 8080 bugbook.  Note the
+   intepretation of CC as a mnemonic or hex depends on context */
 
 char *mnemonic[NMN] =
-{ "ACI",  "ADC",  "ADD",  "ADI",  "ANA",  "ANI",  "CALL", "CxC",  "CM",
-  "CMA",  "CMC",  "CMP",  "CNC",  "CNZ",  "CP",   "CPE",  "CPI",  "CPO",
-  "CZ",   "DAA",  "DAD",  "DCR",  "DCX",  "DI",   "EI",   "HLT",  "IN",
-  "INR",  "INX",  "JC",   "JM",   "JMP",  "JNC",  "JNZ",  "JP",   "JPE",
-  "JPO",  "JZ",   "LDA",  "LDAX", "LHLD", "LXI",  "MVI",  "MOV",  "NOP",
-  "ORA",  "ORI",  "OUT",  "PCHL", "POP",  "PUSH", "RAL",  "RAR",  "RC",
-  "RET",  "RLC",  "RM",   "RNC",  "RNZ",  "RP",   "RPE",  "RPO",  "RRC",
-  "RST",  "RZ",   "SBB",  "SBI",  "SHLD", "SPHL", "STA",  "STAX", "STC",
-  "SUB",  "SUI",  "XCHG", "XRA",  "XRI",  "XTHL" };
+  { "ACI",  "ADC",  "ADD",  "ADI",  "ANA",  "ANI",  "CALL", "CC",  "CM",
+    "CMA",  "CMC",  "CMP",  "CNC",  "CNZ",  "CP",   "CPE",  "CPI",  "CPO",
+    "CZ",   "DAA",  "DAD",  "DCR",  "DCX",  "DI",   "EI",   "HLT",  "IN",
+    "INR",  "INX",  "JC",   "JM",   "JMP",  "JNC",  "JNZ",  "JP",   "JPE",
+    "JPO",  "JZ",   "LDA",  "LDAX", "LHLD", "LXI",  "MVI",  "MOV",  "NOP",
+    "ORA",  "ORI",  "OUT",  "PCHL", "POP",  "PUSH", "RAL",  "RAR",  "RC",
+    "RET",  "RLC",  "RM",   "RNC",  "RNZ",  "RP",   "RPE",  "RPO",  "RRC",
+    "RST",  "RZ",   "SBB",  "SBI",  "SHLD", "SPHL", "STA",  "STAX", "STC",
+    "SUB",  "SUI",  "XCHG", "XRA",  "XRI",  "XTHL" };
+
+/* The number of bytes associated with an instruction including the op code */
+
+int mnbytes[NMN] =
+  { 1, 0, 0, 1, 0, 1, 2, 2, 2,
+    0, 0, 0, 2, 2, 2, 2, 1, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 1,
+    0, 0, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 0, 2, 2, 1, 0, 0,
+    0, 1, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 2, 0, 2, 0, 0,
+    0, 1, 0, 0, 1, 0 };
 
 char *mncode[NMN] =
-{ "316", "21S", "20S", "306", "24S", "346", "315", "334", "374",
-  "057", "077", "27S", "324", "304", "364", "354", "376", "344",
-  "314", "047", "0V1", "0D5", "0V3", "363", "373", "166", "333",
-  "0D4", "0U3", "332", "372", "303", "322", "302", "362", "352",
-  "342", "312", "072", "0V2", "052", "0U1", "0D6", "1DS", "000",
-  "26S", "366", "323", "351", "3U1", "3U5", "027", "037", "330",
-  "311", "007", "370", "320", "300", "360", "350", "340", "017",
-  "3N7", "310", "23S", "336", "042", "371", "062", "0U2", "067",
-  "22S", "326", "353", "25S", "356", "343" };
+  { "316", "21S", "20S", "306", "24S", "346", "315", "334", "374",
+    "057", "077", "27S", "324", "304", "364", "354", "376", "344",
+    "314", "047", "0V1", "0D5", "0V3", "363", "373", "166", "333",
+    "0D4", "0U3", "332", "372", "303", "322", "302", "362", "352",
+    "342", "312", "072", "0V2", "052", "0U1", "0D6", "1DS", "000",
+    "26S", "366", "323", "351", "3U1", "3U5", "027", "037", "330",
+    "311", "007", "370", "320", "300", "360", "350", "340", "017",
+    "3N7", "310", "23S", "336", "042", "371", "062", "0U2", "067",
+    "22S", "326", "353", "25S", "356", "343" };
 
 int mntype[NMN], mnval[NMN];
 
@@ -96,8 +115,8 @@ int pairin(char *);
 int rstnin(char *);
 void zinit();
 void mninit();
-void word_out(int);
-void byte_out(int);
+void word_out(int, mood_t);
+void byte_out(int, mood_t);
 int nvlistok();
 void printnvlist();
 int tokval(char *);
@@ -206,6 +225,7 @@ int main(int argc, char *argv[]) {
 void parse(char *source) {
   int i, j, len, val, valhi, vallo, nrpt, wasplit, found;
   int stack_pos = 0;
+  read_mode_t mode = MODE_SMART;
   char tok[MAXTOK] = "";
   char mod[MAXTOK] = "";
   char *punkt, *include_file;
@@ -215,12 +235,24 @@ void parse(char *source) {
   byte_count = 0;
   origin = addval("ORG", 0);
   ipos = 0; /* initial position in source */
+  mood = MOOD_OPCODE;
   if (nparse == 0) end_prog = addval("END", 0);
   do { /* Outer do loop around file inclusion levels */
-    /* printf(">>> CURRENT SOURCE <<<\n%s\n", source); */
-    /* if (stack_pos > 0) exit(1); */
     while (tokin(tok, source, MAXTOK) != '\0') {
-      if (myscmp("include", tok)) { /* Process include files */
+      if (myscmp("mode", tok)) { /* Process mode setting */
+        if (tokin(tok, source, MAXTOK) == '\0') error("Expected a mode: hex, opcode, smart");
+	if (myscmp("hex", tok)) mode = MODE_HEX;
+	else if (myscmp("op", tok)) mode = MODE_OPCODE;
+	else mode = MODE_SMART;
+	if (verbose && (nparse == 0)) {
+	  printf("Mode setting: ");
+	  switch (mode) {
+	  case MODE_HEX: printf("hex, CC always interpreted as hexadecimal\n"); break;
+	  case MODE_OPCODE: printf("opcode, CC always interpreted as op code DC\n"); break;
+	  case MODE_SMART: printf("smart, interpretation of CC depends on context\n"); break;
+	  }
+	}
+      } else if (myscmp("include", tok)) { /* Process include files */
         if (tokin(tok, source, MAXTOK) == '\0') error("Expected a file name");
         if ((punkt = strchr(tok, '.')) == NULL) {
           include_file = (char *)emalloc(strlen(tok) + strlen(tri_ext) + 1);
@@ -237,8 +269,6 @@ void parse(char *source) {
 	source = slurp(fp);
 	fclose(fp);
 	ipos = 0; /* start at beginning */
-	/* printf("slurped %s\n", include_file); */
-	/* printf("%s", source); */
 	stack_pos++;
       } else { /* Process tokens normally - first extract any modifiers */
         if (split(tok, mod, '=')) { addval(mod, eval(tok) & 0xFFFF); continue; }
@@ -263,7 +293,7 @@ void parse(char *source) {
 	  }
 	  for (i=0; i<nrpt; i++) {
 	    for (j=0; j<len-1; j++) {
-	      if (tok[j] == '"') continue; else byte_out((int)tok[j]);
+	      if (tok[j] == '"') continue; else byte_out((int)tok[j], MOOD_ASCII);
 	    }
 	  }
 	  break;
@@ -271,15 +301,15 @@ void parse(char *source) {
 	  if (strlen(tok) != 3 || tok[2] != '\'') {
 	    warn("invalid character"); break;
 	  }
-	  for (i=0; i<nrpt; i++) byte_out((int)tok[1]);
+	  for (i=0; i<nrpt; i++) byte_out((int)tok[1], MOOD_ASCII);
 	  break;
 	case '%': /* Encountered a decimal number */
-	  if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val);
+	  if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val, MOOD_DEC);
 	  else warn("decimal number too large, should be < 256");
 	  break;
 	case '!': /* Encountered a variable, dereference it therefore */
 	  wasplit = split(tok, mod, '.'); val = tokval(&mod[1]);
-	  if (!wasplit) for (i=0; i<nrpt; i++) word_out(val);
+	  if (!wasplit) for (i=0; i<nrpt; i++) word_out(val, MOOD_VAR);
 	  else {
 	    valhi = val / 0x100; vallo = val - 0x100*valhi;
 	    switch (tok[0]) {
@@ -287,15 +317,19 @@ void parse(char *source) {
 	    case 'L': val = vallo; break;
 	    default: warn("invalid byte specification"); val = 0;
 	    }
-	    for (i=0; i<nrpt; i++) byte_out(val);
+	    for (i=0; i<nrpt; i++) byte_out(val, MOOD_VAR);
 	  }
 	  break;
 	default: /* See if it's a mnemonic or a piece of hex */
 	  for (i=0, found=0; i<NMN; i++) {
 	    if (strcmp(tok, mnemonic[i]) == 0) { found = 1; break; }
 	  }
-	  if (found) { /* Encountered a mnemonic */
-	    val = mnval[i];
+	  if (strcmp(tok, "CC") == 0) {
+	    if (mode == MODE_HEX || mood != MOOD_OPCODE) found = 0;
+	    if (mode == MODE_OPCODE) found = 1;
+	  }
+	  if (found) { /* Encountered a mnemonic, with CC excepted as above */
+	    val = mnval[i]; countdown = mnbytes[i];
 	    switch (mntype[i]) {
 	    case 0: break;
 	    case 1: val |= regin(source); break;
@@ -304,10 +338,10 @@ void parse(char *source) {
 	    case 4: val |= pairin(source) << 3; break;
 	    case 5: val |= rstnin(source) << 3; break;
 	    }
-	    for (i=0; i<nrpt; i++) byte_out(val);
+	    for (i=0; i<nrpt; i++) byte_out(val, MOOD_OPCODE);
 	  } else { /* Encountered hex code */
-	    if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val);
-	    else for (i=0; i<nrpt; i++) word_out(val & 0xFFFF); /* remove 16-bit word flag */
+	    if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val, MOOD_HEX);
+	    else for (i=0; i<nrpt; i++) word_out(val & 0xFFFF, MOOD_HEX); /* remove 16-bit word flag */
 	  }
         } /* switch(tok[0]) */
       } /* normal token */
@@ -397,16 +431,23 @@ void mninit() {
 /* Save, print, and/or transmit a 16-bit word as a pair of bytes in
    little-endian order */
 
-void word_out(int v) {
+void word_out(int v, mood_t new_mood) {
   int hi, lo;
   hi = v / 0x100; lo = v - 0x100*hi;
-  byte_out(lo); byte_out(hi);
+  byte_out(lo, new_mood); byte_out(hi, new_mood);
 }
 
 /* Save, print, and/or transmit a byte */
+/* Switch mood depending on current mood and byte count in a
+   multi-byte instruction - the logic here is a bit of a mess */
 
-void byte_out(int v) {
+void byte_out(int v, mood_t new_mood) {
   char buf[1], c;
+  if (countdown == 0 || new_mood == MOOD_OPCODE) {
+    if (new_mood == MOOD_HEX || new_mood == MOOD_OPCODE) mood = new_mood;
+  } else {
+    if (new_mood != MOOD_OPCODE) countdown--;
+  }
   if (v<0 || v>0xff) { warn("invalid byte crept in somehow"); v = 0; }
   c = buf[0] = (char)v;
   if (serial_device) { write(fd, buf, 1); usleep(50000); }
@@ -475,11 +516,13 @@ void newnv(char *s, int v) {
 /* To indicate s is a 16-bit word in the range 0x0000 - 0x00FF, */
 /* (and not decimal) 0x10000 is added setting the 17th bit. */
 /* This flag can be silently stripped off by v & 0xFFFF */
+/* We silently strip off '0x' for hexadecimal codes */
 
 int eval(char *s) {
   int v = 0;
+  if (s[0] == '0' && s[1] == 'x') s += 2;
   if (sscanf(s, (s[0] == '%') ? "%%%i" : "%X", &v) != 1) {
-    warn("unrecognised value for, using 0"); v = 0;
+    fprintf(stderr, "unrecognised value for %s, using 0", s); v = 0;
   }
   if (v<0 || v>0xffff) { warn("invalid number, using 0"); v = 0; }
   return (s[0] == '%' || s[2] == '\0') ? v : 0x10000 + v; 
@@ -528,7 +571,6 @@ char tokin(char *s, char *source, int maxlen) {
     if ((c = next_char(source)) == '\0') break;
   }
   s[i++] = '\0';
-  /* printf("tokin: s='%s', i=%i\n", s, i); */
   return i;
 }
 
@@ -539,7 +581,6 @@ char next_char(char *source) {
   char c;
   c = source[ipos];
   if (c != '\0') ipos++;
-  /* printf("next_char: c = '%c', ipos = %i\n", c, ipos); */
   return c;
 }
 

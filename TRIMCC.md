@@ -29,7 +29,7 @@ device such `/dev/ttyS0`. Usage is
 ```
 ./tridat [-?|-h] [-o binary_file] serial_device
 ```
-The command line options are:
+Command line options are:
 
 - `-h` or `-?` (help) : print out the help;
 - `-o <binary_file>` : write the byte stream in binary to a file.
@@ -43,7 +43,7 @@ Compile and optionally transmit RS-232 data to Triton through a serial device.  
 ```
 ./trimcc [-?|-h] [-v] [-s] [-p] [-o binary_file] [-t serial_device] [src_file]
 ```
-The command line options are:
+Command line options are:
 
 - `-h` or `-?` (help) : print out the help;
 - `-v` (verbose) : print the byte stream and variables;
@@ -57,14 +57,9 @@ If the source file is not provided, the input is taken from `/dev/stdin`.
 With the `-t` option this transmits bytes to a physically-connected
 Triton through a serial device such `/dev/ttyS0`.  Alternatively with
 the `-o` option the code can also be used to generate binaries to run
-with the [emulator](EMULATOR.md).  If neither `-t` nor `-o` are
-specified, the byte stream is silently dropped.
-
-Using `-p` sends the binary to `/dev/stdout` so for example one can do
-```
-./trimcc <srcfile> -p | hexdump -C
-```
-The `-C` option prints the data out in the most useful format.
+with the [emulator](EMULATOR.md), and with the `-p` option this is
+piped to `/dev/stdout`.  If none of `-t`, `-o` or `-p` are specified, the
+byte stream is silently dropped.
 
 Note that to use the serial device with `-t` option you may have to
 add yourself to the `dialout` group.
@@ -75,13 +70,13 @@ This is provided for convenience and is a simplified version of an 8080
 disassembler written by Jeff Tranter, available on his [GitHub
 site](https://github.com/jefftranter/8080).  The usage is
 ```
-./disasm8080.py [-h] [-c] [-n] [-a address] [-s skip] [binary]
+./disasm8080.py [-h] [-c] [-p] [-a address] [-s skip] [binary]
 ```
 Command line options are:
 
 - `-h` : print help and exit;
 - `-c` : treat printable ASCII codes as characters;
-- `-n` : make output suitable for `trimcc` (don't list instruction addresses or instruction bytes);
+- `-p` : make output suitable for piping into `trimcc` (don't list instruction addresses or bytes);
 - `-a` : specify starting address, for example `-a 0x1602` for a Triton user code;
 - `-s` : skip initial bytes, for example to discard the tape header in a tape binary;
 
@@ -96,6 +91,7 @@ the start of a tape binary, one can investigate the binary using
 ```
 hexdump -C HEX2DEC_TAPE
 ```
+where the `-C` options prints the output in a convenient format,
 one gets:
 ```
 00000000  0d 0d 0d 0d 0d 0d 0d 0d  0d 0d 0d 0d 0d 0d 0d 0d  |................|
@@ -115,8 +111,9 @@ The result is practically identical what one gets by loading
 `HEX2DEC_TAPE` into the Triton emulator using the 'I' function and
 disassembling it using TRAP.
 
-It's possible to compile code with `trimcc` and pipe it into the
-disassembler, for example with the core code in `fastvdu.tri`:
+It's possible to compile code with `trimcc` and pipe it using the
+`-p` option into the disassembler, for example with the core code in
+`fastvdu.tri`:
 ```
 ./trimcc fastvdu.tri -p | ./disasm8080.py
 ```
@@ -124,9 +121,9 @@ This is particularly simple because there is no tape header to avoid.  User
 ROMs can likewise be disassembled.
 
 Equally, it's possible to disassemble code with the disassembler, with
-the `-n` option, and pipe it into `trimcc`, for example
+the `-p` option, and pipe it into `trimcc`, for example
 ```
-./disasm8080.py -n -a 0x400 FASTVDU_ROM | ./trimcc -v -s
+./disasm8080.py -p -a 0x400 FASTVDU_ROM | ./trimcc -v -s
 ```
 
 ### TriMCC minilanguage
@@ -156,10 +153,7 @@ The token stream comprises:
 
 - 8080 op-code mnemonics which are translated to single bytes following the
   naming scheme in the famous
-  [8080A Bugbook](http://www.bugbookcomputermuseum.com/8080A-Bugbook.html),
-  with the exception of 'Call subroutine if carry flip-flop = logic 1'
-  for which the mnemonic `CCC` is used to avoid a clash with
-  hexadecimal token `CC`;
+  [8080A Bugbook](http://www.bugbookcomputermuseum.com/8080A-Bugbook.html);
 
 - an ASCII text string designated by `"..."`, which is exported as the
   corresponding stream of ASCII bytes.
@@ -167,6 +161,27 @@ The token stream comprises:
 Comments can be included at any point: they are start with a `#`
 character and are terminated either by another `#` character, or by the
 end of the line.
+
+The instruction 'Call subroutine if carry flip-flop = logic 1' is
+represented by mnemonic `CC` which can be confused with the
+hexadecimal `CC`.  To resolve the ambiguity whilst preserving the
+standard 8080 mnemonics, three mode settings are allowed:
+
+- `mode hex` : signals that `CC` should always be interpreted as hexadecimal;
+- `mode op` : signals the `CC` should always be interpreted as the 8080 mnemonic;
+- `mode smart` (default) : interprets `CC` according to context, as described next.
+
+The 'smart' reading mode takes as context the preceding op-code: if
+this was an 8080 mnemonic then the compiler assumes `CC` is likewise a
+mnemonic; conversely if this was hexadecimal then the compiler assumes
+`CC` is hexadecimal.  The compiler is smart enough to ignore bytes
+that follow any 'immediate' instructions such as `LXI`, `MVI`, `IN`,
+`OUT`, `JMP`, `CALL`, and variants, and also to ignore characters, and
+strings.  In practice, `CC` as a mnemonic is not in any of the `.tri`
+codes in the present repository, and `CC` as hexadecimal is as such
+restricted to raw machine code dumps such as the Galaxians clone and
+the system ROMs.  A short test sequence in `mode_test.tri` is included
+though to verify the automated mode switching in 'smart' mode.
 
 Variables are represented by 16-bit words and can be defined at any
 time with the syntax `VAR=<val>` where `<val>` is hexadecimal.  These

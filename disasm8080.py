@@ -323,7 +323,7 @@ lookupTable = [
 parser = argparse.ArgumentParser()
 parser.add_argument('binary', nargs='?', help='binary file to disassemble, or /dev/stdin')
 parser.add_argument('-c', '--chars', action='store_true', help='treat printable ASCII codes as characters')
-parser.add_argument('-n', '--nolist', action='store_true', help='make output suitable for TriMCC')
+parser.add_argument('-p', '--pipe', action='store_true', help='make output suitable for piping to TriMCC')
 parser.add_argument('-a', '--address', help='Specify starting address (defaults to 0)')
 parser.add_argument('-s', '--skip', help='Skip initial bytes (defaults to 0)')
 args = parser.parse_args()
@@ -356,7 +356,7 @@ if args.skip:
 
 # Print initial origin address
 
-if args.nolist is False:
+if args.pipe is False:
     print('%04X            %s     %04X' % (address, 'ORG', address))
 else:
     print('ORG=%04X' % address) # formatted for TriMCC
@@ -366,11 +366,11 @@ while True:
         b = f.read(1)  # Get binary byte from file
 
         if len(b) == 0:  # EOF
-            if args.nolist is False:
+            if args.pipe is False:
                 print('%04X            %s' % (address, 'END')) # Exit if end of file reached.
             break
 
-        if args.nolist is False:
+        if args.pipe is False:
             line = '%04X  ' % address # Print current address
         else:
             line = ''
@@ -384,14 +384,14 @@ while True:
         # Print instruction bytes
 
         if n == 1:
-            if args.nolist is False:
+            if args.pipe is False:
                 line += '%02X        ' % op
         elif n == 2:
             try:  # Possible to get exception here if EOF reached.
                 op1 = ord(f.read(1))
             except TypeError:
                 op1 = 0  # Fake it to recover from EOF
-            if args.nolist is False:
+            if args.pipe is False:
                 line += '%02X %02X     ' % (op, op1)
         elif n == 3:
             try:  # Possible to get exception here if EOF reached.
@@ -400,7 +400,7 @@ while True:
             except TypeError:
                 op1 = 0  # Fake it to recover from EOF
                 op2 = 0
-            if args.nolist is False:
+            if args.pipe is False:
                 line += '%02X %02X %02X  ' % (op, op1, op2)
 
         # If opcode starts with '*' then put in comment that this is an alternative op code (likely an error).
@@ -426,7 +426,7 @@ while True:
         if alternative:
             mnem = mnem.replace(mnem[:1], '')  # Remove the star
             # Line up comment at fixed column position
-            comment_col = 67 if args.nolist is False else 51
+            comment_col = 67 if args.pipe is False else 51
             line += comment_alt_op_code.rjust(comment_col - len(line))
 
         # Update address
