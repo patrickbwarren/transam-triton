@@ -133,11 +133,9 @@ result = 0x05 --> parity = T
 ```
 Some 8080 emulators get this the wrong way around (it is however
 correct in Robin's emulator).  In a Triton Level 7.2 emulation this
-leads to an extremely obscure bug since the problem only shows up when
-trying to enter BASIC with the 'J' instruction: if the parity
-calculator is implemented the wrong way around, the emulation hangs at
-this point, but otherwise everything else appears to function
-normally.
+leads to an extremely obscure bug wherein the emulation hangs when
+trying to enter BASIC with the 'J' instruction, but otherwise
+everything else appears to function normally.
 
 The 8-bit parity calculator in the current emulator is based on a
 [Stack Overflow implementation](https://stackoverflow.com/questions/21617970/how-to-check-if-value-has-even-parity-of-bits-or-odd/21618038)

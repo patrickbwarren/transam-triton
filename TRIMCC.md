@@ -32,7 +32,7 @@ device such `/dev/ttyS0`. Usage is
 Command line options are:
 
 - `-h` or `-?` (help) : print out the help;
-- `-o binary_file : write the byte stream in binary to a file.
+- `-o binary_file` : write the byte stream in binary to a file.
 
 Note that to use the serial device you may have to add yourself to the
 `dialout` group.
