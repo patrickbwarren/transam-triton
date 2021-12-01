@@ -32,7 +32,7 @@ device such `/dev/ttyS0`. Usage is
 Command line options are:
 
 - `-h` or `-?` (help) : print out the help;
-- `-o <binary_file>` : write the byte stream in binary to a file.
+- `-o binary_file : write the byte stream in binary to a file.
 
 Note that to use the serial device you may have to add yourself to the
 `dialout` group.
@@ -47,19 +47,20 @@ Command line options are:
 
 - `-h` or `-?` (help) : print out the help;
 - `-v` (verbose) : print the byte stream and variables;
-- `-s` (spaced) : add a column of spaces after the 7th byte;
+- `-s` (spaced) : add a column of spaces after the 7th byte (with `-v`);
 - `-p` (pipe) : write the byte stream in binary to `/dev/stdout` (obviates `-o`);
-- `-o <binary_file>` : write the byte stream in binary to a file;
-- `-t` (transmit) : write the byte stream to a serial device, for example `/dev/ttyS0`.
+- `-o binary_file` : write the byte stream in binary to a file;
+- `-t serial_device` : transmit the byte stream to a serial device, for example `/dev/ttyS0`.
 
-If the source file is not provided, the input is taken from `/dev/stdin`.
+If the source file is not provided, input is taken from `/dev/stdin`.
 
-With the `-t` option this transmits bytes to a physically-connected
-Triton through a serial device such `/dev/ttyS0`.  Alternatively with
-the `-o` option the code can also be used to generate binaries to run
-with the [emulator](EMULATOR.md), and with the `-p` option this is
-piped to `/dev/stdout`.  If none of `-t`, `-o` or `-p` are specified, the
-byte stream is silently dropped.
+With the `-t` option this transmits (writes) a byte stream to a
+physically-connected Triton through a serial device such `/dev/ttyS0`.
+Alternatively with the `-o` option the code can also be used to
+capture the byte steam in a binary file to run with the
+[emulator](EMULATOR.md), and with the `-p` option the byte stream is
+piped to `/dev/stdout`.  If none of `-t`, `-o` or `-p` are specified,
+the byte stream is silently dropped.
 
 Note that to use the serial device with `-t` option you may have to
 add yourself to the `dialout` group.
@@ -130,13 +131,14 @@ the `-p` option, and pipe it into `trimcc`, for example
 
 This is designed to be able to handle raw machine code, 8080 op-code
 mnemonics, labels and cross references, ASCII characters, and ASCII
-text.  A `.tri` file is an ASCII-encoded text file consisting of a
-stream of tokens separated by white space characters, commas,
-semicolons, and/or newlines.  Other files can be included by using an
-`include <file>` directive, which is nestable to a certain level. For
-example see `fastvdu_rom.tri` and `fastvdu_tape.tri`, which both
-include `fastvdu.tri`.  This allows the same core code to be used to
-make a tape binary and for making a user ROM.
+text.  A TriMCC source file (generally a `.tri` file) is an
+ASCII-encoded text file consisting of a stream of tokens separated by
+white space characters, commas, semicolons, and/or newlines.  Other
+source files can be included by using an `include` directive, which is
+nestable to a certain level. For examples see `fastvdu_rom.tri` and
+`fastvdu_tape.tri`, which both include `fastvdu.tri`.  This allows the
+same core code to be used to make a tape binary and for making a user
+ROM.
 
 The token stream comprises:
 
@@ -149,11 +151,10 @@ The token stream comprises:
   represent a single byte;
 
 - an individual ASCII character written as `'x'` (where x is 0-9, A-Z
-  etc) which is exported as the corresponding ASCII byte;
+  etc), exported as the corresponding ASCII byte;
 
-- 8080 op-code mnemonics which are translated to single bytes following the
-  naming scheme in the famous
-  [8080A Bugbook](http://www.bugbookcomputermuseum.com/8080A-Bugbook.html);
+- 8080 op-code mnemonics which are translated corresponding to the famous [8080A
+  Bugbook](http://www.bugbookcomputermuseum.com/8080A-Bugbook.html);
 
 - an ASCII text string designated by `"..."`, which is exported as the
   corresponding stream of ASCII bytes.
@@ -168,20 +169,21 @@ hexadecimal `CC`.  To resolve the ambiguity whilst preserving the
 standard 8080 mnemonics, three mode settings are allowed:
 
 - `mode hex` : signals that `CC` should always be interpreted as hexadecimal;
-- `mode op` : signals the `CC` should always be interpreted as the 8080 mnemonic;
+- `mode code` : signals that `CC` should always be interpreted as the 8080 mnemonic;
 - `mode smart` (default) : interprets `CC` according to context.
 
-In the 'smart' reading mode the preceding op-code is used as context: if
-this was an 8080 mnemonic then the compiler assumes `CC` is likewise a
-mnemonic; conversely if this was hexadecimal then the compiler assumes
-`CC` is hexadecimal.  The compiler is smart enough to ignore bytes
-that follow any 'immediate' instructions such as `LXI`, `MVI`, `IN`,
-`OUT`, `JMP`, `CALL`, and variants, and also to ignore characters, and
-strings.  In practice, `CC` as a mnemonic is not in any of the `.tri`
-codes in the present repository, and `CC` as hexadecimal is as such
-restricted to raw machine code dumps such as the Galaxians clone and
-the system ROMs.  A short test sequence in `mode_test.tri` is included
-though to verify the context setting in smart mode.
+In the 'smart' reading mode the preceding op-code is used as context:
+if this was an 8080 mnemonic then the compiler assumes `CC` is
+likewise a mnemonic; conversely if this was hexadecimal then the
+compiler assumes `CC` is hexadecimal.  The compiler is smart enough to
+ignore bytes that follow any 'immediate' instructions such as `LXI`,
+`MVI`, `IN`, `OUT`, `JMP`, `CALL`, and variants, and also to ignore
+characters, and strings.  In practice, `CC` as a mnemonic is not in
+any of the TriMCC source codes in the present repository, and `CC` as
+hexadecimal is as such restricted to raw machine code dumps such as
+the Galaxians clone and the system ROMs.  A short test sequence in
+`mode_test.tri` is included to verify the context setting in smart
+mode.
 
 Variables are represented by 16-bit words and can be defined at any
 time with the syntax `VAR=<val>` where `<val>` is hexadecimal.  These
@@ -210,24 +212,38 @@ special variable `END` contains the final value of the address counter
 after all bytes have been generated.  This can be used to make tape
 headers.
 
+Compilation can be terminated early in any source file with the `end`
+directive.  In an included file this causes the compiler to continue
+from the next token after the corresponding `include` statement in the
+including file.  In the top level this causes compilation to finish
+completely.
+
 Repeated tokens can be specified by a repeat count followed by `*`,
 thus for example `64*OD` generates 64 ASCII carriage return markers as
 in the tape header below.  Alternatively, following a token by `>` and
 a memory address expressed as a 16-bit word in hexadecimal, or a
-variable preceded by `!`, will export as many tokens as are needed to
+variable preceded by `!`, will export as many repeated elements as are needed to
 fill memory up to but not including the specified memory address (if
-the code has already reached the specified address then no tokens are
-emitted). This can be used for example to pad out to a specified
-position. For instance if the next byte to be exported would be at
-address `1612` (based on the value of `ORG` and the number of bytes
-exported thus far), and the code encounters `NOP>1620`, then the code
-will emit 14 NOP op-codes (`00`) to fill to `161F` and the next byte
-to be exported will be at address `1620`.  The same effect can be
+the code has already reached or gone past the specified address then
+no tokens are emitted). This can be used for example to pad out to a
+specified position. For instance if the next byte to be exported would
+be at address `1612` (based on the value of `ORG` and the number of
+bytes exported thus far), and the code encounters `NOP>1620`, then the
+code will emit 14 NOP op-codes (`00`) to fill to `161F` and the next
+byte to be exported will be at address `1620`.  The same effect can be
 achieved by having something like `FRAME=1620` earlier in the code,
 and using `NOP>!FRAME`.  Finally, by specifying the value of `END` and
-using `NOP>!END` one can pad the compiled code out to a specified
-end address (see [`invaders_tape.tri`](invaders_tape.tri) for another
+using `NOP>!END` one can pad the compiled code out to a specified end
+address (see [`invaders_tape.tri`](invaders_tape.tri) for another
 example).
+
+Repeat counts also work with multi-token and multi-byte instructions,
+for example:
+
+- `3*"ABC"` will result in `ABCABCABC` (in ASCII bytes);
+- `5*INX H` will result in `23 23 23 23 23` (ie five increment HL instructions);
+- `4*ADI A1` will result in `C6 A1 C6 A1 C6 A1 C6 A1` (four add immediate instructions);
+- `2*CALL !PCRLF` will result in `CD 33 00 CD 33 00`, assuming `PCRLF` is assigned to `0033`.
 
 Strings in Triton have to be explicitly terminated by the ASCII END OF
 TRANSMISSION marker (`04` or ctrl-D) so that a typical string would
@@ -240,8 +256,9 @@ This can be printed to the VDU by `LXI D !STRING; CALL 002B` where
 CR/LF.
 
 The TriMCC compiler was written in C over twenty years ago and is
-certainly very clunky by modern standards.  An ongoing project is to
-replace this by something more modern written in python.
+certainly very spaghetti-like and clunky by modern standards.  An
+ongoing project is to replace this by something more modern written in
+python.
 
 #### Tape headers
 
@@ -272,24 +289,27 @@ the `!END` can be omitted if the end adress is hard-coded, as in
 An example which illustrates the features of the TriMCC minilanguage
 is provided in [`hex2dec.tri`](hex2dec.tri):
 ```
-# Standard tape header #
-64*0D "HEX2DEC" 20 04
-ORG=1600 !END
- 
-# Entry points for Triton L7.2 Monitor #
+# Entry points for Triton L7.2 monitor
+
 GETADR=020B PSTRNG=002B PCRLF=0033 OUTCH=0013
 
-# Constants #
-A=%10000 B=%1000 C=%100 D=%10 E=%1
+A=%10000 B=%1000 C=%100 D=%10 E=%1 # Constants
 
-# Main program loops indefinitely #
+# Standard tape header.
+
+64*0D "HEX2DEC" 20 04
+ORG=1600 !END
+
+# Main program loops indefinitely.
+
 ENTRY:
 LXI D !SMESSG; CALL !GETADR;
 LXI D !SVALUE; CALL !PSTRNG;
 CALL !PDEC; CALL !PCRLF
 JMP !ENTRY
 
-# Print HL in decimal format #
+# Print HL in decimal format
+
 PDEC:
 LXI D !A; CALL !SUB
 LXI D !B; CALL !SUB
@@ -298,7 +318,8 @@ LXI D !D; CALL !SUB
 LXI D !E; CALL !SUB
 RET
 
-# Obtain a decimal digit and print it out #
+# Obtain a decimal digit and print it out.
+
 SUB:
 MVI B '0'; DCR B;
 LOOP: INR B; MOV A,L; SUB E; MOV L,A; MOV A,H; SBB D; MOV H,A; JNC !LOOP
@@ -306,14 +327,15 @@ MOV A,L; ADD E; MOV L,A; MOV A,H; ADC D; MOV H,A;
 MOV A,B; CALL !OUTCH;
 RET
 
-# Text for messages #
+# Text for messages.
+
 SMESSG: "TYPE 16-BIT WORD (0000 TO FFFF)" 04
 SVALUE: "VALUE IS " 04
 ```
 It works by subtracting the decimal numbers from 10000 to 1 from the
-provided 16-bit word, and incrementing the ASCII code `30` for the digit 
-'0' to obtain the corresponding decimal digit (this relies on
-the ASCII codes for the digits 0-9 being contiguous).
+provided 16-bit word and, with the ASCII codes for the digits 0-9
+being contiguous, incrementing the ASCII code `30` for the digit '0'
+to obtain the corresponding decimal digit.
 
 Compiling this with `./trimcc hex2dec.tri -v -s` results in the byte
 stream (c.f. disassembled version above)
@@ -347,7 +369,7 @@ and variable list
 All `.tri` codes below can be compiled to tape binaries suitable for the
 [emulator](EMULATOR.md) by, for example,
 ```
-./trimcc example_tape.tri -o EXAMPLE_TAPE
+./trimcc hex2dec_tape.tri -o HEX2DEC_TAPE
 ```
 To load this into the emulator use the `-t EXAMPLE_TAPE` command line
 option, and then from within the emulator load the tape file using the
@@ -358,8 +380,8 @@ loaded into the emulator with the `-t` option,and the code you want to
 load picked out by using the 'I' command with the appropriate tape
 header.  Compilation of all these example and the creation of a master
 tape is implemented as a `make tapes` target in the Makefile.  To run
-these codes in Triton, use the monitor 'G' command, with the starting
-address `1602`.
+any of these codes in Triton, use the monitor 'G' command, with the
+starting address `1602`.
 
 [`hex2dec_tape.tri`](hex2dec_tape.tri) (tape header `HEX2DEC`) -- convert a
 16-bit word to decimal, illustrating some of the features of the

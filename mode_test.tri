@@ -17,30 +17,37 @@
 # You should have received a copy of the GNU General Public License
 # along with this file.  If not, see <http://www.gnu.org/licenses/>.
  
-# The bytes after the comment should be seen in 'smart' mode.
+# Mode setting commands (default is smart mode)
 
-CC 1480  # DC 80 14 - interpret as mnemonic
+# mode hex
+# mode code
+# mode smart
 
-DB 03    # DB 03    - implicit switch to hex mode
-CC 147A  # CC 7A 14 - interpret as hex
+PCRLF=0033
+2*CALL !PCRLF
 
-ADI 02   # C6 02    - implicit switch to op mode
-CC 147B  # DC 7B 14 - interpret as mnemonic
-'A'      # 41       - shouldn't affect the mode
-CC 02 0B # DC 02 0B - interpret as mnemonic
-"BCD"    # 42 43 44 - shouldn't affect the mode
-CC 13 EF # DC 13 EF - interpret as mnemonic
-%100     # 64       - shouldn't affect the mode
-CC 04AA  # DC AA 04 - interpret as mnemonic
+CC 1480   # DC 80 14 - interpret as mnemonic
 
-06 'A'   # 06 41    - implicit switch to hex mode
-CC 147B  # CC 7B 14 - interpret as hex
-'A'      # 41       - shouldn't affect the mode
-CC 02 0B # CC 02 0B - interpret as hex
-"BCD"    # 42 43 44 - shouldn't affect the mode
-CC 13 EF # CC 13 EF - interpret as hex
-%100     # 64       - shouldn't affect the mode
-CC 04AA  # CC AA 04 - interpret as hex
+DB 03     # DB 03    - implicit switch to hex mode
+3*CC 147A # CC CC CC 7A 14 - interpret as hex
 
-OUT 02   # D3 02    - implicit switch to op mode
-CC 04BB  # DC BB 04 - interpret as mnemonic
+ADI 02    # C6 02    - implicit switch to op mode
+2*CC 147B # DC 7B 14 DC 7B 14 - interpret as mnemonic
+'A'       # 41       - shouldn't affect the mode
+CC 02 0B  # DC 02 0B - interpret as mnemonic
+"BCD"     # 42 43 44 - shouldn't affect the mode
+CC 13 EF  # DC 13 EF - interpret as mnemonic
+%100      # 64       - shouldn't affect the mode
+CC 04AA   # DC AA 04 - interpret as mnemonic
+
+06 'A'    # 06 41    - implicit switch to hex mode
+CC 147B   # CC 7B 14 - interpret as hex
+'A'       # 41       - shouldn't affect the mode
+CC 02 0B  # CC 02 0B - interpret as hex
+"BCD"     # 42 43 44 - shouldn't affect the mode
+CC 13 EF  # CC 13 EF - interpret as hex
+%100      # 64       - shouldn't affect the mode
+CC 04AA   # CC AA 04 - interpret as hex
+
+OUT 02    # D3 02    - implicit switch to op mode
+CC 04BB   # DC BB 04 - interpret as mnemonic

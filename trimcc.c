@@ -21,6 +21,7 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -36,6 +37,8 @@ along with this file.  If not, see <http://www.gnu.org/licenses/>.
 #define DELAY  10     /* Delay in ms after a byte transmitted */
 #define NOVAL -1      /* Signals no value assigned in name, value pair */
 #define MAXSTACK 5    /* Max level of file inclusion */
+#define MAXBUF 200    /* Buffer size */
+#define NO_TARGET -1  /* Used to test for absence of target address*/
 
 typedef enum { MOOD_HEX, MOOD_ASCII, MOOD_DEC, MOOD_VAR, MOOD_OPCODE } mood_t;
 typedef enum { MODE_HEX, MODE_OPCODE, MODE_SMART } read_mode_t;
@@ -48,19 +51,27 @@ int ipos = 0;         /* Keep track of current position in source */
 
 int origin, end_prog; /* Position variables */
 int byte_count;       /* Byte counter */
+int target_address = NO_TARGET;  /* Target address for fill requests */
 
-int countdown = 0;      /* count down number of bytes in multi-byte 'immediate' instruction */
-mood_t mood = MOOD_HEX; /* current mood, used for intepreting 'CC' */
+int line_count;           /* Keep track of the line in the current source */
+char *source_file = NULL; /* Keep track of file name of the current source */
 
-char *binary_file = NULL; /* If set, write byte stream to this file */
+int nrpt;               /* Count of number of repeats */
+int countdown = 0;      /* Count down number of bytes in multi-byte 'immediate' instruction */
+mood_t mood = MOOD_HEX; /* Current mood, used for intepreting 'CC' */
+
+char *binary_file = NULL;   /* If set, write byte stream to this file */
 char *serial_device = NULL; /* If set, write byte stream to this device */
+
+uint8_t buf[MAXBUF]; /* Buffer for bytes output, used for repeat commands */
+int buf_size = 0;    /* Current end position in buffer */
 
 FILE *fsp = NULL;     /* File pointer for save binary data */
 
-int fd;                     /* port id number */
-struct termios oldtio;      /* original port settings */
+int fd;                     /* Port id number */
+struct termios oldtio;      /* Original port settings */
 struct termios newtio;      /* Triton required port settings */
-char *tri_ext = ".tri";     /* file name extension (source files) */
+char *tri_ext = ".tri";     /* File name extension (source files) */
 
 /* 8080 mnemonic codes follow: see 8080 bugbook.  Note the
    intepretation of CC as a mnemonic or hex depends on context */
@@ -76,7 +87,7 @@ char *mnemonic[NMN] =
     "RST",  "RZ",   "SBB",  "SBI",  "SHLD", "SPHL", "STA",  "STAX", "STC",
     "SUB",  "SUI",  "XCHG", "XRA",  "XRI",  "XTHL" };
 
-/* The number of bytes associated with an instruction including the op code */
+/* The number of bytes associated with an instruction excluding the op code */
 
 int mnbytes[NMN] =
   { 1, 0, 0, 1, 0, 1, 2, 2, 2,
@@ -88,6 +99,8 @@ int mnbytes[NMN] =
     0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 1, 2, 0, 2, 0, 0,
     0, 1, 0, 0, 1, 0 };
+
+/* octal representations of the mnemonics - see 8080 bugbook */
 
 char *mncode[NMN] =
   { "316", "21S", "20S", "306", "24S", "346", "315", "334", "374",
@@ -133,11 +146,11 @@ void finishio();
 int ctoi(char c) { return (int)c - '0'; }
 
 void warn(char *s) {
-  fprintf(stderr, "warning: %s\n", s);
+  fprintf(stderr, "warning: %s [line %i in %s]\n", s, line_count, source_file);
 }
 
 void error(char *s) {
-  fprintf(stderr, "error: %s\n", s); exit(1);
+  fprintf(stderr, "error: %s [line %i in %s]\n", s, line_count, source_file); exit(1);
 }
 
 void *emalloc(size_t size) {
@@ -148,14 +161,13 @@ void *emalloc(size_t size) {
 
 /* Slurp the entire contents of a file into a string */
 
-/* We do this because this is a two-pass compiler, but we can't assume
-   we can rewind the file since we also want to allow the input to be
-   piped in. */
+/* As a two-pass compiler, we can't assume we can rewind the file if
+   we also want to allow the input to be piped from /dev/stdin. */
 
 /* https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c */
 
 char *slurp(FILE *fp) {
-  char *bytes = NULL; 
+  char *bytes = NULL;
   size_t len;
   ssize_t bytes_read;
   bytes_read = getdelim(&bytes, &len, '\0', fp);
@@ -165,7 +177,7 @@ char *slurp(FILE *fp) {
 
 int main(int argc, char *argv[]) {
   char c;
-  char *source = NULL; 
+  char *source = NULL;
   FILE *fp;
   int pipe_to_stdout = 0;
   /* Sort out command line options */
@@ -178,25 +190,29 @@ int main(int argc, char *argv[]) {
     case 't': serial_device = strdup(optarg); break;
     case 'h': case '?':
       printf("Compile and optionally transmit RS-232 data to Triton through a serial device\n");
-      printf("usage: %s  [-h|-?] [-v] [-s] [-p] [-o binary_file] [-t serial_device] [src_file]\n", argv[0]);
+      printf("Usage: %s  [-h|-?] [-v] [-s] [-p] [-o binary_file] [-t serial_device] [src_file]\n", argv[0]);
       printf("-h or -? (help) : print this help\n");
       printf("-v (verbose) : print the byte stream and variables\n");
       printf("-s (spaced) : add a column of spaces after the 7th byte\n");
       printf("-p (pipe) : write the byte stream in binary to stdout (obviates -o)\n");
-      printf("-o <binary_file> : write the byte stream in binary to a file\n");
-      printf("-t (transmit) : write the byte stream to a serial device, for example /dev/ttyS0\n");
-      printf("if the source file is not provided, the input is taken from /dev/stdin\n");
+      printf("-o binary_file : write the byte stream in binary to a file\n");
+      printf("-t serial_device : transmit the byte stream to a serial device, for example /dev/ttyS0\n");
+      printf("If the source file is not provided, input is taken from /dev/stdin\n");
       exit(0);
     }
   }
-  fp = (optind == argc) ? stdin : fopen(argv[optind], "rb");
+  if (optind == argc) {
+    fp = stdin; source_file = strdup("/dev/stdin");
+  } else {
+    fp = fopen(argv[optind], "rb"); source_file = strdup(argv[optind]);
+  }
   if (fp == NULL) error("couldn't open the source file");
   source = slurp(fp);
   fclose(fp);
   mninit();
   if (verbose) {
     printf("\nTriton Relocatable Machine Code Compiler\n\n");
-    if (fp == stdin) printf("Parsing tokens from stdin\n");
+    if (fp == stdin) printf("Parsing tokens from /dev/stdin\n");
     else printf("Parsing tokens from %s\n", argv[optind]);
   }
   parse(source); /* First pass through */
@@ -221,36 +237,40 @@ int main(int argc, char *argv[]) {
 }
 
 /* Reads in tokens from src_file and generates 8080 machine code */
+/* Generally called twice, with the second time resolving all the references */
 
 void parse(char *source) {
-  int i, j, len, val, valhi, vallo, nrpt, wasplit, found;
+  int i, j, len, val, valhi, vallo, wasplit, found;
   int stack_pos = 0;
+  int process_more_tokens = 0;
   read_mode_t mode = MODE_SMART;
   char tok[MAXTOK] = "";
   char mod[MAXTOK] = "";
   char *punkt, *include_file;
   char *source_stack[MAXSTACK];
+  char *file_stack[MAXSTACK];
   int ipos_stack[MAXSTACK];
+  int line_stack[MAXSTACK];
   FILE *fp;
-  byte_count = 0;
+  byte_count = 0; line_count = 0;
   origin = addval("ORG", 0);
   ipos = 0; /* initial position in source */
   mood = MOOD_OPCODE;
   if (nparse == 0) end_prog = addval("END", 0);
-  do { /* Outer do loop around file inclusion levels */
+  do { /* Loop around file inclusion levels */
     while (tokin(tok, source, MAXTOK) != '\0') {
       if (myscmp("mode", tok)) { /* Process mode setting */
         if (tokin(tok, source, MAXTOK) == '\0') error("Expected a mode: hex, opcode, smart");
 	if (myscmp("hex", tok)) mode = MODE_HEX;
-	else if (myscmp("op", tok)) mode = MODE_OPCODE;
+	else if (myscmp("code", tok)) mode = MODE_OPCODE;
 	else mode = MODE_SMART;
-	if (verbose && (nparse == 0)) {
-	  printf("Mode setting: ");
+	if (nparse == 0 && verbose) {
 	  switch (mode) {
-	  case MODE_HEX: printf("hex, CC always interpreted as hexadecimal\n"); break;
-	  case MODE_OPCODE: printf("opcode, CC always interpreted as op code DC\n"); break;
-	  case MODE_SMART: printf("smart, interpretation of CC depends on context\n"); break;
+	  case MODE_HEX: printf("Mode set: hex, CC always interpreted as hexadecimal"); break;
+	  case MODE_OPCODE: printf("Mode set: opcode, CC always interpreted as op code DC"); break;
+	  case MODE_SMART: printf("Mode set: smart, interpretation of CC depends on context"); break;
 	  }
+	  printf(" [line %i in %s]\n", line_count, source_file);
 	}
       } else if (myscmp("include", tok)) { /* Process include files */
         if (tokin(tok, source, MAXTOK) == '\0') error("Expected a file name");
@@ -258,27 +278,30 @@ void parse(char *source) {
           include_file = (char *)emalloc(strlen(tok) + strlen(tri_ext) + 1);
           strcpy(include_file, tok); strcat(include_file, tri_ext);
         } else include_file = strdup(tok);
-        if (verbose && (nparse == 0)) {
-	  printf("Including tokens from %s\n", include_file);
+        if (nparse == 0 && verbose) {
+	  printf("At line %i in %s, including tokens from %s\n", line_count, source_file, include_file);
 	}
 	if (stack_pos == MAXSTACK) error("I'm out of source file stack space");
+	file_stack[stack_pos] = source_file;
+	line_stack[stack_pos] = line_count;
 	source_stack[stack_pos] = source;
 	ipos_stack[stack_pos] = ipos;
 	fp = fopen(include_file, "rb");
 	if (fp == NULL) error("couldn't open the source file");
 	source = slurp(fp);
 	fclose(fp);
-	ipos = 0; /* start at beginning */
-	stack_pos++;
+	source_file = strdup(include_file);
+	ipos = 0; line_count = 0; /* start at beginning */
+	stack_pos++; /* finally increment the stack level */
       } else { /* Process tokens normally - first extract any modifiers */
         if (split(tok, mod, '=')) { addval(mod, eval(tok) & 0xFFFF); continue; }
         if (split(tok, mod, ':')) addval(mod, value[origin] + byte_count);
-        if (split(tok, mod, '*')) sscanf(mod, "%i", &nrpt); else nrpt = 1;
+        if (split(tok, mod, '*')) sscanf(mod, "%i", &nrpt);
+	else if (countdown == 0) nrpt = 1;
 	if (split(tok, mod, '>')) { /* here tok is the modifier */
-	  if (tok[0] == '!') val = tokval(&tok[1]);
-	  else val = eval(tok) & 0xFFFF;
-	  nrpt = val - value[origin] - byte_count;
-	  strcpy(tok, mod); /* to recover the token to be repeated */
+	  if (tok[0] == '!') target_address = tokval(&tok[1]);
+	  else target_address = eval(tok) & 0xFFFF;
+	  strcpy(tok, mod); /* to recover the token to be repeated, assumed a single byte*/
 	}
         if (nrpt < 0) {
           warn("negative repeat number, setting to zero"); nrpt = 0;
@@ -291,25 +314,23 @@ void parse(char *source) {
 	  if ((len = strlen(tok)) < 2 || tok[len-1] != '"') {
 	    warn("invalid string"); break;
 	  }
-	  for (i=0; i<nrpt; i++) {
-	    for (j=0; j<len-1; j++) {
-	      if (tok[j] == '"') continue; else byte_out((int)tok[j], MOOD_ASCII);
-	    }
+	  countdown = len - 2;
+	  for (j=0; j<len-1; j++) {
+	    if (tok[j] == '"') continue;
+	    else byte_out((int)tok[j], MOOD_ASCII);
 	  }
 	  break;
 	case '\'': /* Encountered a character in single quotes */
-	  if (strlen(tok) != 3 || tok[2] != '\'') {
-	    warn("invalid character"); break;
-	  }
-	  for (i=0; i<nrpt; i++) byte_out((int)tok[1], MOOD_ASCII);
+	  if (strlen(tok) != 3 || tok[2] != '\'') warn("invalid character");
+	  else byte_out((int)tok[1], MOOD_ASCII);
 	  break;
 	case '%': /* Encountered a decimal number */
-	  if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val, MOOD_DEC);
+	  if ((val = eval(tok)) < 0x100) byte_out(val, MOOD_DEC);
 	  else warn("decimal number too large, should be < 256");
 	  break;
 	case '!': /* Encountered a variable, dereference it therefore */
 	  wasplit = split(tok, mod, '.'); val = tokval(&mod[1]);
-	  if (!wasplit) for (i=0; i<nrpt; i++) word_out(val, MOOD_VAR);
+	  if (!wasplit) word_out(val, MOOD_VAR);
 	  else {
 	    valhi = val / 0x100; vallo = val - 0x100*valhi;
 	    switch (tok[0]) {
@@ -317,14 +338,16 @@ void parse(char *source) {
 	    case 'L': val = vallo; break;
 	    default: warn("invalid byte specification"); val = 0;
 	    }
-	    for (i=0; i<nrpt; i++) byte_out(val, MOOD_VAR);
+	    byte_out(val, MOOD_VAR);
 	  }
 	  break;
 	default: /* See if it's a mnemonic or a piece of hex */
 	  for (i=0, found=0; i<NMN; i++) {
-	    if (strcmp(tok, mnemonic[i]) == 0) { found = 1; break; }
+	    if (strcmp(tok, mnemonic[i]) == 0) {
+	      found = 1; break;
+	    }
 	  }
-	  if (strcmp(tok, "CC") == 0) {
+	  if (strcmp(tok, "CC") == 0) { /* deal with 'CC' exception */
 	    if (mode == MODE_HEX || mood != MOOD_OPCODE) found = 0;
 	    if (mode == MODE_OPCODE) found = 1;
 	  }
@@ -338,23 +361,31 @@ void parse(char *source) {
 	    case 4: val |= pairin(source) << 3; break;
 	    case 5: val |= rstnin(source) << 3; break;
 	    }
-	    for (i=0; i<nrpt; i++) byte_out(val, MOOD_OPCODE);
+	    byte_out(val, MOOD_OPCODE);
 	  } else { /* Encountered hex code */
-	    if ((val = eval(tok)) < 0x100) for (i=0; i<nrpt; i++) byte_out(val, MOOD_HEX);
-	    else for (i=0; i<nrpt; i++) word_out(val & 0xFFFF, MOOD_HEX); /* remove 16-bit word flag */
+	    if ((val = eval(tok)) < 0x100) byte_out(val, MOOD_HEX);
+	    else word_out(val & 0xFFFF, MOOD_HEX); /* remove 16-bit word flag */
 	  }
         } /* switch(tok[0]) */
       } /* normal token */
     } /* while tokin */
+    process_more_tokens = 0;
+    if (nparse == 0 && verbose) printf("Finished with %s at line %i", source_file, line_count);
     if (stack_pos > 0) { /* jump back up a level */
-      free(source);
+      stack_pos--; /* first decrement the stack level */
+      free(source); free(source_file);
       source = source_stack[stack_pos];
+      source_file = file_stack[stack_pos];
       ipos = ipos_stack[stack_pos];
-      stack_pos--;
+      line_count = line_stack[stack_pos];
+      if (nparse == 0 && verbose) printf(", re-entering %s after 'include' on line %i\n", source_file, line_count);
+      process_more_tokens = 1; /* There may be more in the level up */
+    } else {
+      if (nparse == 0 && verbose) printf("\n"); /* to terminate the above 'Finished' printf */
     }
-  } while (stack_pos > 0);
+  } while (process_more_tokens);
   value[end_prog] = value[origin] + byte_count; /* capture end point */
-  if (verbose && (nparse > 0)) printf("\n"); /* Catch trailing printout */
+  if (nparse > 0 && verbose) printf("\n"); /* Catch trailing printout */
   nparse++;
 }
 
@@ -406,8 +437,8 @@ int rstnin(char *source) {
 void zinit() {
   int pc;
   pc = value[origin] + byte_count;
-  if (verbose && (nparse > 0) && pc < value[end_prog]) printf("\n%04X ", pc);
-  zcount = 0; 
+  if (nparse > 0 && verbose && pc < value[end_prog]) printf("\n%04X ", pc);
+  zcount = 0;
 }
 
 /* Initialises mnemonic codes */
@@ -428,34 +459,49 @@ void mninit() {
   }
 }
 
-/* Save, print, and/or transmit a 16-bit word as a pair of bytes in
-   little-endian order */
+/* Buffer a 16-bit word as a pair of bytes in little-endian order */
 
 void word_out(int v, mood_t new_mood) {
   int hi, lo;
   hi = v / 0x100; lo = v - 0x100*hi;
+  if (countdown == 0) countdown = 2;
   byte_out(lo, new_mood); byte_out(hi, new_mood);
 }
 
-/* Save, print, and/or transmit a byte */
-/* Switch mood depending on current mood and byte count in a
-   multi-byte instruction - the logic here is a bit of a mess */
+/* Buffer a byte, then empty byte buffer if required.  The mood
+ switches depend on the current mood and byte count in a multi-byte
+ instruction - the logic here is a bit complicated. */
 
 void byte_out(int v, mood_t new_mood) {
-  char buf[1], c;
+  int buf_pos, rpt;
   if (countdown == 0 || new_mood == MOOD_OPCODE) {
     if (new_mood == MOOD_HEX || new_mood == MOOD_OPCODE) mood = new_mood;
   } else {
     if (new_mood != MOOD_OPCODE) countdown--;
   }
   if (v<0 || v>0xff) { warn("invalid byte crept in somehow"); v = 0; }
-  c = buf[0] = (char)v;
-  if (serial_device) { write(fd, buf, 1); usleep(50000); }
-  if (fsp) fwrite(&c, sizeof(char), 1, fsp);
-  if (verbose && (nparse > 0)) printf(" %02X", v);
-  byte_count++; zcount++;
-  if (extra_space && zcount == 8) printf(" ");
-  else if (zcount == 16) zinit();
+  buf[buf_size++] = (uint8_t)v;
+  if (buf_size == MAXBUF) error("ran out of buffer space in byte_out");
+  if (countdown == 0) { /* empty the buffer */
+    if (target_address == NO_TARGET || value[origin] + byte_count < target_address) {
+      for (rpt=0; rpt<nrpt; rpt++)  { /* this is where the repeat count is implemented */
+	if (fsp) fwrite(buf, sizeof(uint8_t), buf_size, fsp);
+	for (buf_pos=0; buf_pos<buf_size; buf_pos++) {
+	  if (serial_device) { write(fd, &buf[buf_pos], 1); usleep(50000); }
+	  if (nparse > 0 && verbose) printf(" %02X", (int)buf[buf_pos]);
+	  byte_count++; zcount++;
+	  if (extra_space && zcount == 8) {
+	    if (nparse > 0 && verbose) printf(" ");
+	  } else if (zcount == 16) zinit();
+	}
+	if (target_address != NO_TARGET) { /* implement the fill to specified adress */
+	  if (value[origin] + byte_count >= target_address) break;
+	  else rpt--; /* we do this by cheekily decreasing the repeat counter */
+	}
+      } /* repeat cycle */
+    } /* if gone past target already */
+    buf_size = 0; nrpt = 1; target_address = NO_TARGET; /* re-start with empty buffer */
+  } /* if countdown is > 0 */
 }
 
 /* Check name, value list for undefined names */
@@ -522,10 +568,10 @@ int eval(char *s) {
   int v = 0;
   if (s[0] == '0' && s[1] == 'x') s += 2;
   if (sscanf(s, (s[0] == '%') ? "%%%i" : "%X", &v) != 1) {
-    fprintf(stderr, "unrecognised value for %s, using 0", s); v = 0;
+    fprintf(stderr, "Unrecognised value for %s, using 0 [line %i in %s]", s, line_count, source_file); v = 0;
   }
   if (v<0 || v>0xffff) { warn("invalid number, using 0"); v = 0; }
-  return (s[0] == '%' || s[2] == '\0') ? v : 0x10000 + v; 
+  return (s[0] == '%' || s[2] == '\0') ? v : 0x10000 + v;
 }
 
 /* Return 0, 1 depending on occurence of character c in s1 */
@@ -571,15 +617,20 @@ char tokin(char *s, char *source, int maxlen) {
     if ((c = next_char(source)) == '\0') break;
   }
   s[i++] = '\0';
+  if (myscmp("end", s)) { /* capture 'end' statements here by serving a null return value */
+    if (nparse == 0 && verbose) printf("Encountered 'end' statement in %s at line %i\n", source_file, line_count);
+    return '\0';
+  }
   return i;
 }
 
 /* Return the next character in the source and advance the position
-   marker, else '\0' */
+   marker, else '\0'; also keep track of line count */
 
 char next_char(char *source) {
   char c;
   c = source[ipos];
+  if (c == '\n') line_count++;
   if (c != '\0') ipos++;
   return c;
 }

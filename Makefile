@@ -19,6 +19,7 @@
 FLAGS = -O2 -Wall
 OBJS = 8080.o triton.o
 LIBS = -lsfml-graphics -lsfml-window -lsfml-audio -lsfml-system
+TMP_BIN = temp
 
 default: all
 
@@ -55,7 +56,23 @@ tape:
 	./trimcc fastvdu_tape.tri  -o FASTVDU_TAPE
 	cat *_TAPE > TAPE
 
-clean : 
+# The idea is that all the binary diffs should pass here:
+
+regression:
+	./trimcc hex2dec_tape.tri  -o $(TMP_BIN) && diff $(TMP_BIN) HEX2DEC_TAPE
+	./trimcc kbdtest_tape.tri  -o $(TMP_BIN) && diff $(TMP_BIN) KBDTEST_TAPE
+	./trimcc tapeout_tape.tri  -o $(TMP_BIN) && diff $(TMP_BIN) TAPEOUT_TAPE
+	./trimcc rawsave_tape.tri  -o $(TMP_BIN) && diff $(TMP_BIN) RAWSAVE_TAPE
+	./trimcc galaxian_tape.tri -o $(TMP_BIN) && diff $(TMP_BIN) GALAXIAN_TAPE
+	./trimcc invaders_tape.tri -o $(TMP_BIN) && diff $(TMP_BIN) INVADERS_TAPE
+	./trimcc fastvdu_tape.tri  -o $(TMP_BIN) && diff $(TMP_BIN) FASTVDU_TAPE
+	./trimcc mona72_rom.tri    -o $(TMP_BIN) && diff $(TMP_BIN) MONA72_ROM
+	./trimcc monb72_rom.tri    -o $(TMP_BIN) && diff $(TMP_BIN) MONB72_ROM
+	./trimcc basic72_rom.tri   -o $(TMP_BIN) && diff $(TMP_BIN) BASIC72_ROM
+	./trimcc trap_rom.tri      -o $(TMP_BIN) && diff $(TMP_BIN) TRAP_ROM
+	./trimcc fastvdu_rom.tri   -o $(TMP_BIN) && diff $(TMP_BIN) FASTVDU_ROM
+
+clean :
 	rm -f *~ *.o
 	rm -f $(OBJS)
 
