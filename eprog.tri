@@ -1,0 +1,305 @@
+# Code to help manage an EPROM on the Triton using the 8255 connected EPROM
+# (c) 2021 T.J.Gilberts - use at your own risk!
+
+# All routines should be entered with the Jump table for simplicity
+# Each one prompts for a START: this is ths address of the workspace
+
+# Blank Check    - will fill workspace with FF and then do a single pass Compare
+# Verify/Compare - will just compare the workspace once, you must load data into it
+# Load/Read      - will read the EPROM out into the workspace, then repeat that 100 times
+#                  throwing an error if the read is not the same as the previous one
+# Zap/Program    - same as the Zap command except the LED's display the low byte
+#
+# LED's display the low byte of the address as it works in all commands
+
+# Deep links to Humbug 7.2 (as per P. Robson code names)
+
+PrintStartGetHL=0208
+PrintReadAndError=0E7B
+ProgramPrompt=0EC0
+PrintDEAndError=0E7E
+EndWarmStart=033D
+CompareHLDE=00BF
+CRPrintStringTwice=01FA
+PrintSpace=025C
+VDUOutput=00EB
+CRPrintString=0219
+PrintString=01FD
+GetKeyEcho=00E8
+ExecuteCommandA=0198
+ShortDelay3ms=014A
+
+CommandVectors=0F7E
+FunctionPrompt=0EDD
+
+#Official TRANSAM entry points...
+
+OUTCH=0013
+INCH=000B
+PDATA=0023
+PSTRNG=002B
+PCRLF=0033
+
+# Uncomment to run in RAM
+# 64*0D "EPROG" 20 04
+# ORG=1600 !END
+
+# Alternate now to run as a menu in extension ROM
+
+NewFunctionPrompt:
+        LXI     D,!FunctionPrompt
+        CALL    !CRPrintStringTwice
+PrintPrompt:
+        CALL    !PrintSpace     # ROM can't use PrintString as does not contain spaces..
+        LDAX    D               # So this code is less than the extra length of that
+        CALL    !VDUOutput
+        CPI     04
+        INX     D
+        JNZ     !PrintPrompt
+        CALL    !CRPrintString
+        CALL    !GetKeyEcho
+        CPI     'Z'              # Intercept the Z (ZAP) command
+        JNZ     !ExecuteCommandA # If not then continue with main ROM
+
+        RST     1                # Official TRANSAM CLS Vector
+        LXI     D,!ROMIntro
+        JMP     !FirstRun
+
+OKSubLoop:
+        LXI     D,!OKMSG
+        CALL    !PrintString
+
+SubLoop:
+        LXI     D,!ZapOptions
+FirstRun:
+        CALL    !PrintString
+        CALL    !GetKeyEcho
+        CPI     '4'
+        JZ      !ProgramEprom
+        CPI     '3'
+        JZ      !ReadEprom
+        CPI     '2'
+        JZ      !CompareEprom
+        CPI     '1'
+        JZ      !BlankCheck
+
+        CALL    !CRPrintString
+
+Error:
+        LXI     D,!ERRORMSG
+        JMP     !ErrorLoop
+
+EPROMfailed:
+        LXI     D,!EPROMMSG
+
+ErrorLoop:
+        CALL    !PrintString
+        CALL    !Beep
+        JMP     !SubLoop
+
+# ********************************************************************************
+
+BlankCheck:
+        CALL    !PrintStartGetHL # 0208
+        PUSH    H
+
+        MVI     A,FF          # Blank EPROM has 255 in all places
+        LXI     D,0400
+
+        PUSH    D
+        LXI     D,0000       # Start 'address' to put out of Port
+BlankLoop:
+        MOV     M,A             # Fill space with FF
+        INX     H               # Advance to next byte
+        INX     D
+        XTHL                    # Swap DE stacked with HL
+        CALL    !CompareHLDE     # 00BF
+        XTHL
+        JNZ     !BlankLoop
+
+        POP     D               # Balance stack
+        POP     H               # Recall start of workspace
+
+        JMP     !CompareEprom2
+
+CompareEprom:
+        CALL    !PrintStartGetHL # 0208
+
+CompareEprom2:
+        MVI     C,01 # just do one pass, so checks against memory!
+        JMP     !ReadEpromC
+
+# ********************************************************************************
+
+ReadEprom:
+        CALL    !PrintStartGetHL # 0208
+
+        MVI     C,64 # 100 in C
+
+ReadEpromC:
+        LXI     D,0400       # Full length of EPROM
+
+ReadROMMain:
+        PUSH    H
+        PUSH    D
+        LXI     D,0000       # Start 'address' to put out of Port
+
+ReadLoop:
+        CALL    !WriteEPROM      # Write address and setup 8255, and read byte
+
+        MOV     B,A
+
+        MOV     A,C             # If C is 64 then we are on the first pass
+        CPI     64
+        JZ      !SkipFirst       # so do not check just read once through...
+
+        MOV     A,B
+        ORA     M
+        CMP     B
+        JNZ     !EPROMfailed
+
+SkipFirst:
+        MOV     A,B
+        MOV     M,A             # Store the value that we actually read
+
+        INX     H               # Advance to next byte
+        INX     D
+        XTHL                    # Swap DE stacked with HL
+        CALL    !CompareHLDE     # 00BF
+        XTHL
+        JNZ     !ReadLoop
+
+        POP     D
+        POP     H
+        DCR     C               # Decrease loop count
+        JNZ     !ReadROMMain     # Repeat next loop unless 0
+
+        JMP     !OKSubLoop       # In which case ALL Ok so back to sub menu
+
+
+# ********************************************************************************
+
+# Program Eprom - as in ROM
+
+ProgramEprom:
+        CALL    !PrintStartGetHL # 0208
+
+        MVI     C,64 # 100 in C
+        LXI     D,0400       # Full length of EPROM
+
+WriteROMMain:
+        PUSH    H
+        PUSH    D
+        LXI     D,0000       # Start 'address' to put out of Port
+
+WriteLoop:
+        CALL    !WriteEPROM      # Write address and setup 8255
+        MOV     B,A             # B is character read
+        ORA     M               # Did we have 0 bits
+        CMP     B               # I.e. EPROM probably not BLANK...
+        JNZ     !EPROMfailed
+
+        MVI     A,88 # Changes mode of 8255 to Bit SET/RESET mode
+        MVI     B,08 # So that Bit 3 os changes - which is program Pulse
+        CALL    !AccessEPROM     # Call part of the 8255 EPROM subroutine
+
+WaitComplete:
+        IN      FE            # Wait for EPROM write to complete, then retry
+        ANA     A               # That os indicated when Bit 8 of Port C changes
+        JM      !WaitComplete    # Loop until is does
+
+        MOV     A,C             # IF c is 1 - we are on the last of 100 loops
+        CPI     01
+        JNZ     !NextByte
+
+        CALL    !WriteEPROM      # So write the byte a final time
+        CMP     M               # Compare with source data
+        JNZ     !EPROMfailed     # WAS *** PrintReadAndError 0E7B - Monitor routine
+
+NextByte:
+        INX     H               # Advance to next byte
+        INX     D
+        XTHL                    # Swap DE stacked with HL
+        CALL    !CompareHLDE     # 00BF
+        XTHL
+        JNZ     1WriteLoop
+
+        POP     D
+        POP     H
+        DCR     C               # Decrease loop count
+        JNZ     !WriteROMMain    # Repeat next loop unless 0
+
+        JMP     !OKSubLoop       # In which case ALL Ok so back to sub menu
+
+# ********************************************************************************
+#
+# Config and Write control for 8255
+#
+# FCh 252 is Port A - this is where the EPROM is READ or Address WRITTEN
+# FDh 253 is Port B - this is where the EPROM is WRITTEN
+# FEh 254 is Port C - Upper Bit 7 to read end pulse, Lower is Bit 3 for Pulse, Bit 2=1,
+#                   and Bit 1/0 are upper Bits 9 and 8 of Address to program.
+# FFh 255 is Control Register - 98h is written which is:
+#
+# 1            0    0      1       1            0           0        0
+# I/O          A mode 0    A in    C7-4 In      B mode 0    B Out    C3-0 Out
+#
+# ********************************************************************************
+
+# Entry here will actually setup the EPROM 'address' etc for use.
+
+WriteEPROM:
+        MVI     A,98 # See above A in, B out, C up In, low Out
+        MVI     B,04 # Fixed value to set 100 i.e. High on Bit 2 of Lower C
+
+# Entry here uses Bit SET/RESET mode to affect port C
+
+AccessEPROM:
+        OUT     FF            # A=Control Word, DE = address to write, D|B to port B
+        MOV     A,E             # Lower Byte of the 'address' in the EPROM
+        OUT     FD
+        XRI     FF           # Invert bits - NOT NEEDED ON IAN's boards - NOP out)
+        OUT     03            # Also flash the LED's on the board with the value
+        MOV     A,M             # Byte to write (or prev read) from (HL) sent to Port A
+        OUT     FC
+        MOV     A,D             # Make sure Bit 2 is set in IO mode or Bit 3 in Bit mode
+        ORA     B               # Write that to Port C in Bit mode ONLY Bit 2 will go low +12v
+        OUT     FE            # onto CE and bits 1 and 0 are upper part of 'address'
+        NOP
+        NOP
+        IN      FC            # Read back written
+        RET
+
+# ********************************************************************************
+
+# No beep to call for a sub-menu so copy of the one in the Monitor
+
+Beep:
+        MVI     A,40
+        OUT     07
+        MVI     B,26
+BeepLoop:
+        CALL    !ShortDelay3ms
+        DCR     B
+        JNZ     !BeepLoop
+        XRA     A
+        OUT     07
+        RET
+
+# ********************************************************************************
+
+ROMIntro:
+"EPROM PROGRAMMER UTILITY V1.0" 0A0D
+
+ZapOptions:
+0A0D
+" 1 BLANK CHECK" 0A0D
+" 2 VERIFY" 0A0D
+" 3 LOAD" 0A0D
+" 4 ZAP (PROGRAM)" 2*0A0D
+"PLEASE ENTER THE NUMBER OF YOUR SELECTION " 04
+
+OKMSG: "OK" 0A0D 04
+
+EPROMMSG: "EPROM "
+ERRORMSG: "ERROR" 0A0D 04

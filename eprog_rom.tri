@@ -1,0 +1,30 @@
+# This file is part of my Transam Triton code repository.
+
+# This is a user ROM providing VDU speedup and an extended EPROM programmer utility,
+# for the Triton Level 7.2 Monitor.
+
+# The original copyright on the fast VDU code is unknown but it may
+# belong to Gerald Sommariva, from whose website the `FASTVDU.ED82` user
+# ROM was downloaded which forms the basis of the current code.
+# https://sites.google.com/view/transam-triton/downloads
+
+# EPROM programmer utility modified from an original code
+# copyright (c) 2021 T. J. Gilberts.
+
+StackInit=1470 # initial stack pointer
+
+ORG=0400
+END=0800
+
+# Intercept video output routine at hook.
+
+LXI SP, !StackInit
+LXI H, !MAIN
+SHLD !OUTVEC
+
+# JMP !NewFunctionPrompt ; this may be commented out
+
+include eprog.tri
+include fastvdu.tri
+
+FF>!END
