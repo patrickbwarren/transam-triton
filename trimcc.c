@@ -137,6 +137,7 @@ void printnvlist();
 int tokval(char *);
 int addval(char *, int, int, char *);
 void newnv(char *, int);
+void nvinit();
 int eval(char *);
 int split(char *, char *, char);
 int myscmp(char *, char *);
@@ -213,7 +214,7 @@ int main(int argc, char *argv[]) {
   if (fp == NULL) error("couldn't open the source file");
   source = slurp(fp);
   fclose(fp);
-  mninit();
+  mninit(); nvinit();
   if (verbose) {
     printf("\nTriton Relocatable Machine Code Compiler\n\n");
     if (fp == stdin) printf("Parsing tokens from /dev/stdin\n");
@@ -235,7 +236,7 @@ int main(int argc, char *argv[]) {
   }
   if (fsp && fsp != stdout) fclose(fsp);
   if (verbose) { printf("\nVariables\n\n"); printnvlist(); }
-  else if (!nvlistok()) printf("Warning, there are undefined variables, run with -v for more info\n");
+  else if (!nvlistok()) fprintf(stderr, "Warning, there are undefined variables, run with -v for more info\n");
   free(source);
   return 0;
 }
@@ -558,6 +559,12 @@ int addval(char *s, int v, int line, char* source) {
   int i;
   for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) break;
   if (i == nnv) newnv(s, v);
+  else {
+    if (nparse == 0 && file_def[i] != NULL && file_def[i][0] != '\0') {
+      fprintf(stderr, "Warning, %s being redefined at line %i in %s, ", s, line, source);
+      fprintf(stderr, "previous value was defined at line %i in %s\n", line_def[i], file_def[i]);
+    }
+  }
   if (i == origin) {
     byte_count = 0;
     zcount = 0;
@@ -574,6 +581,13 @@ void newnv(char *s, int v) {
   if (nnv == MAXNNV) error("exceeded storage for name,value pairs");
   if ((name[nnv] = strdup(s)) == NULL) error("out of heap space");
   value[nnv++] = v;
+}
+
+/* Initialise the arrays here */
+
+void nvinit() {
+  int i;
+  for (i=0; i<MAXNNV; i++) file_def[i] = NULL;
 }
 
 /* Returns value of string, or 0 and a warning if invalid */
