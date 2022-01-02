@@ -395,7 +395,7 @@ void load_rom(uint8_t *memory, const char *rom_name, uint16_t rom_start, uint16_
   if (rom.is_open()) {
     rom.read((char *) &memory[rom_start], rom_size);
     rom.close();
-    fprintf(stderr, "0x%04x-x%04x: %s loaded\n", rom_start, rom_start+rom_size-1, rom_name);
+    fprintf(stderr, "%04X-%04X: %s loaded\n", rom_start, rom_start+rom_size-1, rom_name);
   }
 }
 

@@ -48,6 +48,7 @@ int verbose = 0;      /* Verbosity in reporting results */
 int zcount;           /* Keeps track of number of bytes printed out */
 int extra_space = 0;  /* Whether to print a space after the 8th byte */
 int ipos = 0;         /* Keep track of current position in source */
+int org_init = 0;     /* Initial value of ORG */
 
 int origin, end_prog; /* Position variables */
 int byte_count;       /* Byte counter */
@@ -118,6 +119,8 @@ int mntype[NMN], mnval[NMN];
 /* Storage for name, value pairs */
 int nnv = 0;
 int value[MAXNNV];
+int line_def[MAXNNV];
+char *file_def[MAXNNV];
 char *name[MAXNNV];
 
 /* Function prototypes */
@@ -126,14 +129,13 @@ void parse(char *);
 int regin(char *);
 int pairin(char *);
 int rstnin(char *);
-void zinit();
 void mninit();
 void word_out(int, mood_t);
 void byte_out(int, mood_t);
 int nvlistok();
 void printnvlist();
 int tokval(char *);
-int addval(char *, int);
+int addval(char *, int, int, char *);
 void newnv(char *, int);
 int eval(char *);
 int split(char *, char *, char);
@@ -181,12 +183,13 @@ int main(int argc, char *argv[]) {
   FILE *fp;
   int pipe_to_stdout = 0;
   /* Sort out command line options */
-  while ((c = getopt(argc, argv, "hvspo:t:")) != -1) {
+  while ((c = getopt(argc, argv, "hvspo:t:g:")) != -1) {
     switch (c) {
     case 'v': verbose = 1; break;
     case 's': extra_space = 1; break;
     case 'p': pipe_to_stdout = 1; break;
     case 'o': binary_file = strdup(optarg); break;
+    case 'g': org_init = eval(optarg) & 0xFFFF; break;
     case 't': serial_device = strdup(optarg); break;
     case 'h': case '?':
       printf("Compile and optionally transmit RS-232 data to Triton through a serial device\n");
@@ -196,6 +199,7 @@ int main(int argc, char *argv[]) {
       printf("-s (spaced) : add a column of spaces after the 7th byte\n");
       printf("-p (pipe) : write the byte stream in binary to stdout (obviates -o)\n");
       printf("-o binary_file : write the byte stream in binary to a file\n");
+      printf("-g address : set the value of ORG (default 0)\n");
       printf("-t serial_device : transmit the byte stream to a serial device, for example /dev/ttyS0\n");
       printf("If the source file is not provided, input is taken from /dev/stdin\n");
       exit(0);
@@ -217,7 +221,6 @@ int main(int argc, char *argv[]) {
   }
   parse(source); /* First pass through */
   if (verbose && binary_file) printf("Writing to %s\n", binary_file);
-  if (!nvlistok()) { printnvlist(); error("undefined variables"); }
   if (pipe_to_stdout) fsp = stdout;
   else if (binary_file) {
     fsp = fopen(binary_file, "wb");
@@ -231,7 +234,8 @@ int main(int argc, char *argv[]) {
     printf("\nFinished transmitting down the wires\n"); finishio();
   }
   if (fsp && fsp != stdout) fclose(fsp);
-  if (verbose) { printf("\nVariable list\n\n"); printnvlist(); }
+  if (verbose) { printf("\nVariables\n\n"); printnvlist(); }
+  else if (!nvlistok()) printf("Warning, there are undefined variables, run with -v for more info\n");
   free(source);
   return 0;
 }
@@ -253,10 +257,10 @@ void parse(char *source) {
   int line_stack[MAXSTACK];
   FILE *fp;
   byte_count = 0; line_count = 0;
-  origin = addval("ORG", 0);
+  origin = addval("ORG", org_init, line_count, "");
   ipos = 0; /* initial position in source */
   mood = MOOD_OPCODE;
-  if (nparse == 0) end_prog = addval("END", 0);
+  if (nparse == 0) end_prog = addval("END", 0, line_count, "");
   do { /* Loop around file inclusion levels */
     while (tokin(tok, source, MAXTOK) != '\0') {
       if (myscmp("mode", tok)) { /* Process mode setting */
@@ -294,20 +298,22 @@ void parse(char *source) {
 	ipos = 0; line_count = 0; /* start at beginning */
 	stack_pos++; /* finally increment the stack level */
       } else { /* Process tokens normally - first extract any modifiers */
-        if (split(tok, mod, '=')) { addval(mod, eval(tok) & 0xFFFF); continue; }
-        if (split(tok, mod, ':')) addval(mod, value[origin] + byte_count);
-        if (split(tok, mod, '*')) sscanf(mod, "%i", &nrpt);
-	else if (countdown == 0) nrpt = 1;
-	if (split(tok, mod, '>')) { /* here tok is the modifier */
-	  if (tok[0] == '!') target_address = tokval(&tok[1]);
-	  else target_address = eval(tok) & 0xFFFF;
-	  strcpy(tok, mod); /* to recover the token to be repeated, assumed a single byte*/
+	if (tok[0] != '"') {
+	  if (split(tok, mod, '=')) { addval(mod, eval(tok) & 0xFFFF, line_count, source_file); continue; }
+	  if (split(tok, mod, ':')) addval(mod, value[origin] + byte_count, line_count, source_file);
+	  if (split(tok, mod, '*')) sscanf(mod, "%i", &nrpt);
+	  else if (countdown == 0) nrpt = 1;
+	  if (split(tok, mod, '>')) { /* here tok is the modifier */
+	    if (tok[0] == '!') target_address = tokval(&tok[1]);
+	    else target_address = eval(tok) & 0xFFFF;
+	    strcpy(tok, mod); /* to recover the token to be repeated, assumed a single byte*/
+	  }
+	  if (nrpt < 0) {
+	    warn("negative repeat number, setting to zero"); nrpt = 0;
+	  } else if (nrpt > MAXRPT) {
+	    warn("repeat number too large, ignoring"); nrpt = 0;
+	  }
 	}
-        if (nrpt < 0) {
-          warn("negative repeat number, setting to zero"); nrpt = 0;
-        } else if (nrpt > MAXRPT) {
-          warn("repeat number too large, ignoring"); nrpt = 0;
-        }
         switch (tok[0]) {
 	case '\0': break; /* Case where there's nothing left of token */
 	case '"': /* Encountered a string in double quotes */
@@ -432,15 +438,6 @@ int rstnin(char *source) {
   warn("invalid number in RST N"); return 0;
 }
 
-/* (Re)initialises printed byte counter, printing program counter */
-
-void zinit() {
-  int pc;
-  pc = value[origin] + byte_count;
-  if (nparse > 0 && verbose && pc < value[end_prog]) printf("\n%04X ", pc);
-  zcount = 0;
-}
-
 /* Initialises mnemonic codes */
 
 void mninit() {
@@ -473,7 +470,7 @@ void word_out(int v, mood_t new_mood) {
  instruction - the logic here is a bit complicated. */
 
 void byte_out(int v, mood_t new_mood) {
-  int buf_pos, rpt;
+  int buf_pos, rpt, pc;
   if (countdown == 0 || new_mood == MOOD_OPCODE) {
     if (new_mood == MOOD_HEX || new_mood == MOOD_OPCODE) mood = new_mood;
   } else {
@@ -488,11 +485,15 @@ void byte_out(int v, mood_t new_mood) {
 	if (fsp) fwrite(buf, sizeof(uint8_t), buf_size, fsp);
 	for (buf_pos=0; buf_pos<buf_size; buf_pos++) {
 	  if (serial_device) { write(fd, &buf[buf_pos], 1); usleep(50000); }
-	  if (nparse > 0 && verbose) printf(" %02X", (int)buf[buf_pos]);
-	  byte_count++; zcount++;
-	  if (extra_space && zcount == 8) {
-	    if (nparse > 0 && verbose) printf(" ");
-	  } else if (zcount == 16) zinit();
+	  if (nparse > 0 && verbose) {
+	    if (zcount == 0) {
+	      pc = value[origin] + byte_count;
+	      if (pc < value[end_prog]) printf("\n%04X ", pc);
+	    }
+	    if (extra_space && zcount == 8) printf(" ");
+	    printf(" %02X", (int)buf[buf_pos]);
+	  }
+	  byte_count++; if (++zcount == 16) zcount = 0;
 	}
 	if (target_address != NO_TARGET) { /* implement the fill to specified adress */
 	  if (value[origin] + byte_count >= target_address) break;
@@ -515,13 +516,26 @@ int nvlistok() {
 /* Prints out name, value list */
 
 void printnvlist() {
-  int i, v;
+  int i, v, l, maxl;
+  int undef_vars = 0;
+  char *svar = "variable";
+  maxl = strlen(svar);
   for (i=0; i<nnv; i++) {
-    if ((v = value[i]) == NOVAL) printf("%8s * undefined *   ", name[i]);
-    else printf("%8s = %04X = %%%-6i ", name[i], v, v);
-    if (i % 3 == 2) printf("\n");
+    l = strlen(name[i]);
+    if (l > maxl) maxl = l;
   }
-  if (nnv % 3 != 0) printf("\n");
+  maxl++;
+  printf(" hex  decimal %*s\n", maxl, svar);
+  for (i=0; i<nnv; i++) {
+    if (value[i] == NOVAL) v = 0;
+    else v = value[i];
+    printf("%04X   %5i  %*s", v, v, maxl, name[i]);
+    if (value[i] == NOVAL) {
+      undef_vars = 1; printf("  [*****]\n");
+    } else if (file_def[i][0] == '\0') printf("\n");
+    else printf("  [line %3i in %s]\n", line_def[i], file_def[i]);
+  }
+  if (undef_vars) printf("*** there are undefined variables\n");
 }
 
 /* Looks up the name in the name, value list and returns value, or 0 */
@@ -538,16 +552,20 @@ int tokval(char *s) {
 /* Adds the name, value to the list, returning position of entry */
 /* if name is already there, then just alter value */
 /* if name = ORG then reset byte count and restart printing */
+/* The line number and source file where the (last) definition was encountered is also recorded */
 
-int addval(char *s, int v) {
+int addval(char *s, int v, int line, char* source) {
   int i;
-  for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) {
-    value[i] = v;
-    if (i == origin) { byte_count = 0; zinit(); }
-    return i;
+  for (i=0; i<nnv; i++) if (strcmp(name[i], s) == 0) break;
+  if (i == nnv) newnv(s, v);
+  if (i == origin) {
+    byte_count = 0;
+    zcount = 0;
   }
-  newnv(s, v);
-  return nnv-1;
+  value[i] = v;
+  line_def[i] = line;
+  file_def[i] = strdup(source);
+  return i;
 }
 
 /* Adds a new name, value pair to the list */
