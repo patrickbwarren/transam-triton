@@ -608,7 +608,7 @@ The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
 
 The Triton Level 7.2 Monitor from which the above EPROM programmer
 code was extracted is copyright &copy; Transam Components Limited and/or
-T.C.L. software (1979) or thereabouts.
+T.C.L. software (1979).
 
 The original copyright on the fast VDU code is unknown but it may
 belong to Gerald Sommariva, from whose [web
