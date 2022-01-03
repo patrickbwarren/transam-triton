@@ -299,7 +299,7 @@ void parse(char *source) {
 	ipos = 0; line_count = 0; /* start at beginning */
 	stack_pos++; /* finally increment the stack level */
       } else { /* Process tokens normally - first extract any modifiers */
-	if (tok[0] != '"') {
+	if (tok[0] != '"' && tok[0] != '\'') {
 	  if (split(tok, mod, '=')) { addval(mod, eval(tok) & 0xFFFF, line_count, source_file); continue; }
 	  if (split(tok, mod, ':')) addval(mod, value[origin] + byte_count, line_count, source_file);
 	  if (split(tok, mod, '*')) sscanf(mod, "%i", &nrpt);
