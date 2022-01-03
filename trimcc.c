@@ -117,6 +117,7 @@ char *mncode[NMN] =
 int mntype[NMN], mnval[NMN];
 
 /* Storage for name, value pairs */
+int alphabetical = 0;
 int nnv = 0;
 int value[MAXNNV];
 int line_def[MAXNNV];
@@ -184,9 +185,10 @@ int main(int argc, char *argv[]) {
   FILE *fp;
   int pipe_to_stdout = 0;
   /* Sort out command line options */
-  while ((c = getopt(argc, argv, "hvspo:t:g:")) != -1) {
+  while ((c = getopt(argc, argv, "hvaspo:t:g:")) != -1) {
     switch (c) {
     case 'v': verbose = 1; break;
+    case 'a': alphabetical = 1; break;
     case 's': extra_space = 1; break;
     case 'p': pipe_to_stdout = 1; break;
     case 'o': binary_file = strdup(optarg); break;
@@ -198,6 +200,7 @@ int main(int argc, char *argv[]) {
       printf("-h or -? (help) : print this help\n");
       printf("-v (verbose) : print the byte stream and variables\n");
       printf("-s (spaced) : add a column of spaces after the 7th byte\n");
+      printf("-a (alphabetical) : sort variables by name rather than by value\n");
       printf("-p (pipe) : write the byte stream in binary to stdout (obviates -o)\n");
       printf("-o binary_file : write the byte stream in binary to a file\n");
       printf("-g address : set the value of ORG (default 0)\n");
@@ -514,11 +517,21 @@ int nvlistok() {
   return 1;
 }
 
-/* Prints out name, value list */
+/* Prints out name, value list - the two compare subroutines are used
+   by quicksort */
+
+int compare_names(const void *pi, const void *pj) {
+  return strcmp(name[*((int *)pi)], name[*((int *)pj)]);
+}
+
+int compare_values(const void *pi, const void *pj) {
+  return value[*((int *)pi)] - value[*((int *)pj)];
+}
 
 void printnvlist() {
-  int i, v, l, maxl;
+  int i, j, v, l, maxl;
   int undef_vars = 0;
+  int *idx;
   char *svar = "variable";
   maxl = strlen(svar);
   for (i=0; i<nnv; i++) {
@@ -526,8 +539,12 @@ void printnvlist() {
     if (l > maxl) maxl = l;
   }
   maxl++;
+  idx = (int *)malloc(nnv*sizeof(int));
+  for (i=0; i<nnv; i++) idx[i] = i;
+  qsort(idx, nnv, sizeof(idx[0]), alphabetical ? compare_names : compare_values);
   printf(" hex  decimal %*s\n", maxl, svar);
-  for (i=0; i<nnv; i++) {
+  for (j=0; j<nnv; j++) {
+    i = idx[j];
     if (value[i] == NOVAL) v = 0;
     else v = value[i];
     printf("%04X   %5i  %*s", v, v, maxl, name[i]);
@@ -537,6 +554,7 @@ void printnvlist() {
     else printf("  [line %3i in %s]\n", line_def[i], file_def[i]);
   }
   if (undef_vars) printf("*** there are undefined variables\n");
+  free(idx);
 }
 
 /* Looks up the name in the name, value list and returns value, or 0 */
