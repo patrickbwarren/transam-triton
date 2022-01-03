@@ -118,6 +118,7 @@ int mntype[NMN], mnval[NMN];
 
 /* Storage for name, value pairs */
 int alphabetical = 0;
+int unsorted = 0;
 int nnv = 0;
 int value[MAXNNV];
 int line_def[MAXNNV];
@@ -150,11 +151,11 @@ void finishio();
 int ctoi(char c) { return (int)c - '0'; }
 
 void warn(char *s) {
-  fprintf(stderr, "warning: %s [line %i in %s]\n", s, line_count, source_file);
+  fprintf(stderr, "Warning: %s [line %i in %s]\n", s, line_count, source_file);
 }
 
 void error(char *s) {
-  fprintf(stderr, "error: %s [line %i in %s]\n", s, line_count, source_file); exit(1);
+  fprintf(stderr, "Error: %s [line %i in %s]\n", s, line_count, source_file); exit(1);
 }
 
 void *emalloc(size_t size) {
@@ -185,10 +186,11 @@ int main(int argc, char *argv[]) {
   FILE *fp;
   int pipe_to_stdout = 0;
   /* Sort out command line options */
-  while ((c = getopt(argc, argv, "hvaspo:t:g:")) != -1) {
+  while ((c = getopt(argc, argv, "hvauspo:t:g:")) != -1) {
     switch (c) {
     case 'v': verbose = 1; break;
     case 'a': alphabetical = 1; break;
+    case 'u': unsorted = 1; break;
     case 's': extra_space = 1; break;
     case 'p': pipe_to_stdout = 1; break;
     case 'o': binary_file = strdup(optarg); break;
@@ -201,6 +203,7 @@ int main(int argc, char *argv[]) {
       printf("-v (verbose) : print the byte stream and variables\n");
       printf("-s (spaced) : add a column of spaces after the 7th byte\n");
       printf("-a (alphabetical) : sort variables by name rather than by value\n");
+      printf("-u (unsorted) : don't sort variables (list by order of addition)\n");
       printf("-p (pipe) : write the byte stream in binary to stdout (obviates -o)\n");
       printf("-o binary_file : write the byte stream in binary to a file\n");
       printf("-g address : set the value of ORG (default 0)\n");
@@ -541,7 +544,7 @@ void printnvlist() {
   maxl++;
   idx = (int *)malloc(nnv*sizeof(int));
   for (i=0; i<nnv; i++) idx[i] = i;
-  qsort(idx, nnv, sizeof(idx[0]), alphabetical ? compare_names : compare_values);
+  if (!unsorted) qsort(idx, nnv, sizeof(idx[0]), alphabetical ? compare_names : compare_values);
   printf(" hex  decimal %*s\n", maxl, svar);
   for (j=0; j<nnv; j++) {
     i = idx[j];
