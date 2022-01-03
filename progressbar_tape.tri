@@ -1,0 +1,109 @@
+# This file is part of my Transam Triton code repository.
+
+# Demonstrate a generic progress bar
+
+# This is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+
+# Copyright (c) 1979-2022 Patrick B Warren <patrickbwarren@gmail.com>.
+
+# You should have received a copy of the GNU General Public License
+# along with this file.  If not, see <http://www.gnu.org/licenses/>.
+
+# Entry points for Triton L7.2 monitor
+
+OUTCH=0013
+PSTRNG=002B
+PCRLF=0033
+
+# Standard tape header.
+
+64*0D "PROGRESSBAR" 20 04
+ORG=1600 !END
+
+# Demonstrate three different lengths
+
+MVI C, %100
+CALL !ProgressBarC
+CALL !PCRLF
+
+MVI C, %20
+CALL !ProgressBarC
+CALL !PCRLF
+
+MVI C, %30
+CALL !ProgressBarC
+
+RET
+
+# Subroutine demonstrates a progress bar [==- ] for the counter in C
+# which should contain an even number.
+
+ProgressBarC:
+
+MOV A,C
+RRC
+ANI 7F
+MOV B,A
+
+MVI A, '['
+CALL !OUTCH
+
+Loop1:
+MVI A, ' '
+CALL !OUTCH
+DCR B
+JNZ !Loop1
+
+MVI A, ']'
+CALL !OUTCH
+
+MVI A, 1D
+CALL !OUTCH
+
+MVI A, 09
+CALL !OUTCH
+
+MainLoop:
+
+CALL !Delay
+
+MOV A,C
+RAR
+
+JC !Branch
+MVI A, '-'
+CALL !OUTCH
+JMP !Rejoin
+
+Branch:
+MVI A, 08
+CALL !OUTCH
+MVI A, '='
+CALL !OUTCH
+
+Rejoin:
+DCR C
+JNZ !MainLoop
+
+MVI A, 09
+CALL !OUTCH
+
+RET
+
+Delay:
+
+LXI D 0800
+Loop:
+DCX D
+MOV A,D
+ORA E
+JNZ !Loop
+RET

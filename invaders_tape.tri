@@ -218,4 +218,4 @@ NOP>1900 # Pad to restart at 1900.
 # 1C00-1C3F is the top line of the display (64 bytes).
 
 "     LASER BASE  3                 YOUR SCORE  190"
-' '>1C40 # Pad to 1C40 with ASCII spaces.
+20>1C40 # Pad to 1C40 with ASCII spaces.
