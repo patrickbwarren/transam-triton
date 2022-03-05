@@ -46,7 +46,7 @@ to control the emulation:
  - shift + F5: write 8080 status to command line;
  - ctrl + shift + F5: dump core;
 
- - F9: print this help (about the function keys);
+ - F9: print help about the function keys;
  - ctrl + shift + F9: exit emulator.
 
 All other keyboard input is sent to the emulation.  In a core dump

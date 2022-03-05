@@ -432,7 +432,7 @@ void print_help(FILE *fp) {
   fprintf(fp, "F5: toggle emulator pause\n");
   fprintf(fp, "shift + F5: write 8080 status to command line\n");
   fprintf(fp, "ctrl + shift + F5: dump core\n\n");
-  fprintf(fp, "F9: print this help (about the function keys)\n");
+  fprintf(fp, "F9: print help about the function keys\n");
   fprintf(fp, "ctrl + shift + F9: exit emulator\n");
 }
 
