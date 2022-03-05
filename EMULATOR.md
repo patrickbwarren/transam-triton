@@ -37,13 +37,17 @@ to control the emulation:
  - F1: interrupt 1 (RST 1) - clear screen;
  - F2: interrupt 2 (RST 2) - save and dump registers;
  - F3: reset (RST 0);
+
  - F4: write the EPROM to the file specified by `-z`;
  - shift + F4: toggle simulation of EPROM `READ ERROR` failure mode;
  - ctrl + shift + F4: UV erase the EPROM (set all bytes to `0xff`);
+
  - F5: toggle emulator pause;
  - shift + F5: write 8080 status to command line;
  - ctrl + shift + F5: dump core;
- - F9: exit emulator.
+
+ - F9: print this help (about the function keys);
+ - ctrl + shift + F9: exit emulator.
 
 All other keyboard input is sent to the emulation.  In a core dump
 (ctrl + shift + F5) the entire contents of memory (64k) are written to

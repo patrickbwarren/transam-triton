@@ -419,6 +419,23 @@ bool check_write_counts(StateEPROM *eprom) {
   return false;
 }
 
+// Print help about the function keys
+
+void print_help(FILE *fp) {
+  fprintf(fp, "\nFunction Keys -- whilst emulation running\n\n");
+  fprintf(fp, "F1: interrupt 1 (RST 1) - clear screen\n");
+  fprintf(fp, "F2: interrupt 2 (RST 2) - save and dump registers\n");
+  fprintf(fp, "F3: reset (RST 0)\n\n");
+  fprintf(fp, "F4: write the EPROM to the file specified by -z\n");
+  fprintf(fp, "shift + F4: toggle simulation of READ ERROR failure mode\n");
+  fprintf(fp, "ctrl + shift + F4: UV erase the EPROM (set all bytes to 0xff)\n\n");
+  fprintf(fp, "F5: toggle emulator pause\n");
+  fprintf(fp, "shift + F5: write 8080 status to command line\n");
+  fprintf(fp, "ctrl + shift + F5: dump core\n\n");
+  fprintf(fp, "F9: print this help (about the function keys)\n");
+  fprintf(fp, "ctrl + shift + F9: exit emulator\n");
+}
+
 int main(int argc, char** argv) {
   uint8_t main_memory[_64K];
   int cursor_count = 0;
@@ -461,16 +478,7 @@ int main(int argc, char** argv) {
       printf("-m sets the top of memory, for example -m 0x4000, defaults to 0x2000\n");
       printf("-u installs user ROM(s); to install two ROMS separate the filenames by a comma\n");
       printf("-z specifies a file to write the EPROM to, with F4\n");
-      printf("F1: interrupt 1 (RST 1) - clear screen\n");
-      printf("F2: interrupt 2 (RST 2) - save and dump registers\n");
-      printf("F3: reset (RST 0)\n");
-      printf("F4: write the EPROM to the file specified by -z\n");
-      printf("shift + F4: toggle simulation of READ ERROR failure mode\n");
-      printf("ctrl + shift + F4: UV erase the EPROM (set all bytes to 0xff)\n");
-      printf("F5: toggle emulator pause\n");
-      printf("shift + F5: write 8080 status to command line\n");
-      printf("ctrl + shift + F5: dump core\n");
-      printf("F9: exit emulator\n");
+      print_help(stdout);
     default:
       exit(0);
     }
@@ -633,11 +641,12 @@ int main(int argc, char** argv) {
 	    } else { // toggle emulator pause
 	      pause = !pause;
 	      if (!pause) fprintf(stderr, "Emulation resumed\n");
-	      else fprintf(stderr, "Emulation paused - press F5 to resume, or F9 to exit\n");
+	      else fprintf(stderr, "Emulation paused - press F5 to resume, or ctrl + shift + F9 to exit\n");
 	    }
 	    break;
 	  case sf::Keyboard::F9: // Exit emulator
-	    window.close();
+	    if (shifted && ctrl) window.close();
+	    if  (!shifted && !ctrl) print_help(stderr);
 	    break;
 	  default:
 	    io.key_press(event.type, event.key.code, shifted, ctrl);
