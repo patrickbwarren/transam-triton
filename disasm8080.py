@@ -42,8 +42,6 @@ signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 # Lookup table - given opcode byte as index, return mnemonic of instruction
 # and length of instruction.  Alternative opcodes have a '*' prepended.
 
-comment_alt_op_code = '# alternative op code used #'
-
 lookupTable = [
     ['NOP',         1],  # 00
     ['LXI     B,',  3],  # 01
@@ -357,7 +355,7 @@ if args.skip:
 # Print initial origin address
 
 if args.pipe is False:
-    print('%04X            %s     %04X' % (address, 'ORG', address))
+    print('%04X             %s     %04X' % (address, 'ORG', address))
 else:
     print('ORG=%04X' % address) # formatted for TriMCC
 
@@ -367,13 +365,11 @@ while True:
 
         if len(b) == 0:  # EOF
             if args.pipe is False:
-                print('%04X            %s' % (address, 'END')) # Exit if end of file reached.
+                print('%04X             %s' % (address, 'END')) # Exit if end of file reached.
             break
 
-        if args.pipe is False:
-            line = '%04X  ' % address # Print current address
-        else:
-            line = ''
+        address_data = '%04X  ' % address
+        code = ''
 
         op = ord(b)  # Get opcode byte
 
@@ -384,15 +380,13 @@ while True:
         # Print instruction bytes
 
         if n == 1:
-            if args.pipe is False:
-                line += '%02X        ' % op
+            address_data += '%02X        ' % op
         elif n == 2:
             try:  # Possible to get exception here if EOF reached.
                 op1 = ord(f.read(1))
             except TypeError:
                 op1 = 0  # Fake it to recover from EOF
-            if args.pipe is False:
-                line += '%02X %02X     ' % (op, op1)
+            address_data += '%02X %02X     ' % (op, op1)
         elif n == 3:
             try:  # Possible to get exception here if EOF reached.
                 op1 = ord(f.read(1))
@@ -400,8 +394,7 @@ while True:
             except TypeError:
                 op1 = 0  # Fake it to recover from EOF
                 op2 = 0
-            if args.pipe is False:
-                line += '%02X %02X %02X  ' % (op, op1, op2)
+            address_data += '%02X %02X %02X  ' % (op, op1, op2)
 
         # If opcode starts with '*' then put in comment that this is an alternative op code (likely an error).
 
@@ -411,23 +404,29 @@ while True:
         else:
             alternative = False
 
-        line += mnem
+        code += mnem
 
         # Handle any operands
 
         if n == 2:
             if args.chars and op1 > 0x1f and op1 < 0x7f: # ASCII printable characters
-                line += "'%c'" % op1
+                code += "'%c'" % op1
             else:
-                line += '%02X' % op1
+                code += '%02X' % op1
         elif n == 3:
-            line += '%02X%02X' % (op2, op1) # little-endian order for 8080
+            code += '%02X%02X' % (op2, op1) # little-endian order for 8080
 
         if alternative:
             mnem = mnem.replace(mnem[:1], '')  # Remove the star
             # Line up comment at fixed column position
-            comment_col = 67 if args.pipe is False else 51
-            line += comment_alt_op_code.rjust(comment_col - len(line))
+            if args.pipe is False:
+                comment_alt_op_code = '# alternative op code used'
+            else:
+                comment_alt_op_code = '; alternative op code used'
+            comment_col = 55 if args.pipe is False else 35
+            comment = comment_alt_op_code.rjust(comment_col - len(address_data))
+        else:
+            comment = ''
 
         # Update address
         address += n
@@ -437,7 +436,13 @@ while True:
             address = address & 0xffff
 
         # Finished a line of disassembly
-        print(line)
+
+        if args.pipe is False:
+            line = f'{address_data} {code} {comment}'
+        else:
+            line = ('%-20s' % code) + f' # {address_data} {comment}'
+
+        print(line.rstrip())
 
     except KeyboardInterrupt:
         # Exit if end of file reached.
