@@ -39,6 +39,17 @@ tridat : tridat.c
 trimcc : trimcc.c
 	gcc -O -Wall trimcc.c -o trimcc
 
+binaries:
+	./trimcc mona72_rom.tri  -o mona72.bin
+	./trimcc monb72_rom.tri  -o monb72.bin
+	./trimcc basic72_rom.tri -o basic72.bin
+	./trimcc trap_rom.tri    -o trap.bin
+	./trimcc fastvdu_rom.tri -o fastvdu.bin
+
+zipfiles: binaries
+	zip triton_binaries.zip *.bin
+	zip triton_archive.zip mon*.tri basic*.tri trap*.tri fastvdu*.tri
+
 roms:
 	./trimcc mona72_rom.tri  -o MONA72_ROM
 	./trimcc monb72_rom.tri  -o MONB72_ROM
