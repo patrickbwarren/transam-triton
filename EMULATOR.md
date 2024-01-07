@@ -167,15 +167,15 @@ at least the two monitor ROMs should be present.
 
 The memory map for Level 7.2 Triton software is as follows
 ```
-E000 - FFFF = BASIC72 (BASIC)
-C000 - DFFF = TRAP
+E000 - FFFF = basic72.bin (BASIC)
+C000 - DFFF = trap.bin (TRAP)
 2000 - BFFF = For off-board expansion
 1600 - 1FFF = On board user RAM
 1400 - 15FF = Monitor/BASIC RAM
 1000 - 13FF = VDU
-0C00 - 0FFF = MONB72 (Monitor 'B')
+0C00 - 0FFF = mon72b.bin (Monitor 'B')
 0400 - 0BFF = User ROMs
-0000 - 03FF = MONA72 (Monitor 'A')
+0000 - 03FF = mon72a.bin (Monitor 'A')
 ```
 
 #### User ROMs
