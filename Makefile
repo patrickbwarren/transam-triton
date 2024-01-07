@@ -46,9 +46,9 @@ roms:
 	./trimcc trap.tri    -o trap.bin
 	./trimcc fastvdu.tri -o fastvdu.bin
 
-zipfiles: binaries
-	zip triton_binaries.zip *.bin
-	zip triton_archive.zip mon*.tri basic*.tri trap*.tri fastvdu*.tri
+zipfiles: roms
+	zip triton_bin.zip mona72.bin monb72.bin basic72.bin trap.bin fastvdu.bin
+	zip triton_tri.zip mona72.tri monb72.tri basic72.tri trap.tri fastvdu.tri
 
 tape:
 	./trimcc hex2dec_tape.tri  -o HEX2DEC_TAPE

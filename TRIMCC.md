@@ -116,7 +116,7 @@ It's possible to compile code with `trimcc` and pipe it using the
 `-p` option into the disassembler, for example with the core code in
 `fastvdu.tri`:
 ```
-./trimcc fastvdu.tri -p | ./disasm8080.py
+./trimcc fastvdu_core.tri -p | ./disasm8080.py
 ```
 This is particularly simple because there is no tape header to avoid.  User
 ROMs can likewise be disassembled.
@@ -124,7 +124,7 @@ ROMs can likewise be disassembled.
 Equally, it's possible to disassemble code with the disassembler, with
 the `-p` option, and pipe it into `trimcc`, for example
 ```
-./disasm8080.py -p -a 0x400 FASTVDU_ROM | ./trimcc -v -s
+./disasm8080.py -p -a 0x400 fastvdu.bin | ./trimcc -v -s
 ```
 
 ### TriMCC minilanguage
@@ -135,10 +135,10 @@ text.  A TriMCC source file (generally a `.tri` file) is an
 ASCII-encoded text file consisting of a stream of tokens separated by
 white space characters, commas, semicolons, and/or newlines.  Other
 source files can be included by using an `include` directive, which is
-nestable to a certain level. For examples see `fastvdu_rom.tri` and
-`fastvdu_tape.tri`, which both include `fastvdu.tri`.  This allows the
-same core code to be used to make a tape binary and for making a user
-ROM.
+nestable to a certain level. For examples see `fastvdu.tri` and
+`fastvdu_tape.tri`, which both include `fastvdu_core.tri`.  This
+allows the same core code to be used to make a tape binary and for
+making a user ROM.
 
 The token stream comprises:
 
@@ -419,10 +419,10 @@ ROM dumps for the Triton L7.2 monitor and BASIC, and TRAP (Triton
 Resident Assembly Language Package), are also included.  These can be
 compiled to binaries by
 ```
-./trimcc mona72_rom.tri -o MONA72_ROM
-./trimcc monb72_rom.tri -o MONB72_ROM
-./trimcc basic72_rom.tri -o BASIC72_ROM
-./trimcc trap_rom.tri -o TRAP_ROM
+./trimcc mona72.tri -o mona72.bin
+./trimcc monb72.tri -o monb72.bin
+./trimcc basic72.tri -o basic72.bin
+./trimcc trap.tri -o trap.bin
 ```
 This is implemented as `make roms` in the Makefile, and the resulting
 binary ROM files can be used directly with the emulator.
@@ -438,9 +438,9 @@ this functionality was re-implemented in `fastvdu.tri` which can be
 used to generate both a user ROM and a tape binary,
 ```
 ./trimcc fastvdu_tape.tri -o FASTVDU_TAPE
-./trimcc fastvdu_rom.tri -o FASTVDU_ROM
+./trimcc fastvdu.tri -o fastvdu.bin
 ```
-The user ROM can be loaded into the emulator using `-u FASTVDU_ROM`.  For
+The user ROM can be loaded into the emulator using `-u fastvdu.bin`.  For
 the tape binary (which is really only for testing purposes),
 re-vectorisation of the VDU output is set up by running the code at
 `1602` with the monitor 'G' command.
