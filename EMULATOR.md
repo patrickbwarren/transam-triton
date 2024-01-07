@@ -156,10 +156,10 @@ One can test the effect of getting this the wrong way around by swapping the `tr
 The ROM dumps for the Triton L7.2 monitor and BASIC, and TRAP, can be
 compiled to binaries using `trimcc` as described in [TRIMCC.md](TRIMCC.md),
 ```
-./trimcc mona72_rom.tri -o MONA72_ROM
-./trimcc monb72_rom.tri -o MONB72_ROM
-./trimcc basic72_rom.tri -o BASIC72_ROM
-./trimcc trap_rom.tri -o TRAP_ROM
+./trimcc mona72.tri -o mona72.bin
+./trimcc monb72.tri -o monb72.bin
+./trimcc basic72.tri -o basic72.bin
+./trimcc trap.tri -o trap.bin
 ```
 (implemented as `make roms` in the Makefile).  If present, all these
 files are loaded by the emulator.  For the L7.2 emulation to work
@@ -167,15 +167,15 @@ at least the two monitor ROMs should be present.
 
 The memory map for Level 7.2 Triton software is as follows
 ```
-E000 - FFFF = BASIC72_ROM (BASIC)
-C000 - DFFF = TRAP_ROM (TRAP)
+E000 - FFFF = BASIC72 (BASIC)
+C000 - DFFF = TRAP
 2000 - BFFF = For off-board expansion
 1600 - 1FFF = On board user RAM
 1400 - 15FF = Monitor/BASIC RAM
 1000 - 13FF = VDU
-0C00 - 0FFF = MONB72_ROM (Monitor 'B')
+0C00 - 0FFF = MONB72 (Monitor 'B')
 0400 - 0BFF = User ROMs
-0000 - 03FF = MONA72_ROM (Monitor 'A')
+0000 - 03FF = MONA72 (Monitor 'A')
 ```
 
 #### User ROMs
@@ -188,7 +188,7 @@ is loaded to `0800`-`0BFF`.
 If the first byte in the first user ROM is the instruction LXI SP (op
 code `31`), then Triton vectors here to execute the code automatically: see
 the L7.2 documentation for more details, and
-[`fastvdu_rom.tri`](fastvdu_rom.tri)) described in
+[`fastvdu.tri`](fastvdu.tri)) described in
 [TRIMCC.md](TRIMCC.md) for a working example.
 
 To just load a ROM in the second position, make up a blank ROM filled

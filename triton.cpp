@@ -70,16 +70,16 @@ typedef struct StateEPROM {
   direction_t portA_dirn = OUTPUT;
 } StateEPROM;
 
-#define PRINTF_HI(byte) for (int i=7; i>=4; i--) printf("%c", (byte >> i) & 1 ? '1' : '0')
-#define PRINTF_LO(byte) for (int i=3; i>=0; i--) printf("%c", (byte >> i) & 1 ? '1' : '0')
-#define PRINTF_BIN(byte) printf("%02X (", byte); PRINTF_HI(byte); PRINTF_LO(byte); printf(")")
+// #define PRINTF_HI(byte) for (int i=7; i>=4; i--) printf("%c", (byte >> i) & 1 ? '1' : '0')
+// #define PRINTF_LO(byte) for (int i=3; i>=0; i--) printf("%c", (byte >> i) & 1 ? '1' : '0')
+// #define PRINTF_BIN(byte) printf("%02X (", byte); PRINTF_HI(byte); PRINTF_LO(byte); printf(")")
 
-void WriteStatusEPROM(FILE *fp, StateEPROM *eprom) {
-  fprintf(fp, "A/FC="); PRINTF_BIN(eprom->a);
-  fprintf(fp, " B/FD="); PRINTF_BIN(eprom->b);
-  fprintf(fp, " C/FE="); PRINTF_BIN(eprom->c);
-  fprintf(fp, " ctrl="); PRINTF_BIN(eprom->ctl);
-}
+// void WriteStatusEPROM(FILE *fp, StateEPROM *eprom) {
+//   fprintf(fp, "A/FC="); PRINTF_BIN(eprom->a);
+//   fprintf(fp, " B/FD="); PRINTF_BIN(eprom->b);
+//   fprintf(fp, " C/FE="); PRINTF_BIN(eprom->c);
+//   fprintf(fp, " ctrl="); PRINTF_BIN(eprom->ctl);
+// }
 
 using namespace std;
 
@@ -372,19 +372,19 @@ void MachineInOut(State8080 *state, uint8_t *memory, IOState *io,
     }
     break;
   }
-  if (state->port > 0xfb) {
-    printf("8255: %02X ", state->a);
-    if (state->port_op == 0xd3) printf("-->");
-    else printf("<--");
-    switch (state->port) {
-    case 0xfc: printf(" port A/FC"); break;
-    case 0xfd: printf(" port B/FD"); break;
-    case 0xfe: printf(" port C/FE"); break;
-    case 0xff: printf(" ctrl  /FF"); break;
-    }
-    printf(" | "); WriteStatusEPROM(stdout, eprom);
-    printf(" | "); WriteStatus8080(stdout, state); printf("\n");
-  }
+  //  if (state->port > 0xfb) {
+  //    printf("8255: %02X ", state->a);
+  //    if (state->port_op == 0xd3) printf("-->");
+  //    else printf("<--");
+  //    switch (state->port) {
+  //    case 0xfc: printf(" port A/FC"); break;
+  //    case 0xfd: printf(" port B/FD"); break;
+  //    case 0xfe: printf(" port C/FE"); break;
+  //    case 0xff: printf(" ctrl  /FF"); break;
+  //    }
+  //    printf(" | "); WriteStatusEPROM(stdout, eprom);
+  //    printf(" | "); WriteStatus8080(stdout, state); printf("\n");
+  //  }
   state->port_op = 0x00;
 }
 
@@ -518,10 +518,10 @@ int main(int argc, char** argv) {
 
   for (i=0; i<_64K; i++) main_memory[i] = 0xff;
 
-  load_rom(main_memory, "MONA72_ROM",  0x0000, _1K);
-  load_rom(main_memory, "MONB72_ROM",  0x0c00, _1K);
-  load_rom(main_memory, "TRAP_ROM",    0xc000, _8K);
-  load_rom(main_memory, "BASIC72_ROM", 0xe000, _8K);
+  load_rom(main_memory, "mona72.bin",  0x0000, _1K);
+  load_rom(main_memory, "monb72.bin",  0x0c00, _1K);
+  load_rom(main_memory, "trap.bin",    0xc000, _8K);
+  load_rom(main_memory, "basic72.bin", 0xe000, _8K);
 
   if (user_rom != NULL) {
     if (char *s = strchr(user_rom, ',')) { // check for a comma

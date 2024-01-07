@@ -21,4 +21,4 @@ LXI H, !MAIN
 SHLD !OUTVEC
 RET
 
-include fastvdu.tri
+include fastvdu_core.tri
