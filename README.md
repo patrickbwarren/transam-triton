@@ -62,27 +62,28 @@ along with these programs.  If not, see
 
 ### Copyright
 
-Unless otherwise stated, copyright &copy; 1979-2021 Patrick B Warren
-<patrickbwarren@gmail.com>
+The Triton Level 7.2 Monitor and BASIC here are the originals,
+extracted from the ROMs on my own personal machine a number of years
+ago now, and are copyright &copy; Transam Components Limited and/or
+T.C.L. software (1979) or thereabouts.
 
-The Triton Level 7.2 Monitor, BASIC, and TRAP are all copyright &copy;
-Transam Components Limited and/or T.C.L. software (1979) or thereabouts.
+The version of TRAP included here and the original fast VDU code come
+from Gerald Sommariva's [web
+site](https://sites.google.com/view/transam-triton/home), as
+`TRAP.F86B` and `FASTVDU.ED82` on the
+[downloads](https://sites.google.com/view/transam-triton/downloads)
+page.  Modifications to the fast VDU code are copyright (c) 2021
+Patrick B Warren <patrickbwarren@gmail.com> and are released into the
+public domain.
 
 The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
-<rstuart114@gmail.com>
+<rstuart114@gmail.com>, with modifications copyright &copy; 2021
+Patrick B Warren <patrickbwarren@gmail.com>.
 
 The 8080 disassembler `disasm8080.py` is released under an Apache
 License, Version 2.0 and is copyright &copy; 2013-2015 by Jeff Tranter
 <tranter@pobox.com>, with modifications copyright &copy; 2021
 Patrick B Warren <patrickbwarren@gmail.com>.
-
-The original copyright on the fast VDU code is unknown but it may
-belong to Gerald Sommariva, from whose [web
-site](https://sites.google.com/view/transam-triton/downloads) the
-`FASTVDU.ED82` user ROM was downloaded which forms the basis of the
-current code.  Modifications to this original code are copyright (c)
-2021 Patrick B Warren <patrickbwarren@gmail.com> and are released into
-the public domain.
 
 The file [`invaders_tape.tri`](invaders_tape.tri) is modified from a
 hex dump in Computing Today (March 1980; page 32).  Copyright &copy; is
@@ -92,3 +93,7 @@ presumed to be reproducible and modifiable under the equivalent of a
 modern open source license.  The changes made to this code are
 copyright &copy; 2021 Patrick B Warren and are released into the public
 domain.
+
+All other material here is copyright &copy; 1979-2024 Patrick B Warren
+<patrickbwarren@gmail.com>
+

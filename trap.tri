@@ -3,8 +3,12 @@
 # This comprises the eight 1k ROMs of the Triton Resident Assembly
 # Language Package (TRAP).
 
-# Copyright (c) Transam Components Limited and/or T.C.L. software
-# (1979) or thereabouts.
+# Original copyright (c) Transam Components Limited and/or
+# T.C.L. software (1979) or thereabouts.
+
+# This version comes from Gerald Sommariva's web site, as
+# FASTVDU.ED82 on the download page at:
+# https://sites.google.com/view/transam-triton/downloads.
 
 #C000#  31 70 14 CF 11 55 C0 CD  23 00 CD 32 C0 01 3A 31
 #C010#  CD 2D C0 DA 24 C0 E6 0F  3D 87 21 43 C0 85 6F 7E
