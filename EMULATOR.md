@@ -1,7 +1,7 @@
 ## SFML-based Triton emulator
 
 This describes the fork of Robin Stuart's Triton emulator which is
-available in a [GitHub repository](https://github.com/woo-j/triton).
+available in his [GitHub repository](https://github.com/woo-j/triton).
 Some features have been added and some small changes have been
 made to reflect better the actual hardware.  The emulator is targetted
 towards the Level 7.2 firmware (monitor and BASIC), and the Triton
@@ -66,21 +66,21 @@ The RST instructions are simply one-byte op-codes which execute a
 subroutine call to the appropriate hard-coded place in memory, that's
 to say they push the program counter on stack and jump to the required
 location (`0008` for RST 1, `0010` for RST 2, etc).  They have nothing
-to do with the interrupt system on the 8080, although they are
-designed to work in tandem with it.  In particular, executing an RST
-instruction in software does not change the interrupt enabled flag,
-and equally the execution of an RST instruction is not affected by the
-interrupt enabled flag.
+specific to do with the interrupt system on the 8080, although they
+are designed to work in tandem with it.  In particular, executing an
+RST instruction in software does not change the interrupt enabled
+flag, and equally the execution of an RST instruction is not affected
+by the interrupt enabled flag.
 
 There is only one interrupt line on the 8080 itself.  If activated,
 and if the interrupt enabled flag is set, the 8080 fetches an op-code
 off the databus and executes it, and also disables the interrupt
-enabled flag to disable further interrupts.  This obviously makes good
-sense since one would not necessarily want to enable interrupts whilst
-already servicing one (also likely for the same reason interrupts are
-disabled in Triton on startup or at a hardware reset -- see below).
-The interrupt enabled flag can be set or unset in software by an EI
-(`FB`) or DI (`F3`) instruction.
+enabled flag to disable further interrupts.  This obviously makes
+sense since one would not want to allow further interrupts whilst
+already servicing one; likely for the same reason interrupts are
+disabled in Triton on startup or at a hardware reset.  The interrupt
+enabled flag can be set or unset in software by an EI (`FB`) or DI
+(`F3`) instruction.
 
 The RST instructions are designed with this interrupt system in mind,
 and in a hardware interrupt the fetched op-code is usually an RST
@@ -94,19 +94,19 @@ The upshot of all this is that after a hardware interrupt 1 (clear
 screen) or interrupt 2 (print registers + flags and escape to the
 function prompt), further interrupts are disabled.  They stay disabled
 until an EI instruction is encountered at some point in the monitor
-code.  One can check this in the emulator by using shift + F5 to
-write the 8080 status (the interrupt enabled/disbled flag status is
-E/D).  One can clearly see the interrupt enabled flag is left unset
-after one of these hardware interrupts, but becomes re-enabled for
-example after a key press.  Rather than being a bug it appears that
-this was a design choice.  The section of the Triton manual describing
-the CPU ("The Heart of It") states "Interrupt 0 should not be used
-even though it is available on the PCB. It simply duplicates the
-manual reset operation but would create major problems if used as the
-monitor program contains an EI instruction early on in this routine. A
-very rapid build up of interrupt nests would occur which would fill up
-the stack in a fraction of a second."  Presumably the same could be
-true if EI was executed too soon after any interrupt was serviced.
+code.  One can check this in the emulator by using shift + F5 to write
+the 8080 status (the interrupt enabled/disbled flag status is E/D).
+One can clearly see the interrupt enabled flag is left unset after one
+of these hardware interrupts, but becomes re-enabled for example after
+a key press, which appears to have been a design choice.  The section
+of the Triton manual describing the CPU ("The Heart of It") states
+"Interrupt 0 should not be used even though it is available on the
+PCB. It simply duplicates the manual reset operation but would create
+major problems if used as the monitor program contains an EI
+instruction early on in this routine. A very rapid build up of
+interrupt nests would occur which would fill up the stack in a
+fraction of a second."  Presumably the same could be true if EI was
+executed too soon after any interrupt was serviced.
 
 There is one peculiar thing though.  In the 8080A bugbook, there is
 the statement that the microprocessor can still detect whether or not
@@ -186,9 +186,9 @@ files are specified, for example `-u ROM1,ROM2`, then the second one
 is loaded to `0800`-`0BFF`.
 
 If the first byte in the first user ROM is the instruction LXI SP (op
-code `31`), then Triton vectors here to execute the code automatically: see
-the L7.2 documentation for more details, and
-[`fastvdu.tri`](fastvdu.tri)) described in
+code `31`), then Triton L7.2 Monitor vectors here on startup to
+execute the code automatically; see the L7.2 documentation for more
+details, and [`fastvdu.tri`](fastvdu.tri) described in
 [TRIMCC.md](TRIMCC.md) for a working example.
 
 To just load a ROM in the second position, make up a blank ROM filled
@@ -604,20 +604,21 @@ along with these programs.  If not, see
 
 ### Copyright
 
-Unless otherwise stated, copyright &copy; 2021 Patrick B Warren
-<patrickbwarren@gmail.com>
-
 The original SFML-based emulator is copyright &copy; 2020 Robin Stuart
-<rstuart114@gmail.com>
+<rstuart114@gmail.com>, with modifications copyright &copy; 2021
+Patrick B Warren <patrickbwarren@gmail.com>.
 
 The Triton Level 7.2 Monitor from which the above EPROM programmer
 code was extracted is copyright &copy; Transam Components Limited and/or
 T.C.L. software (1979).
 
-The original copyright on the fast VDU code is unknown but it may
-belong to Gerald Sommariva, from whose [web
-site](https://sites.google.com/view/transam-triton/downloads) the
-`FASTVDU.ED82` user ROM was downloaded which forms the basis of the
-current code.  Modifications to this original code are copyright (c)
-2021 Patrick B Warren <patrickbwarren@gmail.com> and are released into
-the public domain.
+The original fast VDU code comes from Gerald Sommariva's [web
+site](https://sites.google.com/view/transam-triton/home), as
+`FASTVDU.ED82` on the
+[downloads](https://sites.google.com/view/transam-triton/downloads)
+page.  Modifications to this code are copyright (c) 2021 Patrick B
+Warren <patrickbwarren@gmail.com> and are released into the public
+domain.
+
+All other material here is copyright &copy; 1979-2024 Patrick B Warren
+<patrickbwarren@gmail.com>
